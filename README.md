@@ -1,36 +1,148 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MJ Hierarchy — Michael Jordan Card Collection Tracker
 
-## Getting Started
+An improved, open take on Cajun Cardboard's MJ Hierarchy: track all ~378 Michael
+Jordan cards across the four-tier hierarchy, log **every copy** with its grade and
+condition, follow market value, build a want list, and share a public profile.
 
-First, run the development server:
+Built with **Next.js 16 (App Router) + Supabase (Postgres, Auth, Storage, RLS)**.
 
+## What makes it better than a checklist
+
+1. **Rich card data** — set, year, print run, pack odds, and styled card art (real
+   images come via user uploads / licensed sources later — see _Data & rights_).
+2. **Market value** — per-card prices by grade and an estimated collection value.
+3. **Condition / grade tracking** — raw vs graded (PSA/BGS/SGC), grade, quantity,
+   purchase price, and acquisition date. Own a card in multiple grades at once.
+4. **Public sharing + want list** — a shareable `/u/<username>` profile, "for trade"
+   flags, and a personal want list.
+
+## Setup
+
+### 1. Install deps
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Bring up Supabase
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Option A — local (needs Docker running):**
+```bash
+npx supabase start          # prints API URL + anon/service_role keys
+npx supabase db reset       # applies migrations in supabase/migrations + RLS
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Option B — cloud:** create a project at supabase.com, then in the SQL editor run
+`supabase/migrations/0001_init.sql` then `0002_rls_and_rpc.sql` (in order).
 
-## Learn More
+### 3. Environment
+Copy `.env.local.example` → `.env.local` and fill in the URL + keys from step 2.
+For Google OAuth, also enable the Google provider in Supabase Auth and set the
+redirect URL to `http://localhost:3000/callback`.
 
-To learn more about Next.js, take a look at the following resources:
+### 4. Seed the catalog
+```bash
+npm run seed     # idempotent; upserts tiers, sets, the card catalog, sample prices
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 5. Run
+```bash
+npm run dev      # http://localhost:3000
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project layout
 
-## Deploy on Vercel
+- `supabase/migrations/` — schema (`0001`) and RLS + trigger + RPC (`0002`).
+- `data/catalog.ts` — the card dataset (real curated cards + labeled filler to 378).
+- `admin/seed-catalog.ts` — service-role seed script (`npm run seed`).
+- `lib/supabase/{client,server,middleware}.ts` — `@supabase/ssr` clients.
+- `lib/queries.ts` / `lib/actions/*` — server reads / Server Actions (RLS-scoped).
+- `app/` — landing, `hierarchy`, `cards/[slug]`, gated `(app)/{collection,want-list,settings}`, public `u/[username]`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Card images (auto-fetch + self-host)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Cards ship with no images (styled placeholders). Auto-fetch finds a photo per card,
+**downloads it, and stores it in our own Supabase Storage** (`card-images` bucket);
+`cards.image_url` then points at our public URL — so images don't break when a source
+listing ends. Provider is set by `IMAGE_SEARCH_PROVIDER`:
+
+- **`duckduckgo`** (default) — no keys, works immediately. Unofficial endpoint, so
+  it can rate-limit/change; image quality varies.
+- **`ebay`** — eBay's official Browse API. Set `EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET`
+  (Production App ID + Cert ID from [developer.ebay.com](https://developer.ebay.com)).
+
+Bulk-fill:
+```bash
+npm run fetch:images            # cards missing an image
+npm run fetch:images -- --force # refetch all 378
+npm run fetch:images -- --limit 20
+```
+Or use **Admin → Image Manager** (`/admin/images`): per-card **Fetch image**, or
+**Auto-fetch missing (visible)** for the filtered set. Bad matches are fixable by
+pasting a URL (the paste path stores the URL directly).
+
+Caveat: auto-fetched images are arbitrary web results — we now *rehost* them, so
+`image_source` records provenance for removal. The UI falls back to the placeholder
+if an image fails to load.
+
+## Testing
+
+```bash
+npm test          # vitest unit suite — value math, grade keys, CSV parsing, query builders
+npm run test:rls  # RLS/security integration test against LOCAL Supabase (creates+deletes test users)
+npm run lint && npx tsc --noEmit
+```
+
+`test:rls` asserts the security boundary: catalog is world-readable but write-locked,
+per-user holdings are isolated, and `get_public_collection` only exposes public
+profiles. CI (`.github/workflows/ci.yml`) runs lint + typecheck + unit tests on push/PR
+(the RLS test needs a live DB, so it stays local).
+
+## Market values (estimated)
+
+Per-card prices (`card_prices`, by grade) and a monthly history (`price_history`)
+power the card-detail sparkline and the collection's value-over-time + cost-basis /
+gain-loss. **These are estimated/seeded, clearly labeled, and not investment advice** —
+there's no legal, scalable live sold-comp feed (see _Data & rights_). Seed them with:
+
+```bash
+npm run seed:prices         # estimated card_prices + ~36-month price_history
+```
+
+Real signal comes from **your own purchase prices** (cost basis) entered per holding.
+
+**eBay asking prices** (if you have eBay API keys): set `EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET`, then:
+```bash
+npm run prices:ebay              # all cards (raw + PSA 10/9, BGS 9.5 for top tiers)
+npm run prices:ebay -- --limit 10
+npm run prices:ebay -- --tier 1
+```
+This writes median **active-listing (asking)** prices into `card_prices` (`source='ebay (asking)'`)
+plus a fresh `price_history` point. Asking ≠ sold comps (eBay's sold-comp API is partner-gated),
+so treat it as a live ceiling, not a settled value — it coexists with the estimated history.
+
+## Data & rights (read before scaling)
+
+- **Card list & tiers**: the catalog is the real **378-card MJ Hierarchy checklist**
+  (4 tiers: 27 / 54 / 81 / 216), imported from `data/mj-hierarchy-checklist-2026-06-01.csv`
+  — exported from Cajun Cardboard's tracker and **credited to Bryan Denison / Cajun
+  Cardboard Creations**. `data/checklist.ts` parses it (deriving year, card number,
+  set, serial/print run, pack odds, and type flags); `npm run seed` loads it. To use a
+  different list, drop in a new CSV (same columns: Collected, Card Name, Tier, Type,
+  Serial, Odds) and reseed. (`data/catalog.ts` retains the tier definitions + slug helpers.)
+- **Images:** each card has an optional external `image_url` (+ `image_source` for
+  attribution). When set, it renders in the grid/detail; when absent or if the URL
+  fails to load, a styled placeholder shows. Add URLs in `data/catalog.ts` (then
+  `npm run seed`) or directly in Supabase Studio. No copyrighted scans are bundled;
+  populate only rights-cleared URLs. (User uploads / licensed images are a later step.)
+- **Market values:** there is no supported, scalable, legal API for eBay sold comps,
+  and scraping violates ToS. Values are seeded manually (grails first) and will be
+  augmented by user-reported purchase prices; a paid/licensed feed is a later option.
+  Treat all values as best-effort.
+
+## Security model
+
+The catalog is world-readable but write-locked (seed scripts use the service-role
+key, which bypasses RLS). Per-user `holdings`/`want_list`/`profiles` are private via
+RLS (`user_id = auth.uid()`). Public collections are exposed **only** through the
+`get_public_collection` SECURITY DEFINER RPC, which hand-filters to public profiles
+and public holdings — no broad public-read policies.
