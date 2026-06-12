@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   requiredTokenGroups, matchesCard, gradeMatches, median, priceFromListings, extractYear,
+  isJunkTitle, trimOutliers,
 } from "@/lib/ebay-match";
 
 const NAME = "1997 Metal Universe PMG Green #23 /10";
@@ -72,5 +73,49 @@ describe("priceFromListings", () => {
   });
   it("returns null when too few confident matches", () => {
     expect(priceFromListings(listings.slice(0, 1), NAME, "PSA9", 3)).toBeNull();
+  });
+
+  it("excludes lot/reprint/custom listings before pricing", () => {
+    const noisy = [
+      ...listings.slice(0, 3),
+      { title: "1997 Metal Universe PMG Green PSA 9 Jordan LOT of 3", cents: 5000_00 },
+      { title: "1997 Metal Universe PMG Green PSA 9 Jordan REPRINT", cents: 50_00 },
+      { title: "Custom 1997 Metal Universe PMG Green PSA 9 Jordan", cents: 30_00 },
+    ];
+    const r = priceFromListings(noisy, NAME, "PSA9", 3);
+    expect(r!.count).toBe(3); // only the 3 genuine comps survive
+    expect(r!.medianCents).toBe(62000_00);
+  });
+
+  it("trims an extreme outlier so it can't skew the median", () => {
+    const withOutlier = [
+      { title: "1997 Metal Universe PMG Green PSA 9 Jordan", cents: 60000_00 },
+      { title: "1997-98 Metal Universe PMG Green Jordan PSA 9", cents: 61000_00 },
+      { title: "1997 Metal Universe PMG Green PSA 9 Michael Jordan", cents: 62000_00 },
+      { title: "1997 Metal Universe PMG Green PSA 9 Jordan", cents: 63000_00 },
+      { title: "1997 Metal Universe PMG Green PSA 9 Jordan", cents: 5_000000_00 }, // absurd
+    ];
+    const r = priceFromListings(withOutlier, NAME, "PSA9", 3);
+    expect(r!.count).toBe(4); // the $5M listing dropped
+    expect(r!.medianCents).toBeLessThan(70000_00);
+  });
+});
+
+describe("isJunkTitle", () => {
+  it("flags lots/reprints/customs/breaks/quantities", () => {
+    for (const t of ["Jordan lot of 5", "Jordan RC reprint", "custom Jordan card",
+      "Jordan case break spot", "Jordan PSA 9 x3", "Jordan (4) cards"]) {
+      expect(isJunkTitle(t)).toBe(true);
+    }
+  });
+  it("passes a normal single-card title", () => {
+    expect(isJunkTitle("1986 Fleer #57 Michael Jordan RC PSA 9")).toBe(false);
+  });
+});
+
+describe("trimOutliers", () => {
+  it("keeps small sets and drops far outliers via IQR", () => {
+    expect(trimOutliers([100, 110, 120, 130, 9999]).includes(9999)).toBe(false);
+    expect(trimOutliers([100, 200]).length).toBe(2); // <3 untouched
   });
 });

@@ -15,11 +15,11 @@ function BarList({ rows }: { rows: GroupRow[] }) {
       {rows.map((r) => (
         <div key={r.label}>
           <div className="flex items-baseline justify-between text-sm">
-            <span>{r.label} <span className="text-xs text-muted">· {r.count}</span></span>
-            <span className="font-medium">{formatUsd(r.value)}</span>
+            <span>{r.label} <span className="font-data text-base text-muted">· {r.count}</span></span>
+            <span className="font-data text-base">{formatUsd(r.value)}</span>
           </div>
-          <div className="mt-1 h-2 overflow-hidden rounded-full bg-foreground/5">
-            <div className="h-full rounded-full bg-amber-500" style={{ width: `${(r.value / max) * 100}%` }} />
+          <div className="meter mt-1" style={{ ["--meter" as string]: "var(--gold)" } as React.CSSProperties}>
+            <span style={{ width: `${(r.value / max) * 100}%` }} />
           </div>
         </div>
       ))}
@@ -49,42 +49,43 @@ export default async function AnalyticsPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Insights</h1>
-      <p className="mt-1 text-sm text-muted">
-        Analytics for your collection · est. market value {formatUsd(totalValue)} ·{" "}
+      <h1 className="font-display text-lg uppercase tracking-tight">Insights</h1>
+      <p className="mt-2 text-sm text-muted">
+        Analytics for your collection · est. market value{" "}
+        <span className="font-data text-base text-foreground">{formatUsd(totalValue)}</span> ·{" "}
         <span className="text-xs">estimated, not investment advice</span>
       </p>
 
       {holdings.length === 0 ? (
         <Panel className="mt-6 p-8 text-center text-sm text-muted">
           Add cards to your collection to see analytics. Start from the{" "}
-          <Link href="/mj-hierarchy" className="text-amber-500 hover:underline">hierarchy</Link>.
+          <Link href="/mj-hierarchy" className="text-accent hover:underline">hierarchy</Link>.
         </Panel>
       ) : (
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
           <Panel className="p-5">
-            <h2 className="text-sm font-semibold">Value by tier</h2>
+            <h2 className="font-sans text-xs uppercase tracking-wide">Value by tier</h2>
             <div className="mt-3"><BarList rows={byTier} /></div>
           </Panel>
           <Panel className="p-5">
-            <h2 className="text-sm font-semibold">Value by grade</h2>
+            <h2 className="font-sans text-xs uppercase tracking-wide">Value by grade</h2>
             <div className="mt-3"><BarList rows={byGrade} /></div>
           </Panel>
           <Panel className="p-5">
-            <h2 className="text-sm font-semibold">Top sets by value</h2>
+            <h2 className="font-sans text-xs uppercase tracking-wide">Top sets by value</h2>
             <div className="mt-3"><BarList rows={bySet} /></div>
           </Panel>
 
           <Panel className="p-5">
-            <h2 className="text-sm font-semibold">Biggest movers <span className="text-xs font-normal text-muted">(over history window)</span></h2>
+            <h2 className="font-sans text-xs uppercase tracking-wide">Biggest movers <span className="text-xs font-normal text-muted">(over history window)</span></h2>
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
               <div>
-                <div className="text-xs font-medium text-emerald-500">▲ Gainers</div>
+                <div className="text-xs font-medium text-accent">▲ Gainers</div>
                 <ul className="mt-1 space-y-1 text-sm">
                   {gainers.map((m) => (
                     <li key={m.cardId + m.gradeKey} className="flex justify-between gap-2">
                       <Link href={`/cards/${m.slug}`} className="truncate hover:underline">{m.name}</Link>
-                      <span className="shrink-0 text-emerald-500">{pct(m.pct)}</span>
+                      <span className="shrink-0 text-accent">{pct(m.pct)}</span>
                     </li>
                   ))}
                   {gainers.length === 0 && <li className="text-muted">—</li>}
@@ -106,10 +107,10 @@ export default async function AnalyticsPage() {
           </Panel>
 
           <Panel className="p-5">
-            <h2 className="text-sm font-semibold">Rarity</h2>
+            <h2 className="font-sans text-xs uppercase tracking-wide">Rarity</h2>
             <div className="mt-3 flex gap-6 text-sm">
-              <div><div className="text-xl font-semibold">{rarity.ownedCount}</div><div className="text-muted">cards owned</div></div>
-              <div><div className="text-xl font-semibold">{rarity.serialOwned}</div><div className="text-muted">serial-numbered</div></div>
+              <div><div className="font-data text-2xl">{rarity.ownedCount}</div><div className="text-muted">cards owned</div></div>
+              <div><div className="font-data text-2xl">{rarity.serialOwned}</div><div className="text-muted">serial-numbered</div></div>
             </div>
             {rarity.lowestPrints.length > 0 && (
               <div className="mt-3">
@@ -127,11 +128,11 @@ export default async function AnalyticsPage() {
           </Panel>
 
           <Panel className="p-5">
-            <h2 className="text-sm font-semibold">Watchlist deals <span className="text-xs font-normal text-muted">(at/below your target)</span></h2>
+            <h2 className="font-sans text-xs uppercase tracking-wide">Watchlist deals <span className="text-xs font-normal text-muted">(at/below your target)</span></h2>
             {deals.length === 0 ? (
               <p className="mt-3 text-sm text-muted">
                 No wanted cards are at target. Set a max price on{" "}
-                <Link href="/want-list" className="text-amber-500 hover:underline">want-list</Link> items.
+                <Link href="/want-list" className="text-accent hover:underline">want-list</Link> items.
               </p>
             ) : (
               <ul className="mt-3 space-y-1 text-sm">
@@ -139,7 +140,7 @@ export default async function AnalyticsPage() {
                   <li key={d.slug} className="flex items-center justify-between gap-2">
                     <Link href={`/cards/${d.slug}`} className="truncate hover:underline">{d.name}</Link>
                     <span className="shrink-0">
-                      <span className="text-emerald-500">{formatUsd(d.current)}</span>
+                      <span className="text-accent">{formatUsd(d.current)}</span>
                       <span className="text-muted"> ≤ {formatUsd(d.target)}</span>
                     </span>
                   </li>

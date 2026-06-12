@@ -29,7 +29,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
         {guide.body.map((p, i) => <p key={i}>{p}</p>)}
       </div>
       <div className="mt-10 border-t border-border pt-6">
-        <Link href="/mj-hierarchy" className="text-sm text-amber-500 hover:underline">Explore the MJ Hierarchy →</Link>
+        <Link href="/mj-hierarchy" className="text-sm text-accent hover:underline">Explore the MJ Hierarchy →</Link>
       </div>
     </article>
   );

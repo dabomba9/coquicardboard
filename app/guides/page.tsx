@@ -19,7 +19,7 @@ export default function GuidesPage() {
           <Link key={g.slug} href={`/guides/${g.slug}`} className="group block">
             <Panel className="p-5 transition-transform group-hover:-translate-y-0.5">
               <div className="text-xs text-muted">{new Date(g.date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</div>
-              <h2 className="mt-1 text-lg font-semibold group-hover:text-amber-500">{g.title}</h2>
+              <h2 className="mt-1 text-lg font-semibold group-hover:text-accent">{g.title}</h2>
               <p className="mt-1 text-sm text-muted">{g.excerpt}</p>
             </Panel>
           </Link>

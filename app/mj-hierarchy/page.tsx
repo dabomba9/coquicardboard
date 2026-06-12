@@ -1,6 +1,7 @@
 import { getTiers, getAllCards, getMyHoldings, getCatalogValueMap } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { HierarchyExplorer, type ExplorerCard } from "@/components/hierarchy-explorer";
+import { Coqui } from "@/components/mascot/coqui";
 
 export const dynamic = "force-dynamic";
 
@@ -40,11 +41,17 @@ export default async function HierarchyPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">The Hierarchy</h1>
-      <p className="mt-1 text-sm text-muted">
-        {cards.length} cards across {tiers.length} tiers.
-        {user ? " Search, filter, and sort your collection." : " Sign in to track what you own."}
-      </p>
+      <div className="flex items-center gap-3">
+        <Coqui pose="idle" size={44} aria-label="" />
+        <div>
+          <h1 className="font-display text-lg uppercase tracking-tight">The Hierarchy</h1>
+          <p className="mt-1 text-sm text-muted">
+            <span className="font-data text-base text-foreground">{cards.length}</span> cards across{" "}
+            <span className="font-data text-base text-foreground">{tiers.length}</span> tiers.
+            {user ? " Search, filter, and sort your collection." : " Sign in to track what you own."}
+          </p>
+        </div>
+      </div>
 
       <div className="mt-6">
         <HierarchyExplorer

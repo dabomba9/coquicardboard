@@ -35,7 +35,7 @@ export function SettingsForm({ profile }: { profile: Profile }) {
       </label>
 
       {state?.error && <p className="text-sm text-red-400">{state.error}</p>}
-      {state?.ok && <p className="text-sm text-emerald-400">Saved.</p>}
+      {state?.ok && <p className="text-sm text-accent">Saved.</p>}
 
       <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
     </form>

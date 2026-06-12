@@ -17,7 +17,7 @@ export default async function WantListPage() {
       {wants.length === 0 ? (
         <Panel className="mt-6 p-8 text-center text-sm text-muted">
           Nothing here yet. Open any card in the{" "}
-          <Link href="/mj-hierarchy" className="text-amber-500 hover:underline">hierarchy</Link>{" "}
+          <Link href="/mj-hierarchy" className="text-accent hover:underline">hierarchy</Link>{" "}
           and add it to your want list.
         </Panel>
       ) : (

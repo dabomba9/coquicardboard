@@ -30,9 +30,9 @@ export function HoldingsManager({
           ) : (
             <Panel key={h.id} className="flex flex-wrap items-center gap-3 p-4">
               <span className="font-medium">{gradeLabel(h.condition_type, h.grading_company, h.grade)}</span>
-              {h.quantity > 1 && <Badge className="bg-foreground/5 ring-border">×{h.quantity}</Badge>}
-              {h.for_trade && <Badge className="bg-emerald-500/10 text-emerald-400 ring-emerald-500/30">For trade</Badge>}
-              {!h.is_public && <Badge className="bg-foreground/5 text-muted ring-border">Private</Badge>}
+              {h.quantity > 1 && <Badge className="text-muted">×{h.quantity}</Badge>}
+              {h.for_trade && <Badge className="bg-accent/10 text-accent">For trade</Badge>}
+              {!h.is_public && <Badge className="text-muted">Private</Badge>}
               <span className="text-sm text-muted">
                 {h.purchase_price_cents != null ? `Paid ${formatUsd(h.purchase_price_cents)}` : ""}
                 {h.acquired_at ? ` · ${h.acquired_at}` : ""}

@@ -21,7 +21,12 @@ Point a local shell at the cloud project (e.g. a temporary `.env.local` with the
 ```bash
 npm run seed             # 378-card catalog + tiers + sets + sample prices
 npm run prices:ebay      # eBay asking prices (needs EBAY_CLIENT_ID/SECRET)
+npm run prices:fill      # estimated values for any card/grade still unpriced (never overwrites real prices)
+npm run prices:sold      # eBay SOLD comps — needs Marketplace Insights access (see below); overwrites asking/estimated
 ```
+**Price source precedence:** `ebay (sold)` > `ebay (asking)` > `estimated`. Sold comps require eBay's
+**Marketplace Insights API** — apply on your Production keyset at developer.ebay.com. Until approved,
+`prices:sold` exits cleanly without writing. The nightly cron prefers sold → asking automatically.
 Images — choose one:
 - **Preserve current images (recommended):** keep your *local* Supabase running and run
   ```bash

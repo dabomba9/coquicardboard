@@ -26,10 +26,10 @@ export function PriceChart({ series }: { series: PriceSeries[] }) {
           <button
             key={s.grade_key}
             onClick={() => setActive(s.grade_key)}
-            className={`rounded-full px-2.5 py-0.5 text-xs ring-1 transition-colors ${
+            className={`pixel-box px-2.5 py-1 font-sans text-[9px] uppercase transition-colors ${
               s.grade_key === active
-                ? "bg-amber-500/15 text-amber-300 ring-amber-500/40"
-                : "text-muted ring-border hover:text-foreground"
+                ? "bg-accent text-black [--border:var(--accent)]"
+                : "bg-card text-muted hover:text-foreground"
             }`}
           >
             {s.grade_key}
@@ -37,7 +37,7 @@ export function PriceChart({ series }: { series: PriceSeries[] }) {
         ))}
         {latest && (
           <span className="ml-auto text-sm">
-            <span className="font-semibold">{formatUsd(latest.value)}</span>
+            <span className="font-data text-xl">{formatUsd(latest.value)}</span>
             <span className="ml-2 text-xs text-muted">estimated · as of {fmtMonth(latest.date)}</span>
           </span>
         )}
@@ -46,17 +46,17 @@ export function PriceChart({ series }: { series: PriceSeries[] }) {
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 5, right: 8, left: 8, bottom: 0 }}>
             <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
-            <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--chart-axis)" }} minTickGap={28} />
+            <XAxis dataKey="date" tick={{ fontSize: 13, fill: "var(--chart-axis)", fontFamily: "var(--font-data)" }} minTickGap={28} />
             <YAxis
-              tick={{ fontSize: 11, fill: "var(--chart-axis)" }} width={64}
+              tick={{ fontSize: 13, fill: "var(--chart-axis)", fontFamily: "var(--font-data)" }} width={64}
               tickFormatter={(v) => formatUsd(v * 100)}
             />
             <Tooltip
-              contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
+              contentStyle={{ background: "var(--card)", border: "2px solid var(--border)", borderRadius: 0, fontSize: 12 }}
               labelStyle={{ color: "var(--foreground)" }}
               formatter={(v) => [formatUsd(Number(v) * 100), cur.grade_key]}
             />
-            <Line type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={2} dot={false} />
+            <Line type="stepAfter" dataKey="value" stroke="var(--accent)" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
