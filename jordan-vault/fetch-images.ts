@@ -78,34 +78,44 @@ async function main() {
   console.log(`To download: ${jobs.length} images → public/vault/`);
 
   const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ userAgent: UA, viewport: { width: 1280, height: 800 } });
-  const req = context.request;
 
-  // Re-solve the Cloudflare challenge by navigating a real page to tcdb. The
-  // cf_clearance cookie this sets doesn't survive thousands of rapid requests,
-  // so we re-warm periodically and whenever failures streak.
-  const page = await context.newPage();
-  async function warmup() {
-    await page.goto("https://www.tcdb.com/", { waitUntil: "domcontentloaded", timeout: 45_000 }).catch(() => {});
-    await sleep(5000);
-  }
-  console.log("Warming up tcdb.com (Cloudflare)…");
-  await warmup();
-  console.log(`  page title: "${await page.title().catch(() => "")}"`);
+  // Each worker is an INDEPENDENT browser context with its OWN Cloudflare
+  // clearance — so N can run in parallel without tripping the single-session
+  // rate limit that throttled a shared-cookie burst. Each worker still goes
+  // sequentially internally (gentle) and re-warms periodically / on failures.
+  // Default to 1 (sequential): tcdb/Cloudflare rate-limits per-IP, and parallel
+  // contexts from one IP trip a hard block. Override with WORKERS=N only from a
+  // fresh IP / after a long cooldown.
+  const WORKERS = Math.max(1, Number(process.env.WORKERS ?? args[args.indexOf("--workers") + 1] ?? 1) || 1);
+  let ok = 0, fail = 0, done = 0;
 
-  // Sequential + self-healing: Cloudflare's WAF flags parallel bursts, so we go
-  // one at a time, re-warming every ~120 requests and after failure streaks.
-  let ok = 0, fail = 0, sinceWarm = 0, streak = 0;
-  for (let i = 0; i < jobs.length; i++) {
-    const j = jobs[i];
-    let buf = await fetchImage(req, j.url);
-    if (!buf) { await warmup(); sinceWarm = 0; buf = await fetchImage(req, j.url); } // retry after re-warm
-    if (buf) { await writeFile(join(OUT, `${j.id}-${j.side}.jpg`), buf); ok++; streak = 0; }
-    else { fail++; streak++; }
-    if (++sinceWarm >= 120 || streak >= 6) { await warmup(); sinceWarm = 0; streak = 0; }
-    if ((i + 1) % 50 === 0 || i + 1 === jobs.length) process.stdout.write(`\r  ${i + 1}/${jobs.length} (ok ${ok}, fail ${fail})`);
-    await sleep(250);
+  async function runShard(shard: Job[], label: number) {
+    const context = await browser.newContext({ userAgent: UA, viewport: { width: 1280, height: 800 } });
+    const req = context.request;
+    const page = await context.newPage();
+    const warmup = async () => {
+      await page.goto("https://www.tcdb.com/", { waitUntil: "domcontentloaded", timeout: 45_000 }).catch(() => {});
+      await sleep(5000);
+    };
+    await warmup();
+    let sinceWarm = 0, streak = 0;
+    for (const j of shard) {
+      let buf = await fetchImage(req, j.url);
+      if (!buf) { await warmup(); sinceWarm = 0; buf = await fetchImage(req, j.url); } // retry after re-warm
+      if (buf) { await writeFile(join(OUT, `${j.id}-${j.side}.jpg`), buf); ok++; streak = 0; }
+      else { fail++; streak++; }
+      if (++sinceWarm >= 120 || streak >= 6) { await warmup(); sinceWarm = 0; streak = 0; }
+      if (++done % 50 === 0 || done === jobs.length) process.stdout.write(`\r  ${done}/${jobs.length} (ok ${ok}, fail ${fail})`);
+      await sleep(250);
+    }
+    await context.close();
   }
+
+  // Round-robin the jobs across workers so each shard spans the whole catalog.
+  console.log(`Warming up ${WORKERS} Cloudflare contexts…`);
+  const shards: Job[][] = Array.from({ length: WORKERS }, () => []);
+  jobs.forEach((j, i) => shards[i % WORKERS].push(j));
+  await Promise.all(shards.map((s, i) => runShard(s, i)));
   process.stdout.write("\n");
 
   await browser.close();
