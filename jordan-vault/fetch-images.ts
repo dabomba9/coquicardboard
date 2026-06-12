@@ -56,6 +56,9 @@ function looksLikeImage(contentType: string | undefined, buf: Buffer): boolean {
   return (head[0] === 0xff && head[1] === 0xd8) || (head[0] === 0x89 && head[1] === 0x50);
 }
 
+// Fetch through the warmed browser context's request stack (shares cookies incl.
+// cf_clearance). Proven on the residential IP; VPN/datacenter IPs are Cloudflare
+// reputation-blocked regardless of method.
 async function fetchImage(req: APIRequestContext, url: string): Promise<Buffer | null> {
   try {
     const res = await req.get(url, {
@@ -87,23 +90,38 @@ async function main() {
   // contexts from one IP trip a hard block. Override with WORKERS=N only from a
   // fresh IP / after a long cooldown.
   const WORKERS = Math.max(1, Number(process.env.WORKERS ?? args[args.indexOf("--workers") + 1] ?? 1) || 1);
-  let ok = 0, fail = 0, done = 0;
+  const ABORT_AFTER = 20; // consecutive fails (surviving a re-warm) ⇒ this IP is blocked
+  let ok = 0, fail = 0, done = 0, aborted = false;
 
   async function runShard(shard: Job[], label: number) {
     const context = await browser.newContext({ userAgent: UA, viewport: { width: 1280, height: 800 } });
     const req = context.request;
     const page = await context.newPage();
+    // Warm up: load a tcdb page so Cloudflare's JS challenge runs, then wait for
+    // the cf_clearance cookie to confirm we actually passed before fetching.
     const warmup = async () => {
       await page.goto("https://www.tcdb.com/", { waitUntil: "domcontentloaded", timeout: 45_000 }).catch(() => {});
-      await sleep(5000);
+      for (let t = 0; t < 20; t++) {
+        const cookies = await context.cookies("https://www.tcdb.com/").catch(() => []);
+        if (cookies.some((c) => c.name === "cf_clearance")) break;
+        await sleep(1000);
+      }
+      await sleep(1500);
     };
     await warmup();
-    let sinceWarm = 0, streak = 0;
+    let sinceWarm = 0, streak = 0, warmFails = 0;
     for (const j of shard) {
+      if (aborted) break;
       let buf = await fetchImage(req, j.url);
       if (!buf) { await warmup(); sinceWarm = 0; buf = await fetchImage(req, j.url); } // retry after re-warm
-      if (buf) { await writeFile(join(OUT, `${j.id}-${j.side}.jpg`), buf); ok++; streak = 0; }
-      else { fail++; streak++; }
+      if (buf) { await writeFile(join(OUT, `${j.id}-${j.side}.jpg`), buf); ok++; streak = 0; warmFails = 0; }
+      else { fail++; streak++; warmFails++; }
+      // A long streak that survives re-warms means the IP is blocked — stop early.
+      if (warmFails >= ABORT_AFTER) {
+        aborted = true;
+        process.stdout.write(`\n⚠ IP appears blocked after ${warmFails} consecutive failures — switch your VPN to a new server and re-run (progress is saved).\n`);
+        break;
+      }
       if (++sinceWarm >= 120 || streak >= 6) { await warmup(); sinceWarm = 0; streak = 0; }
       if (++done % 50 === 0 || done === jobs.length) process.stdout.write(`\r  ${done}/${jobs.length} (ok ${ok}, fail ${fail})`);
       await sleep(250);
@@ -119,7 +137,9 @@ async function main() {
   process.stdout.write("\n");
 
   await browser.close();
-  console.log(`Done. saved ${ok}, failed ${fail}.`);
+  const remaining = jobs.filter((j) => !existsSync(join(OUT, `${j.id}-${j.side}.jpg`))).length;
+  console.log(`\nDone${aborted ? " (stopped — IP blocked)" : ""}. saved ${ok} this run, ${fail} failed. ${remaining} still missing.`);
+  if (remaining > 0) console.log("Re-run after switching VPN servers to continue (resumable).");
   // Surface a sample saved file size so the caller can sanity-check it's a real image.
   const sample = jobs.find((j) => existsSync(join(OUT, `${j.id}-${j.side}.jpg`)));
   if (sample) {
