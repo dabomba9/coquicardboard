@@ -39,3 +39,18 @@ npx tsx jordan-vault/scrape.ts --no-cache   # bypass the on-disk cache
 Each record carries: id, indexNumber, sourceUrl, slug, name, year, manufacturer,
 brand, cardNumber, cardType, hierarchy (+ parsed `tier`/`page`/`row`), front/back
 image URLs, image flags, playerOdds, psaPopReport, and ebaySoldListings.
+
+## Viewer
+
+`index.html` is a standalone, zero-build browser tool for exploring the dataset
+(search, filter by manufacturer / card type / year, "has image" and "hierarchy
+only" toggles, sort, pagination). It's independent of the Coqui Cardboard app.
+
+It must be **served over http** (it fetches `data/cards.json`, which `file://`
+blocks):
+
+```bash
+npx serve jordan-vault                 # then open the printed URL
+# or:
+(cd jordan-vault && python3 -m http.server 8080)   # → http://localhost:8080
+```

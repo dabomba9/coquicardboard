@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Search, Layers, LayoutGrid, Heart } from "lucide-react";
+import { Menu, X, Search, Layers, LayoutGrid, Heart, Library } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SoundToggle } from "@/components/sound-toggle";
@@ -20,6 +20,7 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
 
   const links: Item[] = [
     { href: "/mj-hierarchy", label: "MJ Hierarchy" },
+    { href: "/vault", label: "Jordan Vault" },
     { href: "/guides", label: "Guides" },
     ...(authed
       ? [
@@ -141,6 +142,7 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
       <div className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border/40 bg-background/80 backdrop-blur-xl md:hidden">
         {[
           { href: "/mj-hierarchy", label: "Cards", Icon: Layers, show: true },
+          { href: "/vault", label: "Vault", Icon: Library, show: true },
           { href: "/collection", label: "Mine", Icon: LayoutGrid, show: authed },
           { href: "/want-list", label: "Want", Icon: Heart, show: authed },
         ].filter((x) => x.show).map(({ href, label, Icon }) => (

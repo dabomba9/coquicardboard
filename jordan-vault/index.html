@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Jordan Vault — Card Explorer</title>
+<style>
+  /* Standalone styling — intentionally independent of the Coqui Cardboard app. */
+  :root {
+    --bg: #0c0a16; --panel: #15121f; --panel-2: #1d1930; --border: #2c2740;
+    --text: #ece9f5; --muted: #9b94b4; --accent: #f5c542; --accent-2: #6ea8ff;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  code, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+  header {
+    padding: 28px 20px 10px; max-width: 1320px; margin: 0 auto;
+  }
+  h1 {
+    margin: 0; font-size: 22px; letter-spacing: .04em; text-transform: uppercase;
+    font-family: ui-monospace, Menlo, monospace;
+  }
+  h1 .vault { color: var(--accent); }
+  .sub { margin-top: 6px; color: var(--muted); font-size: 13px; }
+  .sub b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+  .toolbar {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(12,10,22,.82); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .toolbar-inner {
+    max-width: 1320px; margin: 0 auto; padding: 12px 20px;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
+  .field {
+    height: 36px; border: 1px solid var(--border); background: var(--panel);
+    color: var(--text); border-radius: 999px; padding: 0 14px; font-size: 13px;
+    outline: none; transition: border-color .15s;
+  }
+  .field:hover, .field:focus { border-color: #4a4368; }
+  select.field { padding-right: 28px; cursor: pointer; }
+  #search { flex: 1 1 240px; min-width: 200px; }
+  label.check {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 13px;
+    color: var(--muted); padding: 0 6px; cursor: pointer; user-select: none;
+  }
+  .btn {
+    height: 36px; border: 1px solid var(--border); background: var(--panel);
+    color: var(--muted); border-radius: 999px; padding: 0 14px; font-size: 13px;
+    cursor: pointer; transition: color .15s, border-color .15s;
+  }
+  .btn:hover { color: var(--text); border-color: #4a4368; }
+  .count { margin-left: auto; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+  main { max-width: 1320px; margin: 0 auto; padding: 18px 20px 60px; }
+  .grid {
+    display: grid; gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+  .card {
+    display: flex; flex-direction: column; background: var(--panel);
+    border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+    text-decoration: none; transition: transform .12s, border-color .12s;
+  }
+  .card:hover { transform: translateY(-3px); border-color: #4a4368; }
+  .thumb {
+    position: relative; aspect-ratio: 5 / 7; background: var(--panel-2);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .ph {
+    padding: 10px; text-align: center; font-size: 11px; color: var(--muted); line-height: 1.3;
+  }
+  .pop {
+    position: absolute; right: 6px; bottom: 6px; font-size: 10px; padding: 2px 6px;
+    border-radius: 999px; background: rgba(0,0,0,.6); border: 1px solid var(--border);
+    color: var(--accent-2); text-decoration: none;
+  }
+  .pop:hover { border-color: var(--accent-2); }
+  .meta { padding: 9px 10px 11px; display: flex; flex-direction: column; gap: 3px; }
+  .name {
+    font-size: 12px; line-height: 1.3; font-weight: 600;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .line { font-size: 11px; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .chip {
+    font-size: 9px; text-transform: uppercase; letter-spacing: .04em;
+    padding: 2px 6px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted);
+  }
+  .chip.tier { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+
+  .pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 26px; }
+  .pager .btn[disabled] { opacity: .4; cursor: default; }
+  .pager .pos { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .status { padding: 60px 0; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Jordan <span class="vault">Vault</span> · Card Explorer</h1>
+  <div class="sub" id="counts">Loading the catalog…</div>
+</header>
+
+<div class="toolbar">
+  <div class="toolbar-inner">
+    <input id="search" class="field" type="search" placeholder="Search name or card number…" autocomplete="off" />
+    <select id="manufacturer" class="field" aria-label="Manufacturer"></select>
+    <select id="cardType" class="field" aria-label="Card type"></select>
+    <select id="year" class="field" aria-label="Year"></select>
+    <select id="sort" class="field" aria-label="Sort">
+      <option value="year">Sort: Year ↑</option>
+      <option value="year_desc">Sort: Year ↓</option>
+      <option value="name">Sort: Name</option>
+      <option value="manufacturer">Sort: Manufacturer</option>
+      <option value="cardType">Sort: Card type</option>
+    </select>
+    <label class="check"><input type="checkbox" id="hasImage" /> Has image</label>
+    <label class="check"><input type="checkbox" id="hierOnly" /> Hierarchy only</label>
+    <button id="reset" class="btn">Reset</button>
+    <span class="count" id="showing"></span>
+  </div>
+</div>
+
+<main>
+  <div id="status" class="status">Loading…</div>
+  <div id="grid" class="grid" hidden></div>
+  <div id="pager" class="pager" hidden>
+    <button id="prev" class="btn">‹ Prev</button>
+    <span class="pos" id="pos"></span>
+    <button id="next" class="btn">Next ›</button>
+  </div>
+</main>
+
+<script>
+const PAGE_SIZE = 48;
+const els = {
+  counts: document.getElementById("counts"),
+  status: document.getElementById("status"),
+  grid: document.getElementById("grid"),
+  pager: document.getElementById("pager"),
+  pos: document.getElementById("pos"),
+  prev: document.getElementById("prev"),
+  next: document.getElementById("next"),
+  showing: document.getElementById("showing"),
+  search: document.getElementById("search"),
+  manufacturer: document.getElementById("manufacturer"),
+  cardType: document.getElementById("cardType"),
+  year: document.getElementById("year"),
+  sort: document.getElementById("sort"),
+  hasImage: document.getElementById("hasImage"),
+  hierOnly: document.getElementById("hierOnly"),
+  reset: document.getElementById("reset"),
+};
+
+let ALL = [];
+let filtered = [];
+let page = 0;
+
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function fillSelect(sel, values, allLabel) {
+  sel.innerHTML = `<option value="">${allLabel}</option>` +
+    values.map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+}
+
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+function applyFilters() {
+  const q = els.search.value.trim().toLowerCase();
+  const man = els.manufacturer.value;
+  const ct = els.cardType.value;
+  const yr = els.year.value;
+  const needImg = els.hasImage.checked;
+  const hier = els.hierOnly.checked;
+
+  filtered = ALL.filter((c) => {
+    if (q && !(`${c.name ?? ""} ${c.cardNumber ?? ""}`.toLowerCase().includes(q))) return false;
+    if (man && c.manufacturer !== man) return false;
+    if (ct && c.cardType !== ct) return false;
+    if (yr && String(c.year) !== yr) return false;
+    if (needImg && !c.frontImage) return false;
+    if (hier && c.tier == null) return false;
+    return true;
+  });
+
+  const s = els.sort.value;
+  const byName = (a, b) => (a.name ?? "").localeCompare(b.name ?? "");
+  const cmp = {
+    year: (a, b) => (a.year ?? 0) - (b.year ?? 0) || byName(a, b),
+    year_desc: (a, b) => (b.year ?? 0) - (a.year ?? 0) || byName(a, b),
+    name: byName,
+    manufacturer: (a, b) => (a.manufacturer ?? "").localeCompare(b.manufacturer ?? "") || byName(a, b),
+    cardType: (a, b) => (a.cardType ?? "").localeCompare(b.cardType ?? "") || byName(a, b),
+  }[s];
+  filtered.sort(cmp);
+
+  page = 0;
+  render();
+}
+
+function render() {
+  const total = filtered.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (page >= pages) page = pages - 1;
+  const start = page * PAGE_SIZE;
+  const slice = filtered.slice(start, start + PAGE_SIZE);
+
+  els.showing.textContent = total
+    ? `Showing ${start + 1}–${start + slice.length} of ${total.toLocaleString()}`
+    : "No matches";
+
+  if (!total) {
+    els.grid.hidden = true;
+    els.pager.hidden = true;
+    els.status.hidden = false;
+    els.status.textContent = "No cards match your filters.";
+    return;
+  }
+  els.status.hidden = true;
+  els.grid.hidden = false;
+
+  els.grid.innerHTML = slice.map((c) => {
+    const img = c.frontImage
+      ? `<img loading="lazy" src="${esc(c.frontImage)}" alt="${esc(c.name)}"
+            onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ph',textContent:'no image'}))" />`
+      : `<div class="ph">no image</div>`;
+    const pop = c.psaPopReport
+      ? `<a class="pop" href="${esc(c.psaPopReport)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">PSA pop</a>`
+      : "";
+    const sub = [c.year, c.manufacturer].filter(Boolean).join(" · ");
+    const chips = [
+      c.cardType ? `<span class="chip">${esc(c.cardType)}</span>` : "",
+      c.tier != null ? `<span class="chip tier">Tier ${c.tier} · P${c.page} R${c.row}</span>` : "",
+    ].join("");
+    const href = c.sourceUrl ? `href="${esc(c.sourceUrl)}" target="_blank" rel="noopener"` : "";
+    return `<a class="card" ${href}>
+      <div class="thumb">${img}${pop}</div>
+      <div class="meta">
+        <div class="name">${esc(c.name)}</div>
+        <div class="line">${esc(sub)}${c.cardNumber ? " · " + esc(c.cardNumber) : ""}</div>
+        <div class="chips">${chips}</div>
+      </div>
+    </a>`;
+  }).join("");
+
+  els.pager.hidden = false;
+  els.pos.textContent = `Page ${page + 1} of ${pages}`;
+  els.prev.disabled = page === 0;
+  els.next.disabled = page >= pages - 1;
+  window.scrollTo({ top: 0 });
+}
+
+async function init() {
+  let data;
+  try {
+    const res = await fetch("./data/cards.json");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    data = await res.json();
+  } catch (e) {
+    els.status.textContent =
+      "Could not load data/cards.json — make sure you're serving this folder over http (not opening the file directly). See README.";
+    return;
+  }
+  ALL = data;
+  const withImg = ALL.filter((c) => c.frontImage).length;
+  els.counts.innerHTML =
+    `<b>${ALL.length.toLocaleString()}</b> Michael Jordan cards · <b>${withImg.toLocaleString()}</b> with images · ` +
+    `source <a href="https://www.jordan-vault.com/cards" target="_blank" rel="noopener" style="color:var(--accent-2)">jordan-vault.com</a>`;
+
+  const distinct = (f) => [...new Set(ALL.map((c) => c[f]).filter((v) => v != null))];
+  fillSelect(els.manufacturer, distinct("manufacturer").sort(), "All manufacturers");
+  fillSelect(els.cardType, distinct("cardType").sort(), "All card types");
+  fillSelect(els.year, distinct("year").sort((a, b) => a - b), "All years");
+
+  const onChange = () => applyFilters();
+  els.search.addEventListener("input", debounce(onChange, 180));
+  [els.manufacturer, els.cardType, els.year, els.sort, els.hasImage, els.hierOnly].forEach((el) =>
+    el.addEventListener("change", onChange)
+  );
+  els.prev.addEventListener("click", () => { if (page > 0) { page--; render(); } });
+  els.next.addEventListener("click", () => { page++; render(); });
+  els.reset.addEventListener("click", () => {
+    els.search.value = ""; els.manufacturer.value = ""; els.cardType.value = "";
+    els.year.value = ""; els.sort.value = "year"; els.hasImage.checked = false; els.hierOnly.checked = false;
+    applyFilters();
+  });
+
+  applyFilters();
+}
+
+init();
+</script>
+</body>
+</html>
