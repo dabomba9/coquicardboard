@@ -4,35 +4,39 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { CardThumb } from "@/components/card-thumb";
+import { Button } from "@/components/ui/primitives";
+import { removeFromWantList } from "@/lib/actions/holdings";
 import { cn, formatUsd, TIER_COLORS } from "@/lib/utils";
 import type { CardWithSet } from "@/lib/types";
 
-export type CollectionCard = CardWithSet & { copies: number; marketValueCents: number };
+export type WantCard = CardWithSet & { want_id: string; priority: number };
 type TierMeta = { id: number; name: string };
-type SortKey = "tier" | "value" | "copies" | "year" | "name";
+type SortKey = "priority" | "tier" | "value" | "year" | "name";
 
 const SORTS: { key: SortKey; label: string }[] = [
+  { key: "priority", label: "Priority" },
   { key: "tier", label: "Tier" },
   { key: "value", label: "Value" },
-  { key: "copies", label: "Copies" },
   { key: "year", label: "Year" },
   { key: "name", label: "Name" },
 ];
 
-export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tiers: TierMeta[] }) {
+const PRIORITY_LABEL: Record<number, string> = { 1: "High", 2: "Med", 3: "Low" };
+
+export function WantListGrid({ cards, tiers }: { cards: WantCard[]; tiers: TierMeta[] }) {
   const [q, setQ] = useState("");
   const [tierFilter, setTierFilter] = useState<Set<number>>(new Set());
-  const [sortBy, setSortBy] = useState<SortKey>("tier");
+  const [sortBy, setSortBy] = useState<SortKey>("priority");
   const [view, setView] = useState<"grid" | "list">("grid");
 
   // Persist the grid/list preference (synced after mount to avoid a hydration mismatch).
   useEffect(() => {
-    const saved = localStorage.getItem("mj.collection.view");
+    const saved = localStorage.getItem("mj.wantlist.view");
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (saved === "grid" || saved === "list") setView(saved);
   }, []);
   useEffect(() => {
-    localStorage.setItem("mj.collection.view", view);
+    localStorage.setItem("mj.wantlist.view", view);
   }, [view]);
 
   const filtered = useMemo(() => {
@@ -42,10 +46,10 @@ export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tier
       if (tierFilter.size && !tierFilter.has(c.tier_id)) return false;
       return true;
     });
-    const cmp: Record<SortKey, (a: CollectionCard, b: CollectionCard) => number> = {
+    const cmp: Record<SortKey, (a: WantCard, b: WantCard) => number> = {
+      priority: (a, b) => a.priority - b.priority || a.tier_id - b.tier_id,
       tier: (a, b) => a.tier_id - b.tier_id || a.rarity_rank - b.rarity_rank,
-      value: (a, b) => b.marketValueCents - a.marketValueCents,
-      copies: (a, b) => b.copies - a.copies,
+      value: (a, b) => (b.catalog_value_cents ?? 0) - (a.catalog_value_cents ?? 0),
       year: (a, b) => (a.year ?? 0) - (b.year ?? 0),
       name: (a, b) => a.name.localeCompare(b.name),
     };
@@ -55,7 +59,7 @@ export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tier
   // Group into tier sections only when sorting by tier; otherwise one flat list.
   const groups = useMemo(() => {
     if (sortBy !== "tier") return [{ label: null as string | null, items: filtered }];
-    const map = new Map<number, { label: string; items: CollectionCard[] }>();
+    const map = new Map<number, { label: string; items: WantCard[] }>();
     for (const c of filtered) {
       if (!map.has(c.tier_id)) {
         const t = tiers.find((x) => x.id === c.tier_id);
@@ -80,7 +84,7 @@ export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tier
   const hasFilters = q !== "" || tierFilter.size > 0;
 
   return (
-    <div className="mt-8">
+    <div className="mt-6">
       {/* Controls — modern command bar (mirrors the floating navbar) */}
       <div className="font-modern sticky top-20 z-10 mb-6 rounded-2xl border border-border/45 bg-background/70 px-4 py-3 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.30)] backdrop-blur-xl">
         <div className="flex flex-wrap items-center gap-2">
@@ -89,7 +93,7 @@ export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tier
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search your cards…"
+              placeholder="Search your want list…"
               className="h-9 w-full rounded-full border border-border/60 bg-foreground/[0.03] pl-9 pr-3.5 text-sm text-foreground transition-colors placeholder:text-muted hover:border-border focus:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
@@ -144,34 +148,38 @@ export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tier
               {view === "grid" ? (
                 <div className={cn("grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8", g.label && "mt-4")}>
                   {g.items.map((card) => (
-                    <Link key={card.id} href={`/collection/${card.slug}`} className="group relative">
-                      <CardThumb card={card} className="transition-transform group-hover:-translate-y-1 [--border:var(--gold)]" />
-                      {card.copies > 1 && (
-                        <span className="pointer-events-none absolute right-1 top-1 pixel-box bg-[var(--gold)] px-1 font-sans text-[9px] text-black [--border:var(--gold)]">×{card.copies}</span>
-                      )}
-                    </Link>
+                    <div key={card.want_id} className="group">
+                      <Link href={`/cards/${card.slug}`} className="relative block">
+                        <CardThumb card={card} className="transition-transform group-hover:-translate-y-1" />
+                        <span className="pointer-events-none absolute left-1 top-1 bg-background/80 px-1 font-sans text-[9px] uppercase text-muted backdrop-blur-sm">{PRIORITY_LABEL[card.priority] ?? "Med"}</span>
+                      </Link>
+                      <form action={removeFromWantList.bind(null, card.id)} className="mt-1">
+                        <Button size="sm" variant="ghost" type="submit" className="w-full text-xs text-muted">Remove</Button>
+                      </form>
+                    </div>
                   ))}
                 </div>
               ) : (
                 <div className={cn("space-y-1.5", g.label && "mt-4")}>
                   {g.items.map((card) => (
-                    <Link
-                      key={card.id}
-                      href={`/collection/${card.slug}`}
-                      className="flex items-center gap-3 rounded-xl border border-border/45 bg-card/40 p-2 transition-colors hover:bg-card/70"
-                    >
-                      <div className="w-9 shrink-0">
-                        <CardThumb card={card} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium">{card.name}</div>
-                        <div className="truncate text-xs text-muted">
-                          {[card.sets?.name, card.year].filter(Boolean).join(" · ")}
+                    <div key={card.want_id} className="flex items-center gap-3 rounded-xl border border-border/45 bg-card/40 p-2 transition-colors hover:bg-card/70">
+                      <Link href={`/cards/${card.slug}`} className="flex min-w-0 flex-1 items-center gap-3">
+                        <div className="w-9 shrink-0">
+                          <CardThumb card={card} />
                         </div>
-                      </div>
-                      {card.copies > 1 && <span className="font-data text-xs text-muted">×{card.copies}</span>}
-                      <span className="font-data text-sm text-muted">{formatUsd(card.marketValueCents)}</span>
-                    </Link>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium">{card.name}</div>
+                          <div className="truncate text-xs text-muted">
+                            {[card.sets?.name, card.year].filter(Boolean).join(" · ")}
+                          </div>
+                        </div>
+                      </Link>
+                      <span className="font-sans text-[10px] uppercase text-muted">{PRIORITY_LABEL[card.priority] ?? "Med"}</span>
+                      <span className="font-data text-sm text-muted">{formatUsd(card.catalog_value_cents)}</span>
+                      <form action={removeFromWantList.bind(null, card.id)}>
+                        <Button size="sm" variant="ghost" type="submit" className="text-xs text-muted">Remove</Button>
+                      </form>
+                    </div>
                   ))}
                 </div>
               )}

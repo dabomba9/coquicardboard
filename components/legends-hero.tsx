@@ -42,14 +42,14 @@ function SlotInner({ l }: { l: Legend }) {
         aria-hidden="true"
       />
       {/* sprite */}
-      <div className="relative aspect-[3/4] w-full">
+      <div className="relative aspect-[2/3] w-full">
         <Image
           src={l.img}
           alt={`${l.name} — ${l.team} #${l.number}`}
           fill
           unoptimized
           sizes="(max-width: 768px) 45vw, 22vw"
-          className="pixelated object-contain object-bottom drop-shadow-[0_8px_10px_rgba(0,0,0,0.55)]"
+          className="pixelated origin-bottom scale-[1.08] object-contain object-bottom drop-shadow-[0_10px_12px_rgba(0,0,0,0.6)]"
         />
       </div>
       {/* name plate */}

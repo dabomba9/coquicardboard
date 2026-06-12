@@ -7,7 +7,7 @@ import { PortfolioChart } from "@/components/portfolio-chart";
 import { CompletionRing } from "@/components/completion-ring";
 import { CollectionGrid } from "@/components/collection-grid";
 import { Panel } from "@/components/ui/primitives";
-import { cn, formatUsd, TIER_COLORS } from "@/lib/utils";
+import { cn, formatUsd, gradeKey, TIER_COLORS } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +22,24 @@ export default async function CollectionPage() {
   const ownedCardIds = new Set(holdings.map((h) => h.card_id));
   const copiesByCard = new Map<string, number>();
   for (const h of holdings) copiesByCard.set(h.card_id, (copiesByCard.get(h.card_id) ?? 0) + 1);
+  // Real per-card market value: sum the user's holdings of each card, priced by
+  // grade (same lookup priority as computeTierSummary), falling back to catalog value.
   const ownedFlat = tiers.flatMap((t) =>
     (byTier[t.id] ?? [])
       .filter((c) => ownedCardIds.has(c.id))
-      .map((c) => ({ ...c, copies: copiesByCard.get(c.id) ?? 1 }))
+      .map((c) => {
+        const marketValueCents = holdings
+          .filter((h) => h.card_id === c.id)
+          .reduce((sum, h) => {
+            const gk = gradeKey(h.condition_type, h.grading_company, h.grade);
+            const unit =
+              priceMap.get(`${c.id}|${gk}`) ??
+              priceMap.get(`${c.id}|raw`) ??
+              (c.catalog_value_cents ?? 0);
+            return sum + unit * Math.max(h.quantity, 1);
+          }, 0);
+        return { ...c, copies: copiesByCard.get(c.id) ?? 1, marketValueCents };
+      })
   );
   const totalCards = tiers.reduce((s, t) => s + t.card_count, 0);
   const totalOwned = ownedCardIds.size;
