@@ -55,7 +55,7 @@ export default async function CollectionPage() {
   const stat = (label: string, value: string, sub: string, valueCls?: string) => (
     <Panel className="p-4">
       <div className="font-sans text-[9px] uppercase tracking-wide text-muted">{label}</div>
-      <div className={cn("mt-1 font-data text-2xl leading-none", valueCls)}>{value}</div>
+      <div className={cn("mt-1 font-num text-2xl leading-none", valueCls)}>{value}</div>
       <div className="mt-1 text-[11px] text-muted">{sub}</div>
     </Panel>
   );
@@ -120,7 +120,7 @@ export default async function CollectionPage() {
               <div className="meter mt-2" style={{ ["--meter" as string]: `var(--tier-${s.tier_id})` } as React.CSSProperties}>
                 <span style={{ width: `${pct}%` }} />
               </div>
-              <div className="mt-2 font-data text-base text-muted">{formatUsd(s.est_value_cents)}</div>
+              <div className="mt-2 font-num text-base text-muted">{formatUsd(s.est_value_cents)}</div>
             </Panel>
           );
         })}

@@ -37,7 +37,7 @@ export function PriceChart({ series }: { series: PriceSeries[] }) {
         ))}
         {latest && (
           <span className="ml-auto text-sm">
-            <span className="font-data text-xl">{formatUsd(latest.value)}</span>
+            <span className="font-num text-xl">{formatUsd(latest.value)}</span>
             <span className="ml-2 text-xs text-muted">estimated · as of {fmtMonth(latest.date)}</span>
           </span>
         )}
@@ -48,7 +48,7 @@ export function PriceChart({ series }: { series: PriceSeries[] }) {
             <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
             <XAxis dataKey="date" tick={{ fontSize: 13, fill: "var(--chart-axis)", fontFamily: "var(--font-data)" }} minTickGap={28} />
             <YAxis
-              tick={{ fontSize: 13, fill: "var(--chart-axis)", fontFamily: "var(--font-data)" }} width={64}
+              tick={{ fontSize: 13, fill: "var(--chart-axis)", fontFamily: "var(--font-sans)" }} width={64}
               tickFormatter={(v) => formatUsd(v * 100)}
             />
             <Tooltip

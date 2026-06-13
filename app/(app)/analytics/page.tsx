@@ -16,7 +16,7 @@ function BarList({ rows }: { rows: GroupRow[] }) {
         <div key={r.label}>
           <div className="flex items-baseline justify-between text-sm">
             <span>{r.label} <span className="font-data text-base text-muted">· {r.count}</span></span>
-            <span className="font-data text-base">{formatUsd(r.value)}</span>
+            <span className="font-num text-base">{formatUsd(r.value)}</span>
           </div>
           <div className="meter mt-1" style={{ ["--meter" as string]: "var(--gold)" } as React.CSSProperties}>
             <span style={{ width: `${(r.value / max) * 100}%` }} />
@@ -52,7 +52,7 @@ export default async function AnalyticsPage() {
       <h1 className="font-display text-lg uppercase tracking-tight">Insights</h1>
       <p className="mt-2 text-sm text-muted">
         Analytics for your collection · est. market value{" "}
-        <span className="font-data text-base text-foreground">{formatUsd(totalValue)}</span> ·{" "}
+        <span className="font-num text-base text-foreground">{formatUsd(totalValue)}</span> ·{" "}
         <span className="text-xs">estimated, not investment advice</span>
       </p>
 

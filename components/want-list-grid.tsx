@@ -175,7 +175,7 @@ export function WantListGrid({ cards, tiers }: { cards: WantCard[]; tiers: TierM
                         </div>
                       </Link>
                       <span className="font-sans text-[10px] uppercase text-muted">{PRIORITY_LABEL[card.priority] ?? "Med"}</span>
-                      <span className="font-data text-sm text-muted">{formatUsd(card.catalog_value_cents)}</span>
+                      <span className="font-num text-sm text-muted">{formatUsd(card.catalog_value_cents)}</span>
                       <form action={removeFromWantList.bind(null, card.id)}>
                         <Button size="sm" variant="ghost" type="submit" className="text-xs text-muted">Remove</Button>
                       </form>

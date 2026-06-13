@@ -404,7 +404,7 @@ export function HierarchyExplorer({
                       <td className="py-2 pr-2 font-data text-base text-muted">{card.year}</td>
                       <td className="py-2 pr-2 font-data text-base text-muted">{card.card_number ? `#${card.card_number}` : ""}</td>
                       <td className="py-2 pr-2 font-data text-base text-muted">{card.tier_id}</td>
-                      <td className="py-2 pr-2 text-right font-data text-base">{card.value_cents ? formatUsd(card.value_cents) : "—"}</td>
+                      <td className="py-2 pr-2 text-right font-num text-base">{card.value_cents ? formatUsd(card.value_cents) : "—"}</td>
                       {signedIn && <td className="py-2 pr-2 text-center text-[var(--gold)]">{isOwned(card) ? "✓" : ""}</td>}
                     </tr>
                   ))}

@@ -170,7 +170,7 @@ export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tier
                         </div>
                       </div>
                       {card.copies > 1 && <span className="font-data text-xs text-muted">×{card.copies}</span>}
-                      <span className="font-data text-sm text-muted">{formatUsd(card.marketValueCents)}</span>
+                      <span className="font-num text-sm text-muted">{formatUsd(card.marketValueCents)}</span>
                     </Link>
                   ))}
                 </div>
