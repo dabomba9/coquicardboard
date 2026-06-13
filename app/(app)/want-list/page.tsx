@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { getMyWantList } from "@/lib/queries";
-import { removeFromWantList } from "@/lib/actions/holdings";
-import { CardThumb } from "@/components/card-thumb";
-import { Button, Panel } from "@/components/ui/primitives";
+import { getMyWantList, getTiers } from "@/lib/queries";
+import { Panel } from "@/components/ui/primitives";
+import { WantListGrid } from "@/components/want-list-grid";
 
 export const dynamic = "force-dynamic";
 
 export default async function WantListPage() {
-  const wants = await getMyWantList();
+  const [wants, tiers] = await Promise.all([getMyWantList(), getTiers()]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
@@ -17,24 +16,11 @@ export default async function WantListPage() {
       {wants.length === 0 ? (
         <Panel className="mt-6 p-8 text-center text-sm text-muted">
           Nothing here yet. Open any card in the{" "}
-          <Link href="/mj-hierarchy" className="text-amber-500 hover:underline">hierarchy</Link>{" "}
+          <Link href="/mj-hierarchy" className="text-accent hover:underline">hierarchy</Link>{" "}
           and add it to your want list.
         </Panel>
       ) : (
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-          {wants.map((card) => (
-            <div key={card.want_id} className="group">
-              <Link href={`/cards/${card.slug}`}>
-                <CardThumb card={card} className="transition-transform group-hover:-translate-y-1" />
-              </Link>
-              <form action={removeFromWantList.bind(null, card.id)} className="mt-1">
-                <Button size="sm" variant="ghost" type="submit" className="w-full text-xs text-muted">
-                  Remove
-                </Button>
-              </form>
-            </div>
-          ))}
-        </div>
+        <WantListGrid cards={wants} tiers={tiers.map((t) => ({ id: t.id, name: t.name }))} />
       )}
     </div>
   );

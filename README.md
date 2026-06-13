@@ -117,8 +117,23 @@ npm run prices:ebay -- --limit 10
 npm run prices:ebay -- --tier 1
 ```
 This writes median **active-listing (asking)** prices into `card_prices` (`source='ebay (asking)'`)
-plus a fresh `price_history` point. Asking ≠ sold comps (eBay's sold-comp API is partner-gated),
-so treat it as a live ceiling, not a settled value — it coexists with the estimated history.
+plus a fresh `price_history` point. Asking ≠ sold comps, so treat it as a live ceiling, not a
+settled value — it coexists with the estimated history.
+
+**eBay SOLD comps** (real settled prices — the most accurate source): these come from eBay's
+**Marketplace Insights API**, which is access-gated — apply for it at developer.ebay.com on your
+Production keyset. Once approved, the same keys work (the app requests the
+`buy.marketplace.insights` scope at runtime):
+```bash
+npm run prices:sold              # all cards
+npm run prices:sold -- --limit 10
+npm run prices:sold -- --tier 1
+```
+This writes median **sold** prices (`source='ebay (sold)'`) + a `price_history` point
+(`source='ebay-sold'`). Sold takes precedence over asking and estimated (one row per card+grade).
+Until access is granted the script exits cleanly with an "apply for access" message and writes
+nothing. The nightly cron ([app/api/cron/refresh-prices](app/api/cron/refresh-prices/route.ts))
+automatically prefers sold → asking → keeps estimates.
 
 ## Data & rights (read before scaling)
 

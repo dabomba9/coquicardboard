@@ -21,7 +21,7 @@ export function ThemeToggle() {
       type="button"
       aria-label={label}
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted transition-colors hover:text-foreground hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
     >
       {/* Avoid hydration mismatch: render a neutral icon until mounted. */}
       {mounted ? (isDark ? <Sun size={16} /> : <Moon size={16} />) : <Sun size={16} className="opacity-0" />}

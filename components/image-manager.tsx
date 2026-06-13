@@ -139,9 +139,9 @@ function ImageRow({
           </div>
           <div className="shrink-0 text-xs">
             <span className="text-muted">Search: </span>
-            <a href={ebay} target="_blank" rel="noreferrer" className="text-amber-500 hover:underline">eBay</a>
+            <a href={ebay} target="_blank" rel="noreferrer" className="text-accent hover:underline">eBay</a>
             <span className="text-muted"> · </span>
-            <a href={google} target="_blank" rel="noreferrer" className="text-amber-500 hover:underline">Google</a>
+            <a href={google} target="_blank" rel="noreferrer" className="text-accent hover:underline">Google</a>
           </div>
         </div>
         <div className="mt-2 flex gap-2">

@@ -36,10 +36,10 @@ export default async function PublicProfilePage({
           const pct = t.total_cards ? Math.round((t.owned_cards / t.total_cards) * 100) : 0;
           return (
             <Panel key={t.tier_id} className="p-4">
-              <div className={cn("text-xs font-semibold uppercase", c.text)}>{t.tier_name}</div>
-              <div className="mt-2 text-sm text-muted">{t.owned_cards} / {t.total_cards}</div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-foreground/5">
-                <div className={cn("h-full rounded-full", c.bar)} style={{ width: `${pct}%` }} />
+              <div className={cn("font-sans text-[10px] uppercase tracking-wide", c.text)}>{t.tier_name}</div>
+              <div className="mt-2 font-data text-base text-muted">{t.owned_cards} / {t.total_cards}</div>
+              <div className="meter mt-2" style={{ ["--meter" as string]: `var(--tier-${t.tier_id})` } as React.CSSProperties}>
+                <span style={{ width: `${pct}%` }} />
               </div>
             </Panel>
           );

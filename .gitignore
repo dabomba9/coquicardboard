@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# jordan-vault scraper: raw response cache (data outputs ARE committed)
+jordan-vault/.cache/

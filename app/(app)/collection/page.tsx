@@ -3,11 +3,11 @@ import {
   getTiers, getCardsByTier, getMyHoldings, getCardIndex, getPriceMap, computeTierSummary,
   getPortfolioSeries,
 } from "@/lib/queries";
-import { CardThumb } from "@/components/card-thumb";
 import { PortfolioChart } from "@/components/portfolio-chart";
 import { CompletionRing } from "@/components/completion-ring";
-import { Badge, Panel } from "@/components/ui/primitives";
-import { cn, formatUsd, TIER_COLORS } from "@/lib/utils";
+import { CollectionGrid } from "@/components/collection-grid";
+import { Panel } from "@/components/ui/primitives";
+import { cn, formatUsd, gradeKey, TIER_COLORS } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +20,27 @@ export default async function CollectionPage() {
   const portfolio = await getPortfolioSeries(holdings);
 
   const ownedCardIds = new Set(holdings.map((h) => h.card_id));
+  const copiesByCard = new Map<string, number>();
+  for (const h of holdings) copiesByCard.set(h.card_id, (copiesByCard.get(h.card_id) ?? 0) + 1);
+  // Real per-card market value: sum the user's holdings of each card, priced by
+  // grade (same lookup priority as computeTierSummary), falling back to catalog value.
+  const ownedFlat = tiers.flatMap((t) =>
+    (byTier[t.id] ?? [])
+      .filter((c) => ownedCardIds.has(c.id))
+      .map((c) => {
+        const marketValueCents = holdings
+          .filter((h) => h.card_id === c.id)
+          .reduce((sum, h) => {
+            const gk = gradeKey(h.condition_type, h.grading_company, h.grade);
+            const unit =
+              priceMap.get(`${c.id}|${gk}`) ??
+              priceMap.get(`${c.id}|raw`) ??
+              (c.catalog_value_cents ?? 0);
+            return sum + unit * Math.max(h.quantity, 1);
+          }, 0);
+        return { ...c, copies: copiesByCard.get(c.id) ?? 1, marketValueCents };
+      })
+  );
   const totalCards = tiers.reduce((s, t) => s + t.card_count, 0);
   const totalOwned = ownedCardIds.size;
   const totalValue = summary.reduce((s, t) => s + (t.est_value_cents ?? 0), 0);
@@ -29,20 +50,20 @@ export default async function CollectionPage() {
 
   const stat = (label: string, value: string, sub: string, valueCls?: string) => (
     <Panel className="p-4">
-      <div className="text-xs text-muted">{label}</div>
-      <div className={cn("mt-1 text-xl font-semibold", valueCls)}>{value}</div>
-      <div className="mt-0.5 text-[11px] text-muted">{sub}</div>
+      <div className="font-sans text-[9px] uppercase tracking-wide text-muted">{label}</div>
+      <div className={cn("mt-1 font-data text-2xl leading-none", valueCls)}>{value}</div>
+      <div className="mt-1 text-[11px] text-muted">{sub}</div>
     </Panel>
   );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">My Collection</h1>
+      <h1 className="font-display text-lg uppercase tracking-tight">My Collection</h1>
 
       {totalOwned === 0 ? (
         <Panel className="mt-6 p-8 text-center text-sm text-muted">
           You haven&apos;t added any cards yet. Browse the{" "}
-          <Link href="/mj-hierarchy" className="text-amber-500 hover:underline">hierarchy</Link>{" "}
+          <Link href="/mj-hierarchy" className="text-accent hover:underline">hierarchy</Link>{" "}
           and open a card to add a copy.
         </Panel>
       ) : (
@@ -63,7 +84,7 @@ export default async function CollectionPage() {
                 "Unrealized gain/loss",
                 withCost ? `${gain >= 0 ? "+" : "−"}${formatUsd(Math.abs(gain))}` : "—",
                 "market − cost",
-                withCost ? (gain >= 0 ? "text-emerald-500" : "text-red-500") : undefined
+                withCost ? (gain >= 0 ? "text-accent" : "text-red-500") : undefined
               )}
             </div>
           </div>
@@ -86,43 +107,20 @@ export default async function CollectionPage() {
           const pct = s.total_cards ? Math.round((s.owned_cards / s.total_cards) * 100) : 0;
           return (
             <Panel key={s.tier_id} className="p-4">
-              <div className={cn("text-xs font-semibold uppercase", c.text)}>Tier {s.tier_id}</div>
-              <div className="mt-0.5 text-sm font-medium">{s.tier_name}</div>
-              <div className="mt-2 text-sm text-muted">{s.owned_cards} / {s.total_cards}</div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-foreground/5">
-                <div className={cn("h-full rounded-full", c.bar)} style={{ width: `${pct}%` }} />
+              <div className={cn("font-sans text-[10px] uppercase tracking-wide", c.text)}>Tier {s.tier_id}</div>
+              <div className="mt-1 text-sm font-medium">{s.tier_name}</div>
+              <div className="mt-2 font-data text-base text-muted">{s.owned_cards} / {s.total_cards}</div>
+              <div className="meter mt-2" style={{ ["--meter" as string]: `var(--tier-${s.tier_id})` } as React.CSSProperties}>
+                <span style={{ width: `${pct}%` }} />
               </div>
-              <div className="mt-2 text-xs text-muted">{formatUsd(s.est_value_cents)}</div>
+              <div className="mt-2 font-data text-base text-muted">{formatUsd(s.est_value_cents)}</div>
             </Panel>
           );
         })}
       </div>
 
-      {/* Owned cards by tier */}
-      <div className="mt-10 space-y-10">
-        {tiers.map((tier) => {
-          const owned = (byTier[tier.id] ?? []).filter((c) => ownedCardIds.has(c.id));
-          if (owned.length === 0) return null;
-          return (
-            <section key={tier.id}>
-              <h2 className="border-b border-border pb-2 text-lg font-semibold">{tier.name}</h2>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-                {owned.map((card) => {
-                  const copies = holdings.filter((h) => h.card_id === card.id).length;
-                  return (
-                    <Link key={card.id} href={`/collection/${card.slug}`} className="group relative">
-                      <CardThumb card={card} className="ring-2 ring-amber-400 transition-transform group-hover:-translate-y-1" />
-                      {copies > 1 && (
-                        <Badge className="absolute right-1 top-1 bg-amber-500 text-black ring-amber-400">×{copies}</Badge>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          );
-        })}
-      </div>
+      {/* Owned cards — modern filter bar + grid/list */}
+      <CollectionGrid cards={ownedFlat} tiers={tiers.map((t) => ({ id: t.id, name: t.name }))} />
       </>
       )}
     </div>

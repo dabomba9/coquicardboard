@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { sendMagicLink, signInWithGoogle } from "@/lib/actions/auth";
 import { Button, Input, Label, Panel } from "@/components/ui/primitives";
+import { Coqui } from "@/components/mascot/coqui";
 
 export default function LoginPage() {
   const [state, action, pending] = useActionState(sendMagicLink, null as
@@ -11,10 +12,14 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto max-w-md px-4 py-16">
-      <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
-      <p className="mt-1 text-sm text-muted">
-        Track your Michael Jordan collection across the hierarchy.
-      </p>
+      <div className="flex flex-col items-center text-center">
+        <Coqui pose="wave" size={72} aria-label="Coqui waving" />
+        <p className="mt-2 font-sans text-[10px] uppercase tracking-[0.3em] text-accent">▸ Insert Coin</p>
+        <h1 className="mt-3 font-display text-lg uppercase tracking-tight">Press Start</h1>
+        <p className="mt-2 text-sm text-muted">
+          Track your Michael Jordan collection across the hierarchy.
+        </p>
+      </div>
 
       <Panel className="mt-6 p-6">
         {state?.ok ? (

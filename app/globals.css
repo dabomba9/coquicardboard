@@ -3,32 +3,79 @@
 /* Class-based dark mode (next-themes adds .dark on <html>). */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Light theme (default) */
+/* =========================================================================
+   COQUI CARDBOARD — 16/32-bit JRPG design system
+   Light = "overworld / daytime" (parchment). Dark = "night / dungeon" (the
+   classic blue SNES dialog box). Accent = Coqui green; gold/purple/blue/green
+   tiers map onto the loot-rarity color language.
+   ========================================================================= */
+
+/* Light theme (overworld / daytime — parchment) */
 :root {
-  --background: #f6f7f9;
-  --foreground: #0e1116;
-  --muted: #616b7a;
-  --card: #ffffff;
-  --elevated: #ffffff;
-  --border: #e6e8ec;
-  --accent: #d97706; /* amber-600 — readable on light */
-  --ring: #f59e0b;
-  --chart-grid: #e6e8ec;
-  --chart-axis: #8b94a3;
+  --background: #efe6cd;
+  --foreground: #2b2415;
+  --muted: #6f6448;
+  --card: #fbf4df;
+  --elevated: #fffaee;
+  --border: #b08a4e;        /* hard tan border — feeds the bevel */
+  --border-light: #f3e7c6;  /* bevel top-left highlight */
+  --border-shadow: #8a6a36; /* bevel bottom-right shadow */
+  --accent: #2e8b2e;        /* Coqui green, readable on light */
+  --ring: #2e8b2e;
+  --gold: #b9860d;          /* secondary "treasure" accent */
+  --shadow-ink: #7a5a2a;    /* hard headline drop-shadow (dark brown on parchment) */
+  --chart-grid: #d9c89c;
+  --chart-axis: #8a7c58;
+
+  /* Loot-rarity tier palette */
+  --tier-1: #b9860d; --tier-1-bg: color-mix(in oklab, #b9860d 15%, transparent);
+  --tier-2: #8a3fd1; --tier-2-bg: color-mix(in oklab, #8a3fd1 14%, transparent);
+  --tier-3: #2f6fd0; --tier-3-bg: color-mix(in oklab, #2f6fd0 14%, transparent);
+  --tier-4: #2f9e44; --tier-4-bg: color-mix(in oklab, #2f9e44 14%, transparent);
+
+  /* Holographic foil sweep */
+  --foil-gradient: linear-gradient(
+    115deg,
+    transparent 18%,
+    rgba(255, 0, 128, 0.35) 32%,
+    rgba(0, 200, 255, 0.35) 45%,
+    rgba(120, 0, 255, 0.35) 58%,
+    rgba(255, 200, 0, 0.35) 72%,
+    transparent 86%
+  );
 }
 
-/* Dark theme */
+/* Dark theme (night / dungeon — blue dialog box) */
 .dark {
-  --background: #0a0c10;
-  --foreground: #e7e9ee;
-  --muted: #9aa3b2;
-  --card: #14171f;
-  --elevated: #1a1e28;
-  --border: #232733;
-  --accent: #f59e0b; /* amber-500 */
-  --ring: #f59e0b;
-  --chart-grid: #232733;
-  --chart-axis: #9aa3b2;
+  --background: #0c1026;
+  --foreground: #eef0ff;
+  --muted: #9aa1d4;
+  --card: #1a2150;
+  --elevated: #232c66;
+  --border: #5566c4;
+  --border-light: #8a98e6;
+  --border-shadow: #0a0e22;
+  --accent: #5fd35f;
+  --ring: #5fd35f;
+  --gold: #f5c542;
+  --shadow-ink: #070a18;    /* hard headline drop-shadow (near-black on dungeon) */
+  --chart-grid: #2a3366;
+  --chart-axis: #9aa1d4;
+
+  --tier-1: #f5c542; --tier-1-bg: color-mix(in oklab, #f5c542 16%, transparent);
+  --tier-2: #b56cf0; --tier-2-bg: color-mix(in oklab, #b56cf0 16%, transparent);
+  --tier-3: #5aa6f5; --tier-3-bg: color-mix(in oklab, #5aa6f5 16%, transparent);
+  --tier-4: #5fd06a; --tier-4-bg: color-mix(in oklab, #5fd06a 16%, transparent);
+
+  --foil-gradient: linear-gradient(
+    115deg,
+    transparent 14%,
+    rgba(255, 0, 140, 0.5) 30%,
+    rgba(0, 224, 255, 0.5) 44%,
+    rgba(150, 80, 255, 0.5) 58%,
+    rgba(255, 220, 60, 0.5) 72%,
+    transparent 88%
+  );
 }
 
 @theme inline {
@@ -39,33 +86,398 @@
   --color-elevated: var(--elevated);
   --color-border: var(--border);
   --color-accent: var(--accent);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-gold: var(--gold);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-data);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  /* Pixel fonts read crisper with a touch more spacing/leading. */
+  letter-spacing: 0.01em;
+  line-height: 1.55;
 }
 
 * {
   border-color: var(--border);
 }
 
-/* Skeleton shimmer */
-@keyframes shimmer {
-  100% { transform: translateX(100%); }
+/* Pixel body font needs slightly larger minimums to stay scannable. */
+.font-display {
+  font-family: var(--font-display), system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
 }
+.font-data {
+  font-family: var(--font-data), ui-monospace, monospace;
+  letter-spacing: 0.01em;
+}
+/* Arcade gold marquee — gradient fill + chunky dark outline + drop (em-scaled). */
+.marquee-gold {
+  background: linear-gradient(180deg, #fff6c0 0%, #ffd84a 38%, #f59e1b 64%, #c5740d 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow:
+    0.045em 0 0 #2a1606, -0.045em 0 0 #2a1606, 0 0.045em 0 #2a1606, 0 -0.045em 0 #2a1606,
+    0.045em 0.045em 0 #2a1606, -0.045em 0.045em 0 #2a1606, 0.045em -0.045em 0 #2a1606, -0.045em -0.045em 0 #2a1606,
+    0 0.07em 0.05em rgba(0, 0, 0, 0.55);
+}
+
+/* Clean modern sans — used by the (intentionally non-retro) navbar. */
+.font-modern {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  letter-spacing: 0;
+}
+
+/* Hard, blur-free arcade drop-shadow for big headlines (em-scaled). */
+.pixel-shadow {
+  text-shadow: 0.06em 0.06em 0 var(--shadow-ink);
+}
+
+/* Hero: cursor-parallax layers (vars --mx/--my set on the scene root, −1..1). */
+.parallax-emblem {
+  translate: calc(var(--mx, 0) * 22px) calc(var(--my, 0) * 22px);
+  transition: translate 0.18s ease-out;
+}
+.parallax-fan {
+  translate: calc(var(--mx, 0) * 9px) calc(var(--my, 0) * 9px);
+  transition: translate 0.18s ease-out;
+}
+
+/* Hero: refined drop-shadow under the fanned cards — a hard pixel offset plus a
+   soft ambient layer for a more premium, grounded feel. */
+.card-drop {
+  filter:
+    drop-shadow(3px 5px 0 color-mix(in oklab, var(--shadow-ink) 55%, transparent))
+    drop-shadow(0 9px 12px color-mix(in oklab, var(--shadow-ink) 38%, transparent));
+}
+
+/* Hero: glossy "table" the fanned hand rests on (sheen line + soft contact shadow). */
+.glossy-surface {
+  height: 10px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--foreground) 16%, transparent) 35%,
+    color-mix(in oklab, var(--foreground) 16%, transparent) 65%,
+    transparent
+  );
+  box-shadow: 0 9px 24px -6px color-mix(in oklab, var(--shadow-ink) 55%, transparent);
+}
+
+/* Hero: soft radial spotlight behind the center "chase" card. */
+.spotlight {
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--accent) 42%, transparent), transparent 72%);
+  filter: blur(22px);
+}
+
+/* Subtle film grain (static SVG noise) for a luxe finish. */
+.grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+}
+
+/* Metallic-gold gradient text fill (for the COQUI headline word). */
+.text-foil-gold {
+  background: linear-gradient(180deg, #ffe9a8 0%, var(--gold) 46%, #7a5410 76%, #ffe9a8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Hero: 3D pointer-tilt of the fan (reuses --mx/--my from the scene root). */
+.hero-tilt {
+  transform: perspective(900px) rotateX(calc(var(--my, 0) * -5deg)) rotateY(calc(var(--mx, 0) * 5deg));
+  transform-style: preserve-3d;
+  transition: transform 0.2s ease-out;
+}
+
+/* Posterized "illustration" grade for pixel card canvases (CORS-safe filter). */
+.card-illus {
+  filter: url(#cc-illus) saturate(1.32) contrast(1.1);
+}
+
+/* Console-style shading: a finer 4×4 ordered (Bayer) dither over the card art —
+   dispersed dots that fake the inter-shade gradients of Skul/Battle Axe pixel art. */
+.dither-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23000'/%3E%3Crect x='2' y='0' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23000'/%3E%3Crect x='3' y='1' width='1' height='1' fill='%23000'/%3E%3Crect x='0' y='2' width='1' height='1' fill='%23000'/%3E%3Crect x='2' y='2' width='1' height='1' fill='%23000'/%3E%3Crect x='1' y='3' width='1' height='1' fill='%23000'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23000'/%3E%3C/svg%3E");
+  background-size: 8px 8px;
+  image-rendering: pixelated;
+  mix-blend-mode: overlay;
+  opacity: 0.22;
+}
+
+/* Skip paint/filter work for off-screen grid cells — keeps hundreds of filtered
+   pixel cards scrolling smoothly. `auto` remembers the real size after first render. */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 18rem;
+}
+
+/* Staggered "deal" entrance for hero cards (wrapper layer). */
+.deal-card {
+  animation: deal 0.5s ease-out backwards;
+}
+/* Calmer scroll cue — a slow gentle bob instead of a hard blink. */
+.scroll-cue {
+  animation: scroll-bob 2.4s ease-in-out infinite;
+}
+
+/* =========================================================================
+   Pixel surfaces — chiseled "menu / dialog box" boxes (no rounding, no blur)
+   ========================================================================= */
+/* Background is intentionally left to a bg-* utility so utilities (e.g. the
+   accent fill on a primary button) win over this unlayered rule. */
+.pixel-box {
+  border-radius: 0;
+  border: 2px solid var(--border);
+  box-shadow:
+    inset 2px 2px 0 0 var(--border-light),
+    inset -2px -2px 0 0 var(--border-shadow);
+}
+/* Pressed / recessed variant (input fields, active tabs). */
+.pixel-box--inset {
+  border-radius: 0;
+  border: 2px solid var(--border);
+  box-shadow:
+    inset 2px 2px 0 0 var(--border-shadow),
+    inset -2px -2px 0 0 var(--border-light);
+}
+/* Menu button: presses "into" the screen on :active for tactile JRPG feel. */
+.pixel-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow:
+    inset 2px 2px 0 0 var(--border-shadow),
+    inset -2px -2px 0 0 var(--border-light);
+}
+/* Crisp upscaled pixel art (card images, mascot raster). */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Tiled "overworld / dungeon floor" backdrop — a subtle pixel checker grid. */
+.tile-bg {
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--accent) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklab, var(--accent) 7%, transparent) 1px, transparent 1px);
+  background-size: 16px 16px, 16px 16px;
+  background-position: -1px -1px;
+}
+/* Slowly scroll the tiled backdrop for a hint of "overworld" life. */
+.tile-drift {
+  animation: tile-drift 24s linear infinite;
+}
+
+/* Floating hero card: keeps its base tilt (`rotate`) while bobbing (`translate`),
+   so the reduced-motion fallback below leaves the tilt intact. Set --rot per card. */
+.float-card {
+  rotate: var(--rot, 0deg);
+  animation: float 7s ease-in-out infinite;
+  will-change: translate;
+}
+
+/* JRPG menu-cursor: a "▶" slides in on hover of a menu item. */
+.menu-item {
+  position: relative;
+}
+.menu-item::before {
+  content: "▶";
+  position: absolute;
+  left: -0.85em;
+  opacity: 0;
+  transform: translateX(-2px);
+  transition: opacity 0.12s steps(2), transform 0.12s steps(2);
+}
+.menu-item:hover::before,
+.menu-item:focus-visible::before {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* =========================================================================
+   CRT / scanline overlay — global, above content, never intercepts clicks
+   ========================================================================= */
+.crt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.06) 0px,
+      rgba(0, 0, 0, 0.06) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    radial-gradient(120% 120% at 50% 50%, transparent 70%, rgba(0, 0, 0, 0.12) 100%);
+  animation: scanline-flicker 4s steps(2, end) infinite;
+}
+.dark .crt-overlay {
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.16) 0px,
+      rgba(0, 0, 0, 0.16) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    radial-gradient(120% 120% at 50% 50%, transparent 62%, rgba(0, 0, 0, 0.28) 100%);
+}
+
+/* =========================================================================
+   Holographic foil — animated rainbow sweep for the card-as-hero treatment
+   ========================================================================= */
+.foil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--foil-gradient);
+  background-size: 220% 220%;
+  background-position: 0% 0%;
+  mix-blend-mode: color-dodge;
+  opacity: 0.55;
+  pointer-events: none;
+  animation: foil-shimmer 5s linear infinite;
+}
+.foil--strong::after { opacity: 0.85; }
+.foil--soft::after { opacity: 0.35; }
+
+/* Hover "treasure" sparkle accent (used on interactive slots). */
+.sparkle::before {
+  content: "✦";
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  color: var(--gold);
+  opacity: 0;
+  animation: sparkle 1.6s steps(3, end) infinite;
+}
+
+/* Idle mascot bob (stepped → sprite-like, not buttery). */
+.mascot-bob {
+  animation: bob 1.4s steps(2, end) infinite;
+}
+
+/* Periodic eye-blink for open-eyed mascot poses. */
+.coqui-eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: blink 4.2s ease-in-out infinite;
+}
+
+/* Segmented completion meter (JRPG status bar). Fill color via --meter. */
+.meter {
+  position: relative;
+  height: 10px;
+  border: 2px solid var(--border);
+  background: var(--elevated);
+  overflow: hidden;
+}
+.meter > span {
+  display: block;
+  height: 100%;
+  background-color: var(--meter, var(--accent));
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.32) 0,
+    rgba(0, 0, 0, 0.32) 1px,
+    transparent 1px,
+    transparent 6px
+  );
+}
+
+/* =========================================================================
+   Keyframes
+   ========================================================================= */
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+@keyframes foil-shimmer {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 200%; }
+}
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0.6); }
+  50% { opacity: 1; transform: scale(1); }
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0.1); }
+}
+@keyframes scanline-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.92; }
+}
+@keyframes tile-drift {
+  0% { background-position: -1px -1px, -1px -1px; }
+  100% { background-position: -1px 64px, 64px -1px; }
+}
+@keyframes deal {
+  0% { opacity: 0; translate: 0 36px; }
+  100% { opacity: 1; translate: 0 0; }
+}
+@keyframes blink-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+@keyframes float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -6px; }
+}
+@keyframes scroll-bob {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 4px; }
+}
+
+/* Pixel skeleton — 2-color stepped wipe instead of a smooth shimmer. */
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  background: color-mix(in oklab, var(--foreground) 10%, transparent);
 }
 .skeleton::after {
   content: "";
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--foreground) 6%, transparent), transparent);
-  animation: shimmer 1.4s infinite;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--foreground) 8%, transparent) 50%,
+    transparent 51%
+  );
+  animation: shimmer 1.4s steps(8, end) infinite;
+}
+
+/* =========================================================================
+   Accessibility — honor reduced motion everywhere
+   ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  .crt-overlay { animation: none; }
+  .foil::after { animation: none; background-position: 50% 50%; opacity: 0.4; }
+  .sparkle::before { animation: none; opacity: 0; }
+  .mascot-bob { animation: none; }
+  .coqui-eyes { animation: none; }
+  .tile-drift { animation: none; }
+  .float-card { animation: none; }
+  .menu-item::before { transition: none; }
+  .deal-card { animation: none; }
+  .scroll-cue { animation: none; }
+  .parallax-emblem, .parallax-fan { translate: 0 0 !important; transition: none; }
+  .hero-tilt { transform: none !important; transition: none; }
+  .skeleton::after { animation: none; }
 }

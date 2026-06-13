@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ebayConfigured, searchEbayListings } from "@/lib/ebay";
+import { ebayConfigured, searchEbayListings, searchEbaySoldItems, EbayInsightsNoAccessError } from "@/lib/ebay";
 import { buildQuery } from "@/lib/image-search";
 import { priceFromListings } from "@/lib/ebay-match";
 
@@ -44,27 +44,44 @@ export async function GET(request: NextRequest) {
     if (targets.length >= BATCH) break;
   }
 
-  let updated = 0;
+  let updated = 0, soldRows = 0;
+  let soldAccessible = true; // flips off after the first no-access, to stop retrying
   for (const card of targets) {
     const base = buildQuery(card.name);
     for (const g of grades(card.tier)) {
+      const query = g.suffix ? `${base} ${g.suffix}` : base;
       try {
-        const listings = await searchEbayListings(g.suffix ? `${base} ${g.suffix}` : base);
-        const result = priceFromListings(listings, card.name, g.key, 3);
-        if (!result) continue;
+        // Prefer REAL sold comps (Marketplace Insights); fall back to asking listings.
+        let median: number | null = null, count = 0, source = "ebay (asking)", histSource = "ebay";
+        if (soldAccessible) {
+          try {
+            const sold = await searchEbaySoldItems(query);
+            const r = priceFromListings(sold, card.name, g.key, 2);
+            if (r) { median = r.medianCents; count = r.count; source = "ebay (sold)"; histSource = "ebay-sold"; }
+          } catch (e) {
+            if (e instanceof EbayInsightsNoAccessError) soldAccessible = false;
+            else throw e;
+          }
+        }
+        if (median === null) {
+          const r = priceFromListings(await searchEbayListings(query), card.name, g.key, 3);
+          if (!r) continue;
+          median = r.medianCents; count = r.count;
+        }
         await admin.from("card_prices").upsert(
-          { card_id: card.id, grade_key: g.key, median_cents: result.medianCents, last_sale_cents: result.medianCents,
-            currency: "USD", sample_size: result.count, source: "ebay (asking)", as_of: new Date().toISOString() },
+          { card_id: card.id, grade_key: g.key, median_cents: median, last_sale_cents: median,
+            currency: "USD", sample_size: count, source, as_of: new Date().toISOString() },
           { onConflict: "card_id,grade_key" }
         );
         await admin.from("price_history").delete()
-          .match({ card_id: card.id, grade_key: g.key, recorded_on: today, source: "ebay" });
+          .match({ card_id: card.id, grade_key: g.key, recorded_on: today, source: histSource });
         await admin.from("price_history").insert(
-          { card_id: card.id, grade_key: g.key, value_cents: result.medianCents, recorded_on: today, source: "ebay" }
+          { card_id: card.id, grade_key: g.key, value_cents: median, recorded_on: today, source: histSource }
         );
         updated++;
+        if (source === "ebay (sold)") soldRows++;
       } catch { /* skip grade on error */ }
     }
   }
-  return NextResponse.json({ refreshed: targets.length, gradeRows: updated });
+  return NextResponse.json({ refreshed: targets.length, gradeRows: updated, soldRows });
 }

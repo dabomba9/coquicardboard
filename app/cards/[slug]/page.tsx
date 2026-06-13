@@ -46,31 +46,43 @@ export default async function CardDetailPage({
   const ebayUrl = `https://www.ebay.com/sch/i.html?_nkw=${q}`;
   const googleUrl = `https://www.google.com/search?tbm=isch&q=${q}`;
 
+  // Holographic foil scales with rarity — legendary (tier 1) shimmers hardest.
+  const foilClass =
+    card.tier_id === 1 ? "foil foil--strong" : card.tier_id === 2 ? "foil" : card.tier_id === 3 ? "foil foil--soft" : "";
+  const tierStyle = { ["--border" as string]: `var(--tier-${card.tier_id})` } as React.CSSProperties;
+  const tierName = ["Legendary", "Epic", "Rare", "Common"][card.tier_id - 1] ?? "Common";
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
-      <Link href="/mj-hierarchy" className="text-sm text-muted hover:text-foreground">← Hierarchy</Link>
+      <Link href="/mj-hierarchy" className="font-sans text-[10px] uppercase tracking-wide text-muted hover:text-foreground">← Hierarchy</Link>
 
-      <div className="mt-4 grid gap-8 sm:grid-cols-[220px_1fr]">
+      <div className="mt-4 grid gap-8 sm:grid-cols-[280px_1fr]">
         <div>
-          <CardLightbox imageUrl={card.image_url} alt={card.name}>
-            <CardThumb card={card} className="w-full" />
-          </CardLightbox>
+          <div className={cn("relative overflow-hidden pixel-box bg-card p-1", foilClass)} style={tierStyle}>
+            <CardLightbox imageUrl={card.image_url} alt={card.name}>
+              <CardThumb card={card} className="w-full !border-0 !shadow-none" />
+            </CardLightbox>
+          </div>
           {card.image_source && (
             <p className="mt-1.5 text-[10px] text-muted">Image: {card.image_source}</p>
           )}
         </div>
 
-        <div>
+        {/* Item stats dialog */}
+        <Panel className="self-start p-5" style={tierStyle}>
           <div className="flex flex-wrap items-center gap-2">
-            <span className={cn("rounded px-2 py-0.5 text-sm ring-1", c.bg, c.text, c.ring)}>
-              Tier {card.tier_id}
+            <span
+              className={cn("pixel-box px-2 py-0.5 font-sans text-[10px] uppercase", c.bg, c.text)}
+              style={tierStyle}
+            >
+              Tier {card.tier_id} · {tierName}
             </span>
-            {card.is_rookie && <Badge className={cn(c.bg, c.text, c.ring)}>Rookie</Badge>}
-            {card.is_insert && <Badge className={cn(c.bg, c.text, c.ring)}>Insert</Badge>}
-            {card.is_parallel && <Badge className={cn(c.bg, c.text, c.ring)}>Parallel</Badge>}
+            {card.is_rookie && <Badge className={c.text}>Rookie</Badge>}
+            {card.is_insert && <Badge className={c.text}>Insert</Badge>}
+            {card.is_parallel && <Badge className={c.text}>Parallel</Badge>}
           </div>
-          <h1 className="mt-3 text-2xl font-semibold tracking-tight">{card.name}</h1>
-          <p className="mt-1 text-sm text-muted">
+          <h1 className="mt-4 font-display text-lg leading-relaxed tracking-tight">{card.name}</h1>
+          <p className="mt-2 text-sm text-muted">
             {ownerCount > 0
               ? `Owned by ${ownerCount} collector${ownerCount === 1 ? "" : "s"}`
               : "Be the first to add it to your collection"}
@@ -79,13 +91,13 @@ export default async function CardDetailPage({
           <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
             {facts.filter(([, v]) => v).map(([k, v]) => (
               <div key={k}>
-                <dt className="text-xs text-muted">{k}</dt>
-                <dd className="font-medium">{v}</dd>
+                <dt className="font-sans text-[9px] uppercase tracking-wide text-muted">{k}</dt>
+                <dd className="font-data text-lg leading-tight">{v}</dd>
               </div>
             ))}
           </dl>
 
-          <div className="mt-6 flex gap-3">
+          <div className="mt-6 flex flex-wrap gap-3">
             {user ? (
               <>
                 <Link href={`/collection/${card.slug}`}>
@@ -100,21 +112,23 @@ export default async function CardDetailPage({
 
           <p className="mt-4 text-xs text-muted">
             Find this card:{" "}
-            <a href={ebayUrl} target="_blank" rel="noreferrer" className="text-amber-500 hover:underline">eBay</a>
+            <a href={ebayUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">eBay</a>
             {" · "}
-            <a href={googleUrl} target="_blank" rel="noreferrer" className="text-amber-500 hover:underline">Google Images</a>
+            <a href={googleUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">Google Images</a>
           </p>
-        </div>
+        </Panel>
       </div>
 
       <Panel className="mt-8 p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-sm font-semibold">Market value</h2>
+          <h2 className="font-sans text-xs uppercase tracking-wide">Market value</h2>
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted">
-              {prices.some((p) => p.source?.startsWith("ebay"))
-                ? "eBay asking where available · otherwise estimated · not investment advice"
-                : "Estimated · not investment advice"}
+              {prices.some((p) => p.source === "ebay (sold)")
+                ? "Real eBay sold prices where available · otherwise estimated · not investment advice"
+                : prices.some((p) => p.source?.startsWith("ebay"))
+                  ? "eBay asking where available · otherwise estimated · not investment advice"
+                  : "Estimated · not investment advice"}
             </span>
             {isAdmin(user?.email) && <RefreshPriceButton cardId={card.id} />}
           </div>
@@ -126,14 +140,20 @@ export default async function CardDetailPage({
               .slice()
               .sort((a, b) => (a.grade_key === "raw" ? -1 : b.grade_key === "raw" ? 1 : 0))
               .map((p) => {
+                const isSold = p.source === "ebay (sold)";
                 const isEbay = p.source?.startsWith("ebay");
                 const asOf = p.as_of ? new Date(p.as_of).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : null;
+                const label = isSold
+                  ? `eBay sold${asOf ? ` · ${asOf}` : ""}`
+                  : isEbay
+                    ? `eBay asking${asOf ? ` · ${asOf}` : ""}`
+                    : "estimated";
                 return (
-                  <div key={p.grade_key}>
-                    <span className="text-xs text-muted">{p.grade_key}</span>{" "}
-                    <span className="font-medium">{formatUsd(p.median_cents)}</span>
-                    <div className={cn("text-[10px]", isEbay ? "text-emerald-600 dark:text-emerald-400" : "text-muted")}>
-                      {isEbay ? `eBay asking${asOf ? ` · ${asOf}` : ""}` : "estimated"}
+                  <div key={p.grade_key} className="pixel-box bg-elevated px-3 py-2">
+                    <span className="font-sans text-[9px] uppercase text-muted">{p.grade_key}</span>
+                    <div className="font-data text-xl leading-none text-foreground">{formatUsd(p.median_cents)}</div>
+                    <div className={cn("text-[10px]", isEbay ? "text-accent" : "text-muted")}>
+                      {label}
                     </div>
                   </div>
                 );
@@ -155,7 +175,7 @@ export default async function CardDetailPage({
 
       {related.length > 0 && (
         <section className="mt-8">
-          <h2 className="text-sm font-semibold">More from {card.sets?.name ?? "this set"}</h2>
+          <h2 className="font-sans text-xs uppercase tracking-wide">More from {card.sets?.name ?? "this set"}</h2>
           <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-6">
             {related.map((r) => (
               <Link key={r.id} href={`/cards/${r.slug}`} className="group">

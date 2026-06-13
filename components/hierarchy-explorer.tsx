@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
-import { CardThumb } from "@/components/card-thumb";
+import { PixelCard } from "@/components/pixel-card";
+import { Coqui } from "@/components/mascot/coqui";
 import { quickAddOwned } from "@/lib/actions/holdings";
-import { Badge, Input, Select } from "@/components/ui/primitives";
+import { playConfirm, playFanfare } from "@/lib/sfx";
+import { Search } from "lucide-react";
 import { cn, formatUsd, TIER_COLORS } from "@/lib/utils";
 
 export type ExplorerCard = {
@@ -70,6 +72,7 @@ export function HierarchyExplorer({
   const [groupBy, setGroupBy] = useState<GroupKey>("tier");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [ownedLocal, setOwnedLocal] = useState<Set<string>>(new Set());
+  const [celebrating, setCelebrating] = useState(false);
   const [, startAdd] = useTransition();
 
   const isOwned = (c: ExplorerCard) => c.owned || ownedLocal.has(c.id);
@@ -87,8 +90,12 @@ export function HierarchyExplorer({
       if (tier && ownedInTier === tier.card_count) {
         confetti({ particleCount: 140, spread: 75, origin: { y: 0.7 } });
         toast.success(`Tier ${tier.id} complete — ${tier.name}! 🏆`);
+        setCelebrating(true);
+        setTimeout(() => setCelebrating(false), 1900);
+        playFanfare();
       } else {
         toast.success("Added to your collection");
+        playConfirm();
       }
     });
   }
@@ -191,65 +198,79 @@ export function HierarchyExplorer({
 
   return (
     <div>
-      {/* Progress facets (your collection) — also click to filter */}
-      {signedIn && (
-        <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-          {facets.map((f) => (
-            <button
-              key={f.label}
-              onClick={f.onClick}
-              className={cn(
-                "rounded-lg border p-3 text-left transition-colors",
-                f.active ? "border-amber-500/60 bg-amber-500/5" : "border-border hover:bg-foreground/5"
-              )}
-            >
-              <div className="text-xs text-muted">{f.label}</div>
-              <div className="mt-0.5 text-sm font-semibold">{f.owned}/{f.total}</div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-foreground/10">
-                <div className="h-full rounded-full bg-amber-500" style={{ width: `${f.pct}%` }} />
-              </div>
-              <div className="mt-1 text-[11px] text-muted">{f.pct}% complete</div>
-            </button>
-          ))}
+      {/* Tier-complete celebration — transient bobbing Coqui */}
+      {celebrating && (
+        <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center">
+          <Coqui pose="celebrate" size={140} aria-label="Coqui celebrating" />
         </div>
       )}
 
-      {/* Controls */}
-      <div className="sticky top-14 z-10 -mx-4 mb-6 border-b border-border bg-background/90 px-4 py-3 backdrop-blur">
+      {/* Party status — collection progress meters; also click to filter */}
+      {signedIn && (
+        <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {facets.map((f, i) => {
+            // Facets are [Collected, Tier1..N, Serial]; color tier meters by tier.
+            const meter = i >= 1 && i <= tiers.length ? `var(--tier-${tiers[i - 1].id})` : "var(--accent)";
+            return (
+              <button
+                key={f.label}
+                onClick={f.onClick}
+                className={cn(
+                  "pixel-box bg-card p-3 text-left transition-transform hover:-translate-y-0.5",
+                  f.active && "[--border:var(--accent)]"
+                )}
+              >
+                <div className="font-sans text-[9px] uppercase tracking-wide text-muted">{f.label}</div>
+                <div className="mt-1 font-data text-lg leading-none">{f.owned}/{f.total}</div>
+                <div className="meter mt-2" style={{ ["--meter" as string]: meter } as React.CSSProperties}>
+                  <span style={{ width: `${f.pct}%` }} />
+                </div>
+                <div className="mt-1 font-data text-sm text-muted">{f.pct}% complete</div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Controls — modern command bar (mirrors the floating navbar) */}
+      <div className="font-modern sticky top-20 z-10 mb-6 rounded-2xl border border-border/45 bg-background/70 px-4 py-3 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.30)] backdrop-blur-xl">
         <div className="flex flex-wrap items-center gap-2">
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search name or set…"
-            className="h-9 max-w-xs"
-          />
-          <Select value={setFilter} onChange={(e) => setSetFilter(e.target.value)} className="h-9 w-auto">
+          <div className="relative max-w-xs flex-1">
+            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden="true" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search name or set…"
+              className="h-9 w-full rounded-full border border-border/60 bg-foreground/[0.03] pl-9 pr-3.5 text-sm text-foreground transition-colors placeholder:text-muted hover:border-border focus:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+          <select value={setFilter} onChange={(e) => setSetFilter(e.target.value)} className="h-9 rounded-full border border-border/60 bg-foreground/[0.03] px-3 text-sm text-foreground transition-colors hover:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <option value="">All sets</option>
             {setNames.map((s) => <option key={s} value={s}>{s}</option>)}
-          </Select>
-          <Select value={ownership} onChange={(e) => setOwnership(e.target.value as Ownership)} className="h-9 w-auto" disabled={!signedIn}>
+          </select>
+          <select value={ownership} onChange={(e) => setOwnership(e.target.value as Ownership)} disabled={!signedIn} className="h-9 rounded-full border border-border/60 bg-foreground/[0.03] px-3 text-sm text-foreground transition-colors hover:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
             <option value="all">All</option>
             <option value="owned">Owned</option>
             <option value="needed">Needed</option>
-          </Select>
-          <label className={cn("flex items-center gap-1.5 text-sm", !signedIn && "opacity-50")}>
+          </select>
+          <label className={cn("flex items-center gap-1.5 text-sm text-muted", !signedIn && "opacity-50")}>
             <input type="checkbox" checked={forTradeOnly} disabled={!signedIn} onChange={(e) => setForTradeOnly(e.target.checked)} />
             For trade
           </label>
 
           <div className="ml-auto flex items-center gap-2 text-sm">
             <span className="text-muted">Sort</span>
-            <Select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} className="h-9 w-auto">
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} className="h-9 rounded-full border border-border/60 bg-foreground/[0.03] px-3 text-sm text-foreground transition-colors hover:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               {SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-            </Select>
+            </select>
             <span className="text-muted">Group</span>
-            <Select value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupKey)} className="h-9 w-auto">
+            <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupKey)} className="h-9 rounded-full border border-border/60 bg-foreground/[0.03] px-3 text-sm text-foreground transition-colors hover:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <option value="tier">Tier</option>
               <option value="set">Set</option>
-            </Select>
-            <div className="flex overflow-hidden rounded-md border border-border">
-              <button onClick={() => setView("grid")} className={cn("px-2.5 py-1.5 text-xs", view === "grid" ? "bg-foreground/10" : "text-muted")}>Grid</button>
-              <button onClick={() => setView("list")} className={cn("px-2.5 py-1.5 text-xs", view === "list" ? "bg-foreground/10" : "text-muted")}>List</button>
+            </select>
+            <div className="flex items-center gap-0.5 rounded-full border border-border/60 bg-foreground/[0.03] p-0.5">
+              <button onClick={() => setView("grid")} className={cn("rounded-full px-3 py-1 text-xs font-medium transition-colors", view === "grid" ? "bg-accent/15 text-accent" : "text-muted hover:text-foreground")}>Grid</button>
+              <button onClick={() => setView("list")} className={cn("rounded-full px-3 py-1 text-xs font-medium transition-colors", view === "list" ? "bg-accent/15 text-accent" : "text-muted hover:text-foreground")}>List</button>
             </div>
           </div>
         </div>
@@ -264,15 +285,15 @@ export function HierarchyExplorer({
                 key={t.id}
                 onClick={() => toggleTier(t.id)}
                 className={cn(
-                  "rounded-full px-2.5 py-0.5 text-xs ring-1 transition-colors",
-                  active ? cn(c.bg, c.text, c.ring) : "text-muted ring-border hover:text-foreground"
+                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                  active ? cn(c.text, "border-current bg-foreground/5") : "border-border/55 text-muted hover:border-border hover:text-foreground"
                 )}
               >
                 Tier {t.id}
               </button>
             );
           })}
-          <span className="mx-1 h-4 w-px bg-border" />
+          <span className="mx-1 h-5 w-0.5 bg-border" />
           {ATTRS.map((a) => {
             const active = attrs.has(a.key);
             return (
@@ -280,8 +301,8 @@ export function HierarchyExplorer({
                 key={a.key}
                 onClick={() => toggleAttr(a.key)}
                 className={cn(
-                  "rounded-full px-2.5 py-0.5 text-xs ring-1 transition-colors",
-                  active ? "bg-amber-500/15 text-amber-600 ring-amber-500/40 dark:text-amber-300" : "text-muted ring-border hover:text-foreground"
+                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                  active ? "border-[var(--gold)]/60 bg-[var(--gold)]/10 text-[var(--gold)]" : "border-border/55 text-muted hover:border-border hover:text-foreground"
                 )}
               >
                 {a.label}
@@ -289,9 +310,9 @@ export function HierarchyExplorer({
             );
           })}
           {(tierFilter.size > 0 || attrs.size > 0 || setFilter || forTradeOnly || ownership !== "all" || q) && (
-            <button onClick={resetFilters} className="text-xs text-muted underline hover:text-foreground">Clear</button>
+            <button onClick={resetFilters} className="font-sans text-[9px] uppercase text-muted underline hover:text-foreground">Clear</button>
           )}
-          <span className="ml-2 text-xs text-muted">
+          <span className="ml-2 font-data text-sm text-muted">
             {filtered.length} cards{signedIn ? ` · ${ownedCount} owned` : ""}
           </span>
         </div>
@@ -304,38 +325,46 @@ export function HierarchyExplorer({
           const pct = g.items.length ? Math.round((ownedN / g.items.length) * 100) : 0;
           return (
           <section key={g.label}>
-            <div className="flex items-baseline justify-between border-b border-border pb-2">
-              <h2 className="text-lg font-semibold">{g.label}</h2>
-              <span className="text-sm text-muted">
+            <div className="flex items-baseline justify-between border-b-2 border-border pb-2">
+              <h2 className="font-sans text-sm uppercase tracking-wide">{g.label}</h2>
+              <span className="font-data text-base text-muted">
                 {signedIn ? `${ownedN} / ${g.items.length}` : `${g.items.length}`}
               </span>
             </div>
             {signedIn && (
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-foreground/5">
-                <div className="h-full rounded-full bg-amber-500" style={{ width: `${pct}%` }} />
-              </div>
+              <div className="meter mt-2"><span style={{ width: `${pct}%` }} /></div>
             )}
 
             {view === "grid" ? (
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+              <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                 {g.items.map((card) => {
                   const owned = isOwned(card);
                   return (
-                  <div key={card.id} className="group relative">
+                  <div key={card.id} className="cv-auto group relative">
                     <Link href={`/cards/${card.slug}`}>
-                      <CardThumb
-                        card={{ ...card, sets: card.set_name ? { name: card.set_name } : null }}
-                        className={cn("transition-transform group-hover:-translate-y-1", owned && "ring-2 ring-amber-400")}
+                      <PixelCard
+                        src={card.image_url}
+                        alt={card.name}
+                        tierId={card.tier_id}
+                        className={cn(
+                          "transition-transform group-hover:-translate-y-1",
+                          owned && "[--border:var(--gold)]",
+                          card.tier_id === 1 && "foil foil--soft"
+                        )}
                       />
                     </Link>
-                    {owned && <Badge className="pointer-events-none absolute right-1 top-1 bg-amber-500 text-black ring-amber-400">✓</Badge>}
-                    {card.for_trade && <Badge className="pointer-events-none absolute left-1 top-1 bg-emerald-500 text-black ring-emerald-400">T</Badge>}
+                    {owned && (
+                      <span className="pointer-events-none absolute right-1 top-1 pixel-box bg-[var(--gold)] px-1 font-sans text-[9px] text-black [--border:var(--gold)]">✓</span>
+                    )}
+                    {card.for_trade && (
+                      <span className="pointer-events-none absolute left-1 top-1 pixel-box bg-accent px-1 font-sans text-[9px] text-black [--border:var(--accent)]">T</span>
+                    )}
                     {signedIn && !owned && (
                       <button
                         type="button"
                         aria-label="Add to my collection"
                         onClick={(e) => { e.preventDefault(); quickAdd(card); }}
-                        className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-black opacity-0 shadow transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:bg-amber-400"
+                        className="pixel-box pixel-btn absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center bg-accent font-sans text-xs text-black opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:brightness-110 [--border:var(--accent)]"
                         title="Quick add (owned)"
                       >
                         +
@@ -347,29 +376,29 @@ export function HierarchyExplorer({
               </div>
             ) : (
               <table className="mt-3 w-full text-sm">
-                <thead className="text-left text-xs text-muted">
+                <thead className="text-left font-sans text-[9px] uppercase tracking-wide text-muted">
                   <tr>
-                    <th className="py-1.5 pr-2">Card</th>
-                    <th className="py-1.5 pr-2">Set</th>
-                    <th className="py-1.5 pr-2">Year</th>
-                    <th className="py-1.5 pr-2">#</th>
-                    <th className="py-1.5 pr-2">Tier</th>
-                    <th className="py-1.5 pr-2 text-right">Value</th>
-                    {signedIn && <th className="py-1.5 pr-2 text-center">Owned</th>}
+                    <th className="py-2 pr-2">Card</th>
+                    <th className="py-2 pr-2">Set</th>
+                    <th className="py-2 pr-2">Year</th>
+                    <th className="py-2 pr-2">#</th>
+                    <th className="py-2 pr-2">Tier</th>
+                    <th className="py-2 pr-2 text-right">Value</th>
+                    {signedIn && <th className="py-2 pr-2 text-center">Owned</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {g.items.map((card) => (
-                    <tr key={card.id} className="border-t border-border hover:bg-foreground/5">
-                      <td className="py-1.5 pr-2">
+                    <tr key={card.id} className="border-t-2 border-border hover:bg-foreground/5">
+                      <td className="py-2 pr-2">
                         <Link href={`/cards/${card.slug}`} className="font-medium hover:underline">{card.name}</Link>
                       </td>
-                      <td className="py-1.5 pr-2 text-muted">{card.set_name}</td>
-                      <td className="py-1.5 pr-2 text-muted">{card.year}</td>
-                      <td className="py-1.5 pr-2 text-muted">{card.card_number ? `#${card.card_number}` : ""}</td>
-                      <td className="py-1.5 pr-2 text-muted">{card.tier_id}</td>
-                      <td className="py-1.5 pr-2 text-right">{card.value_cents ? formatUsd(card.value_cents) : "—"}</td>
-                      {signedIn && <td className="py-1.5 pr-2 text-center">{isOwned(card) ? "✓" : ""}</td>}
+                      <td className="py-2 pr-2 text-muted">{card.set_name}</td>
+                      <td className="py-2 pr-2 font-data text-base text-muted">{card.year}</td>
+                      <td className="py-2 pr-2 font-data text-base text-muted">{card.card_number ? `#${card.card_number}` : ""}</td>
+                      <td className="py-2 pr-2 font-data text-base text-muted">{card.tier_id}</td>
+                      <td className="py-2 pr-2 text-right font-data text-base">{card.value_cents ? formatUsd(card.value_cents) : "—"}</td>
+                      {signedIn && <td className="py-2 pr-2 text-center text-[var(--gold)]">{isOwned(card) ? "✓" : ""}</td>}
                     </tr>
                   ))}
                 </tbody>
@@ -379,7 +408,10 @@ export function HierarchyExplorer({
           );
         })}
         {groups.length === 0 && (
-          <p className="py-12 text-center text-sm text-muted">No cards match your filters.</p>
+          <div className="flex flex-col items-center gap-3 py-12 text-center">
+            <Coqui pose="sleeping" size={80} bob={false} aria-label="Coqui sleeping" />
+            <p className="font-sans text-[10px] uppercase tracking-wide text-muted">No cards match your filters.</p>
+          </div>
         )}
       </div>
     </div>

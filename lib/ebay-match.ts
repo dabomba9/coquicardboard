@@ -71,6 +71,43 @@ export function median(nums: number[]): number {
   return s.length % 2 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
 }
 
+// Listings that pollute card-price medians: lots/multi-card, reprints, customs,
+// repacks, group breaks, digital, damaged. Excluded before matching.
+const JUNK = new RegExp(
+  [
+    "\\blots?\\b", "\\bset of\\b", "\\bbundle\\b", "\\brepack\\b", "\\bmystery\\b",
+    "\\breprints?\\b", "\\brp\\b", "\\bproxy\\b", "\\bcustom\\b", "\\bnovelty\\b", "\\baceo\\b",
+    "\\bdigital\\b", "\\bbreak\\b", "\\bcase\\b", "\\bspot\\b", "\\bread\\b",
+    "\\bdamaged\\b", "\\bcreased\\b", "\\bmiscut\\b", "\\bpoor\\b",
+    "\\bx\\s?\\d+\\b", "\\b\\d+\\s?x\\b", "\\(\\s?\\d+\\s?\\)", // x3 / 3x / (4) = quantities
+  ].join("|"),
+  "i"
+);
+
+export function isJunkTitle(title: string): boolean {
+  return JUNK.test(title);
+}
+
+// Drop statistical outliers so one absurd listing can't skew the median.
+// >=4 samples: Tukey IQR fence. 3 samples: keep within [0.2x, 5x] of the median.
+export function trimOutliers(nums: number[]): number[] {
+  if (nums.length < 3) return nums;
+  const s = [...nums].sort((a, b) => a - b);
+  if (s.length === 3) {
+    const m = s[1];
+    return s.filter((v) => v >= m * 0.2 && v <= m * 5);
+  }
+  const q = (p: number) => {
+    const idx = (s.length - 1) * p;
+    const lo = Math.floor(idx), hi = Math.ceil(idx);
+    return s[lo] + (s[hi] - s[lo]) * (idx - lo);
+  };
+  const q1 = q(0.25), q3 = q(0.75), iqr = q3 - q1;
+  const lo = q1 - 1.5 * iqr, hi = q3 + 1.5 * iqr;
+  const kept = s.filter((v) => v >= lo && v <= hi);
+  return kept.length ? kept : s;
+}
+
 // From raw listings, keep only confident matches and return a median if we have
 // at least `minSamples`; otherwise null (caller keeps the existing/estimated price).
 export function priceFromListings(
@@ -82,8 +119,9 @@ export function priceFromListings(
   const year = extractYear(name);
   const groups = requiredTokenGroups(name);
   const matched = listings
-    .filter((l) => l.cents > 0 && matchesCard(l.title, year, groups) && gradeMatches(l.title, gradeKey))
+    .filter((l) => l.cents > 0 && !isJunkTitle(l.title) && matchesCard(l.title, year, groups) && gradeMatches(l.title, gradeKey))
     .map((l) => l.cents);
-  if (matched.length < minSamples) return null;
-  return { medianCents: median(matched), count: matched.length };
+  const cleaned = trimOutliers(matched);
+  if (cleaned.length < minSamples) return null;
+  return { medianCents: median(cleaned), count: cleaned.length };
 }

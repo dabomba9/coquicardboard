@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
+import { playSelect } from "@/lib/sfx";
+import { cn } from "@/lib/utils";
 
 type Item = { name: string; slug: string; tier_id: number; set: string | null };
 
@@ -53,6 +55,7 @@ export function CommandPalette() {
   }, [q, items]);
 
   function go(i: Item) {
+    playSelect();
     setOpen(false);
     router.push(`/cards/${i.slug}`);
   }
@@ -64,10 +67,10 @@ export function CommandPalette() {
       onClick={() => setOpen(false)}
     >
       <div
-        className="w-full max-w-xl overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
+        className="font-modern w-full max-w-xl overflow-hidden rounded-2xl border border-border/50 bg-background/90 shadow-2xl backdrop-blur-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-2 border-b border-border px-3">
+        <div className="flex items-center gap-2 border-b border-border/50 px-3">
           <Search size={16} className="text-muted" />
           <input
             ref={inputRef}
@@ -81,18 +84,21 @@ export function CommandPalette() {
             placeholder="Search cards…"
             className="h-12 w-full bg-transparent text-sm text-foreground placeholder:text-muted focus:outline-none"
           />
-          <kbd className="rounded border border-border px-1.5 py-0.5 text-[10px] text-muted">esc</kbd>
+          <kbd className="rounded-md border border-border/60 bg-foreground/5 px-1.5 py-0.5 text-[11px] leading-none text-muted">esc</kbd>
         </div>
-        <ul className="max-h-80 overflow-y-auto py-1">
+        <ul className="max-h-80 overflow-y-auto p-2">
           {results.map((i, idx) => (
             <li key={i.slug}>
               <button
                 onMouseEnter={() => setActive(idx)}
                 onClick={() => go(i)}
-                className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm ${idx === active ? "bg-foreground/5" : ""}`}
+                className={cn(
+                  "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                  idx === active ? "bg-accent/12 text-accent" : "hover:bg-foreground/5"
+                )}
               >
                 <span className="truncate">{i.name}</span>
-                <span className="shrink-0 text-xs text-muted">Tier {i.tier_id}</span>
+                <span className={cn("shrink-0 text-xs", idx === active ? "text-accent" : "text-muted")}>Tier {i.tier_id}</span>
               </button>
             </li>
           ))}

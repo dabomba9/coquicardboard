@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Jersey_25, Pixelify_Sans, VT323 } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { SiteNav } from "@/components/site-nav";
@@ -7,8 +7,27 @@ import { CommandPalette } from "@/components/command-palette";
 import { Toaster } from "sonner";
 import type { Viewport } from "next";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+// Display: "Jersey 25" — a pixelated varsity jersey-number face for headlines
+// and page titles (text-lg+). Pairs with the Pixelify body + VT323 numbers.
+const pixelDisplay = Jersey_25({
+  weight: "400",
+  variable: "--font-display",
+  subsets: ["latin"],
+  display: "swap",
+});
+// Body: a pixel face designed to stay legible at small sizes (variable, 400–700).
+const pixelBody = Pixelify_Sans({
+  variable: "--font-body",
+  subsets: ["latin"],
+  display: "swap",
+});
+// Data: monospace pixel digits for value/year/# columns and prices.
+const pixelData = VT323({
+  weight: "400",
+  variable: "--font-data",
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
@@ -22,8 +41,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f7f9" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0c10" },
+    { media: "(prefers-color-scheme: light)", color: "#efe6cd" },
+    { media: "(prefers-color-scheme: dark)", color: "#0c1026" },
   ],
 };
 
@@ -32,17 +51,35 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${pixelDisplay.variable} ${pixelBody.variable} ${pixelData.variable} h-full`}
     >
       <body className="min-h-full flex flex-col font-sans">
+        {/* Global posterize/illustration filter referenced by .card-illus on pixel cards. */}
+        <svg aria-hidden="true" width="0" height="0" className="absolute">
+          <filter id="cc-illus">
+            <feComponentTransfer>
+              <feFuncR type="discrete" tableValues="0 0.33 0.67 1" />
+              <feFuncG type="discrete" tableValues="0 0.33 0.67 1" />
+              <feFuncB type="discrete" tableValues="0 0.33 0.67 1" />
+            </feComponentTransfer>
+          </filter>
+        </svg>
         <Providers>
           <SiteNav />
           <CommandPalette />
-          <main className="flex-1 pb-16 sm:pb-0">{children}</main>
-          <footer className="border-t border-border py-6 text-center text-xs text-muted">
-            © Coqui Cardboard · an independent collector tool. MJ Hierarchy tier concept credited to Cajun Cardboard.
+          <main className="flex-1 pb-16 pt-[5.5rem] md:pb-0">{children}</main>
+          <footer className="border-t-2 border-border py-6 text-center text-xs text-muted">
+            <span className="font-data text-sm">©</span> Coqui Cardboard · an independent collector tool.
+            MJ Hierarchy tier concept credited to Cajun Cardboard.
           </footer>
-          <Toaster theme="system" position="bottom-right" richColors closeButton />
+          <Toaster
+            theme="system"
+            position="bottom-right"
+            closeButton
+            toastOptions={{ className: "pixel-box !rounded-none font-sans" }}
+          />
+          {/* Global CRT / scanline overlay — sits above content, never blocks clicks. */}
+          <div className="crt-overlay" aria-hidden="true" />
         </Providers>
       </body>
     </html>

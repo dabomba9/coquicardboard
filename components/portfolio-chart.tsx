@@ -24,14 +24,14 @@ export function PortfolioChart({ points }: { points: { date: string; value: numb
             </linearGradient>
           </defs>
           <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
-          <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--chart-axis)" }} minTickGap={28} />
-          <YAxis tick={{ fontSize: 11, fill: "var(--chart-axis)" }} width={64} tickFormatter={(v) => formatUsd(v * 100)} />
+          <XAxis dataKey="date" tick={{ fontSize: 13, fill: "var(--chart-axis)", fontFamily: "var(--font-data)" }} minTickGap={28} />
+          <YAxis tick={{ fontSize: 13, fill: "var(--chart-axis)", fontFamily: "var(--font-data)" }} width={64} tickFormatter={(v) => formatUsd(v * 100)} />
           <Tooltip
-            contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
+            contentStyle={{ background: "var(--card)", border: "2px solid var(--border)", borderRadius: 0, fontSize: 12 }}
             labelStyle={{ color: "var(--foreground)" }}
             formatter={(v) => [formatUsd(Number(v) * 100), "Est. value"]}
           />
-          <Area type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={2} fill="url(#pv)" />
+          <Area type="stepAfter" dataKey="value" stroke="var(--accent)" strokeWidth={2} fill="url(#pv)" />
         </AreaChart>
       </ResponsiveContainer>
     </div>
