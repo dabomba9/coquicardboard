@@ -4,7 +4,6 @@ import { getTiers, getAllCards } from "@/lib/queries";
 import { CardThumb } from "@/components/card-thumb";
 import { Panel, Button } from "@/components/ui/primitives";
 import { LegendsHero } from "@/components/legends-hero";
-import { CardMarquee } from "@/components/card-marquee";
 import { Reveal } from "@/components/reveal";
 import type { CardWithSet, Tier } from "@/lib/types";
 
@@ -29,7 +28,6 @@ export default async function Home() {
   }
   const mjTotal = tiers.reduce((s, t) => s + t.card_count, 0) || 378;
   const withImg = cards.filter((c) => c.image_url);
-  const marqueeImgs = withImg.slice(0, 22).map((c) => c.image_url!);
   const hierGrid = withImg.filter((c) => c.tier_id === 1).slice(0, 5);
   const vaultGrid = withImg.slice(5, 10);
 
@@ -57,15 +55,6 @@ export default async function Home() {
           </div>
         </section>
       </Reveal>
-
-      {/* Card showcase marquee */}
-      {marqueeImgs.length > 0 && (
-        <Reveal>
-          <section className="py-4">
-            <CardMarquee images={marqueeImgs} />
-          </section>
-        </Reveal>
-      )}
 
       {/* Two catalogs */}
       <Reveal>
