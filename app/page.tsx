@@ -31,7 +31,7 @@ export default async function Home() {
         <div className="mt-6 grid gap-4 lg:grid-cols-3">
           {/* MJ Hierarchy — live */}
           <Link href="/mj-hierarchy" className="group lg:col-span-2">
-            <Panel className="h-full overflow-hidden p-5 [--border:var(--tier-1)] transition-transform group-hover:-translate-y-1">
+            <Panel className="h-full overflow-hidden border-[var(--tier-1)] p-5 transition-transform group-hover:-translate-y-1">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="font-sans text-[10px] uppercase tracking-wide text-[var(--tier-1)]">● Live</div>
@@ -46,7 +46,7 @@ export default async function Home() {
               {heroCards.length > 0 && (
                 <div className="mt-4 grid grid-cols-5 gap-2">
                   {heroCards.map((c) => (
-                    <div key={c.id} className="pixel-box bg-card p-1">
+                    <div key={c.id} className="rounded-xl border border-border/50 bg-card p-1">
                       <CardThumb card={c} />
                     </div>
                   ))}

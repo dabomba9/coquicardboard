@@ -140,8 +140,8 @@ export function VaultExplorer({ cards, signedIn, ownedCount }: { cards: VaultTil
               key={f.label}
               onClick={() => { setManufacturer((m) => (m === f.manufacturer ? "" : f.manufacturer)); setPage(0); }}
               className={cn(
-                "pixel-box bg-card p-3 text-left transition-transform hover:-translate-y-0.5",
-                manufacturer === f.manufacturer && f.manufacturer !== "" && "[--border:var(--accent)]"
+                "rounded-2xl border border-border/50 bg-card p-3 text-left transition-transform hover:-translate-y-0.5",
+                manufacturer === f.manufacturer && f.manufacturer !== "" && "border-accent"
               )}
             >
               <div className="truncate font-sans text-[9px] uppercase tracking-wide text-muted">{f.label}</div>

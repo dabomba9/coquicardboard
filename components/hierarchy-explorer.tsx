@@ -216,8 +216,8 @@ export function HierarchyExplorer({
                 key={f.label}
                 onClick={f.onClick}
                 className={cn(
-                  "pixel-box bg-card p-3 text-left transition-transform hover:-translate-y-0.5",
-                  f.active && "[--border:var(--accent)]"
+                  "rounded-2xl border border-border/50 bg-card p-3 text-left transition-transform hover:-translate-y-0.5",
+                  f.active && "border-accent"
                 )}
               >
                 <div className="font-sans text-[9px] uppercase tracking-wide text-muted">{f.label}</div>
@@ -325,7 +325,7 @@ export function HierarchyExplorer({
           const pct = g.items.length ? Math.round((ownedN / g.items.length) * 100) : 0;
           return (
           <section key={g.label}>
-            <div className="flex items-baseline justify-between border-b-2 border-border pb-2">
+            <div className="flex items-baseline justify-between border-b border-border/50 pb-2">
               <h2 className="font-sans text-sm uppercase tracking-wide">{g.label}</h2>
               <span className="font-data text-base text-muted">
                 {signedIn ? `${ownedN} / ${g.items.length}` : `${g.items.length}`}
@@ -353,23 +353,23 @@ export function HierarchyExplorer({
                         }}
                         className={cn(
                           "transition-transform group-hover:-translate-y-1",
-                          owned && "[--border:var(--gold)]",
+                          owned && "border-[var(--gold)]",
                           card.tier_id === 1 && "foil foil--soft"
                         )}
                       />
                     </Link>
                     {owned && (
-                      <span className="pointer-events-none absolute right-1 top-1 pixel-box bg-[var(--gold)] px-1 font-sans text-[9px] text-black [--border:var(--gold)]">✓</span>
+                      <span className="pointer-events-none absolute right-1 top-1 rounded-full bg-[var(--gold)] px-1.5 text-[9px] font-semibold text-black">✓</span>
                     )}
                     {card.for_trade && (
-                      <span className="pointer-events-none absolute left-1 top-1 pixel-box bg-accent px-1 font-sans text-[9px] text-black [--border:var(--accent)]">T</span>
+                      <span className="pointer-events-none absolute left-1 top-1 rounded-full bg-accent px-1.5 text-[9px] font-semibold text-black">T</span>
                     )}
                     {signedIn && !owned && (
                       <button
                         type="button"
                         aria-label="Add to my collection"
                         onClick={(e) => { e.preventDefault(); quickAdd(card); }}
-                        className="pixel-box pixel-btn absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center bg-accent font-sans text-xs text-black opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:brightness-110 [--border:var(--accent)]"
+                        className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-accent text-xs font-semibold text-black opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:brightness-110"
                         title="Quick add (owned)"
                       >
                         +
@@ -394,7 +394,7 @@ export function HierarchyExplorer({
                 </thead>
                 <tbody>
                   {g.items.map((card) => (
-                    <tr key={card.id} className="border-t-2 border-border hover:bg-foreground/5">
+                    <tr key={card.id} className="border-t border-border/50 hover:bg-foreground/5">
                       <td className="py-2 pr-2">
                         <Link href={`/cards/${card.slug}`} className="font-medium hover:underline">{card.name}</Link>
                       </td>

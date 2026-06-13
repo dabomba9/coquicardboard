@@ -134,7 +134,7 @@ export default async function CollectionPage() {
       {/* Owned Jordan Vault cards (no tier — their own section) */}
       {ownedVaultCards.length > 0 && (
         <section className="mt-10">
-          <h2 className="flex items-baseline justify-between border-b-2 border-border pb-2">
+          <h2 className="flex items-baseline justify-between border-b border-border/50 pb-2">
             <span className="font-sans text-sm uppercase tracking-wide">Jordan Vault</span>
             <span className="font-data text-base text-muted">{ownedVaultCards.length}</span>
           </h2>
@@ -150,7 +150,7 @@ export default async function CollectionPage() {
                     image_url: c.image_url,
                     sets: (c.attributes?.manufacturer as string) ? { name: c.attributes.manufacturer as string } : null,
                   }}
-                  className="transition-transform group-hover:-translate-y-1 [--border:var(--gold)]"
+                  className="transition-transform group-hover:-translate-y-1 border-[var(--gold)]"
                 />
               </Link>
             ))}

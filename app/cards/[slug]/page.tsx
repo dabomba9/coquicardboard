@@ -62,7 +62,7 @@ export default async function CardDetailPage({
 
       <div className="mt-4 grid gap-8 sm:grid-cols-[280px_1fr]">
         <div>
-          <div className={cn("relative overflow-hidden pixel-box bg-card p-1", foilClass)} style={tierStyle}>
+          <div className={cn("relative overflow-hidden rounded-xl border border-border/50 bg-card p-1", foilClass)} style={tierStyle}>
             <CardLightbox imageUrl={card.image_url} alt={card.name}>
               <CardThumb card={card} className="w-full !border-0 !shadow-none" />
             </CardLightbox>
@@ -76,7 +76,7 @@ export default async function CardDetailPage({
         <Panel className="self-start p-5" style={tierStyle}>
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={cn("pixel-box px-2 py-0.5 font-sans text-[10px] uppercase", isVault ? "text-accent" : cn(c.bg, c.text))}
+              className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium", isVault ? "bg-accent/12 text-accent" : cn(c.bg, c.text))}
               style={tierStyle}
             >
               {isVault ? "Jordan Vault" : `Tier ${card.tier_id} · ${tierName}`}
@@ -153,7 +153,7 @@ export default async function CardDetailPage({
                     ? `eBay asking${asOf ? ` · ${asOf}` : ""}`
                     : "estimated";
                 return (
-                  <div key={p.grade_key} className="pixel-box bg-elevated px-3 py-2">
+                  <div key={p.grade_key} className="rounded-xl border border-border/50 bg-elevated px-3 py-2">
                     <span className="font-sans text-[9px] uppercase text-muted">{p.grade_key}</span>
                     <div className="font-data text-xl leading-none text-foreground">{formatUsd(p.median_cents)}</div>
                     <div className={cn("text-[10px]", isEbay ? "text-accent" : "text-muted")}>

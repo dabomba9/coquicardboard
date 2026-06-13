@@ -26,10 +26,10 @@ export function PriceChart({ series }: { series: PriceSeries[] }) {
           <button
             key={s.grade_key}
             onClick={() => setActive(s.grade_key)}
-            className={`pixel-box px-2.5 py-1 font-sans text-[9px] uppercase transition-colors ${
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
               s.grade_key === active
-                ? "bg-accent text-black [--border:var(--accent)]"
-                : "bg-card text-muted hover:text-foreground"
+                ? "border-accent bg-accent/15 text-accent"
+                : "border-border/55 text-muted hover:border-border hover:text-foreground"
             }`}
           >
             {s.grade_key}

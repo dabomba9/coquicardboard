@@ -63,7 +63,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <SiteNav />
           <CommandPalette />
           <main className="flex-1 pb-16 pt-[5.5rem] md:pb-0">{children}</main>
-          <footer className="border-t-2 border-border py-6 text-center text-xs text-muted">
+          <footer className="border-t border-border/50 py-6 text-center text-xs text-muted">
             <span className="font-data text-sm">©</span> Coqui Cardboard · an independent collector tool.
             MJ Hierarchy tier concept credited to Cajun Cardboard.
           </footer>
@@ -71,7 +71,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             theme="system"
             position="bottom-right"
             closeButton
-            toastOptions={{ className: "pixel-box !rounded-none font-sans" }}
+            toastOptions={{ className: "rounded-xl border border-border/50" }}
           />
           {/* Global CRT / scanline overlay — sits above content, never blocks clicks. */}
           <div className="crt-overlay" aria-hidden="true" />

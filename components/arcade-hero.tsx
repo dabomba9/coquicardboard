@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/primitives";
 export function ArcadeHero() {
   return (
     <section
-      className="relative overflow-hidden border-b-2 border-border pb-14 pt-28 sm:pt-32"
+      className="relative overflow-hidden border-b border-border/50 pb-14 pt-28 sm:pt-32"
       style={{ background: "#140f33" }}
     >
       <div className="mx-auto max-w-6xl px-4">

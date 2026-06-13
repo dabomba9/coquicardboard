@@ -22,7 +22,7 @@ export default async function PublicProfilePage({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">
+      <h1 className="font-display text-lg uppercase tracking-tight">
         {profile.display_name || profile.username}
       </h1>
       <p className="mt-1 text-sm text-muted">@{profile.username}</p>
