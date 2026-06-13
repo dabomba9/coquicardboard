@@ -115,6 +115,37 @@ export async function getRelatedCards(setId: string, excludeId: string, limit = 
   return (data as CardWithSet[]) ?? [];
 }
 
+// All Jordan Vault cards (catalog='mj-vault'). PostgREST caps a select at 1000
+// rows, so page through the ~12k in chunks. Returns the slim fields the explorer
+// needs (vault metadata lives in `attributes`).
+export type VaultRow = {
+  id: string;
+  slug: string;
+  name: string | null;
+  card_number: string | null;
+  year: number | null;
+  image_url: string | null;
+  attributes: Record<string, unknown>;
+};
+export async function getVaultCards(): Promise<VaultRow[]> {
+  const supabase = await createClient();
+  const out: VaultRow[] = [];
+  const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("cards")
+      .select("id, slug, name, card_number, year, image_url, attributes")
+      .eq("catalog", "mj-vault")
+      .order("rarity_rank")
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    const rows = (data as VaultRow[]) ?? [];
+    out.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return out;
+}
+
 export async function getCardBySlug(slug: string): Promise<CardWithSet | null> {
   const supabase = await createClient();
   const { data } = await supabase.from("cards").select("*, sets(*)").eq("slug", slug).maybeSingle();
