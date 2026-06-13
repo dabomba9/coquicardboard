@@ -1,8 +1,142 @@
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   CardWithSet, Holding, Tier, CardPrice, Profile, PublicCollection,
 } from "@/lib/types";
 import { valuePortfolioSeries, type PriceHistoryRow } from "@/lib/portfolio";
+
+// ---- Cached catalog reads (global, non-user) ----
+// These read world-readable catalog/price rows with the cookieless admin client
+// (unstable_cache callbacks cannot call cookies()) and cache the result so Supabase
+// isn't re-queried on every request. Per-user reads stay dynamic (see further down).
+// Caches are invalidated by time (revalidate) and by the nightly cron via
+// revalidateTag("catalog" | "prices" | "vault-catalog").
+
+export const getTiersCached = unstable_cache(
+  async (): Promise<Tier[]> => {
+    const { data, error } = await createAdminClient().from("tiers").select("*").order("rank");
+    if (error) throw error;
+    return data as Tier[];
+  },
+  ["tiers"],
+  { revalidate: 86400, tags: ["catalog"] }
+);
+
+export const getHierarchyCatalog = unstable_cache(
+  async (): Promise<CardWithSet[]> => {
+    const { data, error } = await createAdminClient()
+      .from("cards")
+      .select("*, sets(*)")
+      .eq("catalog", "mj-hierarchy")
+      .order("tier_id")
+      .order("rarity_rank");
+    if (error) throw error;
+    return (data as CardWithSet[]) ?? [];
+  },
+  ["hierarchy-catalog"],
+  { revalidate: 3600, tags: ["catalog"] }
+);
+
+export const getCatalogValueMapCached = unstable_cache(
+  async (): Promise<[string, number][]> => {
+    // Returned as entries (Map isn't serializable in the cache). Caller rebuilds the Map.
+    const db = createAdminClient();
+    const map = new Map<string, number>();
+    const { data: cards } = await db.from("cards").select("id, catalog_value_cents").eq("catalog", "mj-hierarchy");
+    for (const c of (cards as { id: string; catalog_value_cents: number | null }[]) ?? []) {
+      if (c.catalog_value_cents != null) map.set(c.id, c.catalog_value_cents);
+    }
+    const { data: prices } = await db.from("card_prices").select("card_id, median_cents").eq("grade_key", "raw");
+    for (const p of (prices as { card_id: string; median_cents: number | null }[]) ?? []) {
+      if (p.median_cents != null) map.set(p.card_id, p.median_cents);
+    }
+    return [...map.entries()];
+  },
+  ["catalog-value-map"],
+  { revalidate: 3600, tags: ["catalog", "prices"] }
+);
+
+// Full Jordan Vault catalog (slim fields), cached. The cookieless admin client +
+// PostgREST 1000-row paging through the ~12k rows. The vault page filters/sorts/
+// paginates this in-memory server-side (lib/vault-filter.ts) — the browser only
+// ever receives one 48-card page.
+export const getVaultCatalog = unstable_cache(
+  async (): Promise<VaultRow[]> => {
+    const db = createAdminClient();
+    const out: VaultRow[] = [];
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await db
+        .from("cards")
+        .select("id, slug, name, card_number, year, image_url, attributes")
+        .eq("catalog", "mj-vault")
+        .order("rarity_rank")
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      const rows = (data as VaultRow[]) ?? [];
+      out.push(...rows);
+      if (rows.length < PAGE) break;
+    }
+    return out;
+  },
+  ["vault-catalog"],
+  { revalidate: 3600, tags: ["vault-catalog"] }
+);
+
+export const getCardBySlugCached = unstable_cache(
+  async (slug: string): Promise<CardWithSet | null> => {
+    const { data } = await createAdminClient().from("cards").select("*, sets(*)").eq("slug", slug).maybeSingle();
+    return (data as CardWithSet) ?? null;
+  },
+  ["card-by-slug"],
+  { revalidate: 3600, tags: ["catalog"] }
+);
+
+export const getCardPricesCached = unstable_cache(
+  async (cardId: string): Promise<CardPrice[]> => {
+    const { data } = await createAdminClient().from("card_prices").select("*").eq("card_id", cardId);
+    return (data as CardPrice[]) ?? [];
+  },
+  ["card-prices"],
+  { revalidate: 3600, tags: ["prices"] }
+);
+
+export const getPriceHistoryCached = unstable_cache(
+  async (cardId: string): Promise<PriceSeries[]> => {
+    const { data } = await createAdminClient()
+      .from("price_history")
+      .select("grade_key, value_cents, recorded_on")
+      .eq("card_id", cardId)
+      .order("recorded_on");
+    const map = new Map<string, { date: string; value: number }[]>();
+    for (const r of (data as { grade_key: string; value_cents: number; recorded_on: string }[]) ?? []) {
+      if (!map.has(r.grade_key)) map.set(r.grade_key, []);
+      map.get(r.grade_key)!.push({ date: r.recorded_on, value: r.value_cents });
+    }
+    const order = (g: string) => (g === "raw" ? 0 : g.startsWith("PSA10") ? 1 : g.startsWith("BGS") ? 2 : 3);
+    return [...map.entries()]
+      .map(([grade_key, points]) => ({ grade_key, points }))
+      .sort((a, b) => order(a.grade_key) - order(b.grade_key));
+  },
+  ["price-history"],
+  { revalidate: 3600, tags: ["prices"] }
+);
+
+export const getRelatedCardsCached = unstable_cache(
+  async (setId: string, excludeId: string, limit = 12): Promise<CardWithSet[]> => {
+    const { data } = await createAdminClient()
+      .from("cards")
+      .select("*, sets(*)")
+      .eq("set_id", setId)
+      .neq("id", excludeId)
+      .order("rarity_rank")
+      .limit(limit);
+    return (data as CardWithSet[]) ?? [];
+  },
+  ["related-cards"],
+  { revalidate: 3600, tags: ["catalog"] }
+);
 
 // ---- Catalog (public, read-only) ----
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCardBySlug, getCardPrices, getMyWantCardIds, getPriceHistory, getCardOwnerCount, getRelatedCards, getMyHoldingsForCard } from "@/lib/queries";
+import { getCardBySlugCached, getCardPricesCached, getMyWantCardIds, getPriceHistoryCached, getCardOwnerCount, getRelatedCardsCached, getMyHoldingsForCard } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
 import { CardThumb } from "@/components/card-thumb";
@@ -20,19 +20,22 @@ export default async function CardDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const card = await getCardBySlug(slug);
+  const card = await getCardBySlugCached(slug);
   if (!card) notFound();
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const [prices, history, wantIds, ownerCount, related, myHoldings] = await Promise.all([
-    getCardPrices(card.id),
-    getPriceHistory(card.id),
+  const [allPrices, history, wantIds, ownerCount, related, myHoldings] = await Promise.all([
+    getCardPricesCached(card.id),
+    getPriceHistoryCached(card.id),
     user ? getMyWantCardIds() : Promise.resolve(new Set<string>()),
     getCardOwnerCount(card.id),
-    card.set_id ? getRelatedCards(card.set_id, card.id) : Promise.resolve([]),
+    card.set_id ? getRelatedCardsCached(card.set_id, card.id) : Promise.resolve([]),
     user ? getMyHoldingsForCard(card.id) : Promise.resolve([]),
   ]);
+  // Drop "no-comp" sentinel rows (median_cents=null, source='none') the cron writes
+  // to advance coverage — they must never render as a $0 value.
+  const prices = allPrices.filter((p) => p.median_cents != null);
 
   const isVault = card.catalog === "mj-vault";
   const attrs = (card.attributes ?? {}) as Record<string, unknown>;

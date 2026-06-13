@@ -1,29 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Search, Plus, Check } from "lucide-react";
 import { toast } from "sonner";
 import { CardThumb } from "@/components/card-thumb";
 import { quickAddOwned } from "@/lib/actions/holdings";
 import { playConfirm } from "@/lib/sfx";
 import { cn } from "@/lib/utils";
+import type { VaultItem, VaultParams, SortKey, Facet } from "@/lib/vault-filter";
 
-export type VaultTile = {
-  id: string;
-  slug: string;
-  name: string | null;
-  year: number | null;
-  manufacturer: string | null;
-  cardNumber: string | null;
-  cardType: string | null;
-  frontImage: string | null;
-  owned: boolean;
-  forTrade: boolean;
-};
+export type VaultTile = VaultItem & { owned: boolean; forTrade: boolean };
 
-type SortKey = "year" | "year_desc" | "name" | "manufacturer" | "cardType";
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "year", label: "Year ↑" },
   { key: "year_desc", label: "Year ↓" },
@@ -31,99 +20,67 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "manufacturer", label: "Manufacturer" },
   { key: "cardType", label: "Card type" },
 ];
-type Ownership = "all" | "owned" | "needed";
-const PAGE_SIZE = 48;
 // Vault has no tiers; cycle a palette so each manufacturer facet reads distinctly.
 const METER_VARS = ["var(--tier-1)", "var(--tier-2)", "var(--tier-3)", "var(--tier-4)", "var(--accent)", "var(--gold)"];
 
-export function VaultExplorer({ cards, signedIn, ownedCount }: { cards: VaultTile[]; signedIn: boolean; ownedCount: number }) {
-  const [q, setQ] = useState("");
-  const [manufacturer, setManufacturer] = useState("");
-  const [cardType, setCardType] = useState("");
-  const [year, setYear] = useState("");
-  const [hasImage, setHasImage] = useState(false);
-  const [ownership, setOwnership] = useState<Ownership>("all");
-  const [sortBy, setSortBy] = useState<SortKey>("year");
-  const [page, setPage] = useState(0);
+type Props = {
+  tiles: VaultTile[];
+  params: VaultParams;
+  options: { manufacturers: string[]; cardTypes: string[]; years: number[] };
+  facets: Facet[];
+  total: number;
+  pages: number;
+  page: number;
+  signedIn: boolean;
+  ownedCount: number;
+};
+
+export function VaultExplorer({ tiles, params, options, facets, total, pages, page, signedIn, ownedCount }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const sp = useSearchParams();
+  const [text, setText] = useState(params.q);
   const [ownedLocal, setOwnedLocal] = useState<Set<string>>(new Set());
   const [, startAdd] = useTransition();
-  const router = useRouter();
 
-  const isOwned = (c: VaultTile) => c.owned || ownedLocal.has(c.id);
+  const isOwned = (t: VaultTile) => t.owned || ownedLocal.has(t.id);
 
-  const manufacturers = useMemo(
-    () => [...new Set(cards.map((c) => c.manufacturer).filter((v): v is string => v != null))].sort(),
-    [cards]
-  );
-  const cardTypes = useMemo(
-    () => [...new Set(cards.map((c) => c.cardType).filter((v): v is string => v != null))].sort(),
-    [cards]
-  );
-  const years = useMemo(
-    () => [...new Set(cards.map((c) => c.year).filter((v): v is number => v != null))].sort((a, b) => a - b),
-    [cards]
-  );
-
-  // Progress facets: overall + per-manufacturer (owned/total), independent of filters.
-  const progress = (subset: VaultTile[]) => {
-    const total = subset.length;
-    const owned = subset.filter(isOwned).length;
-    return { owned, total, pct: total ? Math.round((owned / total) * 100) : 0 };
-  };
-  const facets = useMemo(() => {
-    const byMan = new Map<string, VaultTile[]>();
-    for (const c of cards) {
-      if (!c.manufacturer) continue;
-      (byMan.get(c.manufacturer) ?? byMan.set(c.manufacturer, []).get(c.manufacturer)!).push(c);
+  // Build a URL from the current params with `overrides` applied. Any non-page
+  // change resets to page 1; empty/default values drop the key.
+  function hrefWith(overrides: Record<string, string | null>): string {
+    const next = new URLSearchParams(sp.toString());
+    for (const [k, v] of Object.entries(overrides)) {
+      if (v === null || v === "") next.delete(k);
+      else next.set(k, v);
     }
-    return [
-      { label: "Collected", manufacturer: "", ...progress(cards), meter: "var(--accent)" },
-      ...manufacturers.map((m, i) => ({ label: m, manufacturer: m, ...progress(byMan.get(m) ?? []), meter: METER_VARS[i % METER_VARS.length] })),
-    ];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cards, manufacturers, ownedLocal]);
-
-  const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    const out = cards.filter((c) => {
-      if (needle && !`${c.name ?? ""} ${c.cardNumber ?? ""}`.toLowerCase().includes(needle)) return false;
-      if (manufacturer && c.manufacturer !== manufacturer) return false;
-      if (cardType && c.cardType !== cardType) return false;
-      if (year && String(c.year) !== year) return false;
-      if (hasImage && !c.frontImage) return false;
-      if (ownership === "owned" && !isOwned(c)) return false;
-      if (ownership === "needed" && isOwned(c)) return false;
-      return true;
-    });
-    const byName = (a: VaultTile, b: VaultTile) => (a.name ?? "").localeCompare(b.name ?? "");
-    const cmp: Record<SortKey, (a: VaultTile, b: VaultTile) => number> = {
-      year: (a, b) => (a.year ?? 0) - (b.year ?? 0) || byName(a, b),
-      year_desc: (a, b) => (b.year ?? 0) - (a.year ?? 0) || byName(a, b),
-      name: byName,
-      manufacturer: (a, b) => (a.manufacturer ?? "").localeCompare(b.manufacturer ?? "") || byName(a, b),
-      cardType: (a, b) => (a.cardType ?? "").localeCompare(b.cardType ?? "") || byName(a, b),
-    };
-    return out.sort(cmp[sortBy]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cards, q, manufacturer, cardType, year, hasImage, ownership, sortBy, ownedLocal]);
-
-  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, pages - 1);
-  const slice = filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
-
-  const hasFilters = q !== "" || manufacturer !== "" || cardType !== "" || year !== "" || hasImage || ownership !== "all";
-  function reset() {
-    setQ(""); setManufacturer(""); setCardType(""); setYear(""); setHasImage(false); setOwnership("all"); setSortBy("year"); setPage(0);
+    if (!("page" in overrides)) next.delete("page");
+    const qs = next.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
   }
-  const onFilter = <T,>(setter: (v: T) => void) => (v: T) => { setter(v); setPage(0); };
+  const navigate = (overrides: Record<string, string | null>) =>
+    router.replace(hrefWith(overrides), { scroll: false });
 
-  function quickAdd(e: React.MouseEvent, c: VaultTile) {
+  // Debounced free-text search → URL.
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return; }
+    const id = setTimeout(() => {
+      if (text.trim() !== params.q) router.replace(hrefWith({ q: text.trim() || null }), { scroll: false });
+    }, 200);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text]);
+  // Keep the box in sync if params change externally (e.g. Clear / back button).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setText(params.q); }, [params.q]);
+
+  function quickAdd(e: React.MouseEvent, t: VaultTile) {
     e.preventDefault(); e.stopPropagation();
-    if (isOwned(c)) return;
+    if (isOwned(t)) return;
     startAdd(async () => {
-      const res = await quickAddOwned(c.id);
+      const res = await quickAddOwned(t.id);
       if (res?.error) { toast.error(res.error); return; }
-      setOwnedLocal((prev) => new Set(prev).add(c.id));
+      setOwnedLocal((prev) => new Set(prev).add(t.id));
       toast.success("Added to your collection");
       playConfirm();
     });
@@ -131,24 +88,27 @@ export function VaultExplorer({ cards, signedIn, ownedCount }: { cards: VaultTil
 
   const selectCls =
     "h-9 rounded-full border border-border/60 bg-foreground/[0.03] px-3 text-sm text-foreground transition-colors hover:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
+  const hasFilters =
+    params.q !== "" || params.manufacturer !== "" || params.cardType !== "" || params.year !== "" ||
+    params.hasImage || params.ownership !== "all";
 
   return (
     <div className="mt-6">
       {/* Progress facets — overall + per-manufacturer collection meters (click to filter) */}
       {signedIn && (
         <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-          {facets.map((f) => (
+          {facets.map((f, i) => (
             <button
               key={f.label}
-              onClick={() => { setManufacturer((m) => (m === f.manufacturer ? "" : f.manufacturer)); setPage(0); }}
+              onClick={() => navigate({ manufacturer: params.manufacturer === f.manufacturer ? null : f.manufacturer || null })}
               className={cn(
                 "rounded-2xl border border-border/50 bg-card p-3 text-left transition-transform hover:-translate-y-0.5",
-                manufacturer === f.manufacturer && f.manufacturer !== "" && "border-accent"
+                params.manufacturer === f.manufacturer && f.manufacturer !== "" && "border-accent"
               )}
             >
               <div className="truncate font-sans text-[9px] uppercase tracking-wide text-muted">{f.label}</div>
               <div className="mt-1 font-data text-base leading-none">{f.owned}/{f.total}</div>
-              <div className="meter mt-2" style={{ ["--meter" as string]: f.meter } as React.CSSProperties}>
+              <div className="meter mt-2" style={{ ["--meter" as string]: f.label === "Collected" ? "var(--accent)" : METER_VARS[i % METER_VARS.length] } as React.CSSProperties}>
                 <span style={{ width: `${f.pct}%` }} />
               </div>
             </button>
@@ -162,53 +122,53 @@ export function VaultExplorer({ cards, signedIn, ownedCount }: { cards: VaultTil
           <div className="relative max-w-xs flex-1">
             <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden="true" />
             <input
-              value={q}
-              onChange={(e) => onFilter(setQ)(e.target.value)}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
               placeholder="Search name or card number…"
               className="h-9 w-full rounded-full border border-border/60 bg-foreground/[0.03] pl-9 pr-3.5 text-sm text-foreground transition-colors placeholder:text-muted hover:border-border focus:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
-          <select value={cardType} onChange={(e) => onFilter(setCardType)(e.target.value)} className={selectCls} aria-label="Card type">
+          <select value={params.cardType} onChange={(e) => navigate({ type: e.target.value || null })} className={selectCls} aria-label="Card type">
             <option value="">All types</option>
-            {cardTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+            {options.cardTypes.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
-          <select value={year} onChange={(e) => onFilter(setYear)(e.target.value)} className={selectCls} aria-label="Year">
+          <select value={params.year} onChange={(e) => navigate({ year: e.target.value || null })} className={selectCls} aria-label="Year">
             <option value="">All years</option>
-            {years.map((y) => <option key={y} value={String(y)}>{y}</option>)}
+            {options.years.map((y) => <option key={y} value={String(y)}>{y}</option>)}
           </select>
-          <select value={ownership} onChange={(e) => onFilter(setOwnership)(e.target.value as Ownership)} disabled={!signedIn} className={selectCls} aria-label="Ownership">
+          <select value={params.ownership} onChange={(e) => navigate({ ownership: e.target.value === "all" ? null : e.target.value })} disabled={!signedIn} className={selectCls} aria-label="Ownership">
             <option value="all">All</option>
             <option value="owned">Owned</option>
             <option value="needed">Needed</option>
           </select>
           <div className="ml-auto flex items-center gap-2 text-sm">
-            <label className="flex items-center gap-1.5 text-muted"><input type="checkbox" checked={hasImage} onChange={(e) => onFilter(setHasImage)(e.target.checked)} /> Has image</label>
+            <label className="flex items-center gap-1.5 text-muted"><input type="checkbox" checked={params.hasImage} onChange={(e) => navigate({ img: e.target.checked ? "1" : null })} /> Has image</label>
             <span className="text-muted">Sort</span>
-            <select value={sortBy} onChange={(e) => onFilter(setSortBy)(e.target.value as SortKey)} className={selectCls}>
+            <select value={params.sort} onChange={(e) => navigate({ sort: e.target.value === "year" ? null : e.target.value })} className={selectCls}>
               {SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
             </select>
           </div>
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          {manufacturer && (
-            <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">{manufacturer}</span>
+          {params.manufacturer && (
+            <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">{params.manufacturer}</span>
           )}
           {hasFilters && (
-            <button onClick={reset} className="font-sans text-[9px] uppercase text-muted underline hover:text-foreground">Clear</button>
+            <Link href={pathname} replace scroll={false} className="font-sans text-[9px] uppercase text-muted underline hover:text-foreground">Clear</Link>
           )}
           <span className="ml-auto font-data text-sm text-muted">
-            {filtered.length.toLocaleString()} cards{signedIn ? ` · ${ownedCount.toLocaleString()} owned` : ""}
+            {total.toLocaleString()} cards{signedIn ? ` · ${ownedCount.toLocaleString()} owned` : ""}
           </span>
         </div>
       </div>
 
       {/* Results */}
-      {filtered.length === 0 ? (
+      {total === 0 ? (
         <p className="py-10 text-center text-sm text-muted">No cards match your filters.</p>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-            {slice.map((c) => {
+            {tiles.map((c) => {
               const owned = isOwned(c);
               return (
                 <Link key={c.id} href={`/cards/${c.slug}`} className="group relative">
@@ -245,17 +205,17 @@ export function VaultExplorer({ cards, signedIn, ownedCount }: { cards: VaultTil
           </div>
 
           <div className="mt-8 flex items-center justify-center gap-4">
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={safePage === 0}
-              className="rounded-full border border-border/60 px-4 py-1.5 text-sm text-muted transition-colors hover:border-border hover:text-foreground disabled:opacity-40"
-            >‹ Prev</button>
-            <span className="font-data text-sm text-muted">Page {safePage + 1} of {pages}</span>
-            <button
-              onClick={() => setPage((p) => Math.min(pages - 1, p + 1))}
-              disabled={safePage >= pages - 1}
-              className="rounded-full border border-border/60 px-4 py-1.5 text-sm text-muted transition-colors hover:border-border hover:text-foreground disabled:opacity-40"
-            >Next ›</button>
+            {page > 1 ? (
+              <Link href={hrefWith({ page: String(page - 1) })} scroll className="rounded-full border border-border/60 px-4 py-1.5 text-sm text-muted transition-colors hover:border-border hover:text-foreground">‹ Prev</Link>
+            ) : (
+              <span className="rounded-full border border-border/60 px-4 py-1.5 text-sm text-muted opacity-40">‹ Prev</span>
+            )}
+            <span className="font-data text-sm text-muted">Page {page} of {pages}</span>
+            {page < pages ? (
+              <Link href={hrefWith({ page: String(page + 1) })} scroll className="rounded-full border border-border/60 px-4 py-1.5 text-sm text-muted transition-colors hover:border-border hover:text-foreground">Next ›</Link>
+            ) : (
+              <span className="rounded-full border border-border/60 px-4 py-1.5 text-sm text-muted opacity-40">Next ›</span>
+            )}
           </div>
         </>
       )}
