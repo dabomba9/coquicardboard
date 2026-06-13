@@ -45,22 +45,22 @@
   );
 }
 
-/* Dark theme (night / dungeon — blue dialog box) */
+/* Dark theme (night — deep forest green) */
 .dark {
-  --background: #0c1026;
-  --foreground: #eef0ff;
-  --muted: #9aa1d4;
-  --card: #1a2150;
-  --elevated: #232c66;
-  --border: #5566c4;
-  --border-light: #8a98e6;
-  --border-shadow: #0a0e22;
+  --background: #0b1712;
+  --foreground: #e9f1ea;
+  --muted: #8ba596;
+  --card: #122418;
+  --elevated: #18301f;
+  --border: #2e5740;
+  --border-light: #3f7053;
+  --border-shadow: #05100a;
   --accent: #5fd35f;
   --ring: #5fd35f;
   --gold: #f5c542;
-  --shadow-ink: #070a18;    /* hard headline drop-shadow (near-black on dungeon) */
-  --chart-grid: #2a3366;
-  --chart-axis: #9aa1d4;
+  --shadow-ink: #04100a;    /* hard headline drop-shadow (near-black on forest) */
+  --chart-grid: #1d3727;
+  --chart-axis: #8ba596;
 
   --tier-1: #f5c542; --tier-1-bg: color-mix(in oklab, #f5c542 16%, transparent);
   --tier-2: #b56cf0; --tier-2-bg: color-mix(in oklab, #b56cf0 16%, transparent);
