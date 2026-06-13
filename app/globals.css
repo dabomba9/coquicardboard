@@ -254,6 +254,25 @@ body {
   image-rendering: crisp-edges;
 }
 
+/* Legends hero backdrop — light (parchment) vs dark (forest). The hero is a
+   fixed arcade band but adapts its base/gradient/floor/vignette per theme. */
+.hero-arcade {
+  --hero-base: #e7dcbf;
+  --hero-g1: #f1e9d4;
+  --hero-g2: #e7dcbf;
+  --hero-g3: #ddd0ae;
+  --hero-floor: rgba(0, 0, 0, 0.10);
+  --hero-vignette: rgba(120, 90, 30, 0.10);
+}
+.dark .hero-arcade {
+  --hero-base: #07140d;
+  --hero-g1: #14281b;
+  --hero-g2: #0d1c13;
+  --hero-g3: #06120c;
+  --hero-floor: rgba(255, 255, 255, 0.10);
+  --hero-vignette: rgba(0, 0, 0, 0.6);
+}
+
 /* Tiled "overworld / dungeon floor" backdrop — a subtle pixel checker grid. */
 .tile-bg {
   background-image:

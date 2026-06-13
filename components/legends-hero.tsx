@@ -29,8 +29,8 @@ function SlotInner({ l, i }: { l: Legend; i: number }) {
       className={cn(
         "group/slot relative flex h-full flex-col overflow-hidden rounded-2xl border backdrop-blur-sm transition-all duration-300",
         l.live
-          ? "border-white/15 bg-white/[0.05] hover:-translate-y-1.5 focus-within:-translate-y-1.5"
-          : "border-white/10 bg-white/[0.03] opacity-80 hover:opacity-100"
+          ? "border-border bg-foreground/[0.05] hover:-translate-y-1.5 focus-within:-translate-y-1.5"
+          : "border-border/70 bg-foreground/[0.03] opacity-80 hover:opacity-100"
       )}
       style={{ ["--accent" as string]: l.accent } as React.CSSProperties}
     >
@@ -61,13 +61,13 @@ function SlotInner({ l, i }: { l: Legend; i: number }) {
         />
       </div>
       {/* name plate */}
-      <div className="relative border-t border-white/10 bg-black/30 px-2 py-2.5 text-center backdrop-blur-sm">
-        <div className="font-display text-sm uppercase tracking-wide text-white">{l.name}</div>
-        <div className="font-data text-sm leading-none text-white/55">#{l.number} · {l.team}</div>
+      <div className="relative border-t border-border/60 bg-foreground/[0.05] px-2 py-2.5 text-center backdrop-blur-sm">
+        <div className="font-display text-sm uppercase tracking-wide text-foreground">{l.name}</div>
+        <div className="font-data text-sm leading-none text-muted">#{l.number} · {l.team}</div>
         <div
           className={cn(
             "mt-2 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wide",
-            l.live ? "text-black" : "border border-white/20 text-white/55"
+            l.live ? "text-black" : "border border-border text-muted"
           )}
           style={l.live ? { background: l.accent } : undefined}
         >
@@ -81,13 +81,13 @@ function SlotInner({ l, i }: { l: Legend; i: number }) {
 export function LegendsHero() {
   return (
     <section
-      className="relative overflow-hidden border-b border-border/50 pb-16 pt-28 sm:pt-32"
-      style={{ background: "#07140d" }}
+      className="hero-arcade relative overflow-hidden border-b border-border/50 pb-16 pt-28 sm:pt-32"
+      style={{ background: "var(--hero-base)" }}
     >
       {/* --- layered dark arcade backdrop --- */}
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: "linear-gradient(180deg, #14281b 0%, #0d1c13 46%, #06120c 100%)" }}
+        style={{ background: "linear-gradient(180deg, var(--hero-g1) 0%, var(--hero-g2) 46%, var(--hero-g3) 100%)" }}
       />
       <div className="tile-bg pointer-events-none absolute inset-0" style={{ opacity: 0.16 }} />
       {/* twin floodlights */}
@@ -99,18 +99,18 @@ export function LegendsHero() {
         style={{ background: "radial-gradient(closest-side, rgba(120,200,140,0.16), transparent 70%)" }}
       />
       {/* faint floor line for depth */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-20 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent)" }} />
-      <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0,0,0,0.6) 100%)" }} />
+      <div className="pointer-events-none absolute inset-x-0 bottom-20 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--hero-floor), transparent)" }} />
+      <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(120% 90% at 50% 40%, transparent 55%, var(--hero-vignette) 100%)" }} />
 
       {/* --- content --- */}
       <div className="relative z-10 mx-auto max-w-6xl px-4 text-center">
-        <p className="font-display text-[10px] uppercase tracking-[0.4em] text-[#ffd84a]/90 sm:text-xs">
+        <p className="font-display text-[10px] uppercase tracking-[0.4em] text-[#b8791b] dark:text-[#ffd84a]/90 sm:text-xs">
           ▸ Legends of the Game
         </p>
         <h1 className="marquee-gold mt-3 font-display text-5xl uppercase leading-none tracking-tight sm:text-6xl lg:text-7xl">
           Coqui Cardboard
         </h1>
-        <p className="mx-auto mt-4 max-w-xl text-sm text-white/65 sm:text-base">
+        <p className="mx-auto mt-4 max-w-xl text-sm text-muted sm:text-base">
           Track, grade, value, and share the definitive card hierarchies — pick your legend to begin.
         </p>
 
@@ -118,7 +118,7 @@ export function LegendsHero() {
         <div className="mx-auto mt-9 grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
           {LEGENDS.map((l, i) =>
             l.href ? (
-              <Link key={l.name} href={l.href} onMouseEnter={() => playSelect()} className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+              <Link key={l.name} href={l.href} onMouseEnter={() => playSelect()} className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30">
                 <SlotInner l={l} i={i} />
               </Link>
             ) : (
@@ -131,7 +131,7 @@ export function LegendsHero() {
 
         <div className="mt-9 flex flex-wrap justify-center gap-3">
           <Link href="/mj-hierarchy"><Button className="h-12 px-6 text-base">▶ Explore the MJ Hierarchy</Button></Link>
-          <Link href="/vault"><Button variant="secondary" className="h-12 border-white/20 px-6 text-base text-white hover:bg-white/10">Browse the Jordan Vault</Button></Link>
+          <Link href="/vault"><Button variant="secondary" className="h-12 border-border px-6 text-base text-foreground hover:bg-foreground/10">Browse the Jordan Vault</Button></Link>
         </div>
       </div>
     </section>
