@@ -32,7 +32,7 @@ export function CardThumb({ card, className }: { card: ThumbCard; className?: st
           alt={card.name}
           fill
           sizes="(max-width: 768px) 25vw, 12vw"
-          className="pixelated object-cover transition-transform duration-300 group-hover:scale-[1.05]"
+          className="object-cover transition-transform duration-300 group-hover:scale-[1.05]"
           unoptimized
           onError={() => setFailed(true)}
         />

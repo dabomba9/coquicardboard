@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
-import { PixelCard } from "@/components/pixel-card";
+import { CardThumb } from "@/components/card-thumb";
 import { Coqui } from "@/components/mascot/coqui";
 import { quickAddOwned } from "@/lib/actions/holdings";
 import { playConfirm, playFanfare } from "@/lib/sfx";
@@ -342,10 +342,15 @@ export function HierarchyExplorer({
                   return (
                   <div key={card.id} className="cv-auto group relative">
                     <Link href={`/cards/${card.slug}`}>
-                      <PixelCard
-                        src={card.image_url}
-                        alt={card.name}
-                        tierId={card.tier_id}
+                      <CardThumb
+                        card={{
+                          name: card.name,
+                          card_number: card.card_number,
+                          year: card.year,
+                          tier_id: card.tier_id,
+                          image_url: card.image_url,
+                          sets: card.set_name ? { name: card.set_name } : null,
+                        }}
                         className={cn(
                           "transition-transform group-hover:-translate-y-1",
                           owned && "[--border:var(--gold)]",
