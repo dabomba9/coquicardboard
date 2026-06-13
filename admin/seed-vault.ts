@@ -40,7 +40,7 @@ async function main() {
   const rows = cards.map((c, i) => ({
     // catalog='vault', no tier; slug prefixed with the vault id so it never
     // collides with the 378 hierarchy slugs.
-    catalog: "vault",
+    catalog: "mj-vault",
     tier_id: null,
     set_id: null,
     name: c.name ?? `Vault card ${c.id}`,

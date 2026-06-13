@@ -18,7 +18,7 @@ export async function getCardsByTier(): Promise<Record<number, CardWithSet[]>> {
   const { data, error } = await supabase
     .from("cards")
     .select("*, sets(*)")
-    .eq("catalog", "mj") // the 378-card hierarchy only; vault cards live under catalog='vault'
+    .eq("catalog", "mj-hierarchy") // the 378-card hierarchy only; vault cards live under catalog='mj-vault'
     .order("tier_id")
     .order("rarity_rank");
   if (error) throw error;
@@ -34,7 +34,7 @@ export async function getAllCards(): Promise<CardWithSet[]> {
   const { data, error } = await supabase
     .from("cards")
     .select("*, sets(*)")
-    .eq("catalog", "mj") // hierarchy only
+    .eq("catalog", "mj-hierarchy") // hierarchy only
     .order("tier_id")
     .order("rarity_rank");
   if (error) throw error;
@@ -45,7 +45,7 @@ export async function getAllCards(): Promise<CardWithSet[]> {
 export async function getCatalogValueMap(): Promise<Map<string, number>> {
   const supabase = await createClient();
   const map = new Map<string, number>();
-  const { data: cards } = await supabase.from("cards").select("id, catalog_value_cents").eq("catalog", "mj");
+  const { data: cards } = await supabase.from("cards").select("id, catalog_value_cents").eq("catalog", "mj-hierarchy");
   for (const c of (cards as { id: string; catalog_value_cents: number | null }[]) ?? []) {
     if (c.catalog_value_cents != null) map.set(c.id, c.catalog_value_cents);
   }
@@ -151,7 +151,7 @@ export { computeTierSummary, type CardIndexRow };
 // Lightweight card index (378 rows) for mapping holdings -> tier and base value.
 export async function getCardIndex(): Promise<CardIndexRow[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("cards").select("id, tier_id, catalog_value_cents").eq("catalog", "mj");
+  const { data } = await supabase.from("cards").select("id, tier_id, catalog_value_cents").eq("catalog", "mj-hierarchy");
   return (data as CardIndexRow[]) ?? [];
 }
 
