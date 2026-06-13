@@ -12,19 +12,19 @@ export function Button({
 }) {
   const variants = {
     primary:
-      "pixel-box pixel-btn bg-accent text-black [--border:var(--accent)] hover:brightness-110 disabled:opacity-50",
+      "rounded-full bg-accent text-black hover:brightness-110 disabled:opacity-50",
     secondary:
-      "pixel-box pixel-btn bg-card text-foreground hover:bg-elevated",
+      "rounded-full border border-border/60 bg-foreground/[0.03] text-foreground hover:border-border hover:bg-foreground/[0.06]",
     ghost:
-      "text-muted hover:text-foreground hover:bg-foreground/10 border-2 border-transparent",
+      "rounded-full text-muted hover:text-foreground hover:bg-foreground/10",
     danger:
-      "pixel-box pixel-btn bg-red-500/15 text-red-600 dark:text-red-300 [--border:#c0392b] hover:bg-red-500/25",
+      "rounded-full bg-red-500/15 text-red-600 dark:text-red-300 hover:bg-red-500/25",
   };
-  const sizes = { sm: "h-8 px-3 text-xs", md: "h-10 px-4 text-sm" };
+  const sizes = { sm: "h-8 px-3.5 text-xs", md: "h-10 px-5 text-sm" };
   return (
     <button
       className={cn(
-        "group inline-flex items-center justify-center gap-2 font-sans font-semibold tracking-wide transition-[filter,background-color,transform] disabled:cursor-not-allowed",
+        "group inline-flex items-center justify-center gap-2 font-medium transition-colors disabled:cursor-not-allowed",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         variants[variant],
         sizes[size],
@@ -39,8 +39,8 @@ export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInp
   return (
     <input
       className={cn(
-        "pixel-box--inset h-10 w-full bg-card px-3 text-sm text-foreground",
-        "placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "h-10 w-full rounded-lg border border-border/60 bg-foreground/[0.03] px-3 text-sm text-foreground transition-colors",
+        "placeholder:text-muted hover:border-border focus:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className
       )}
       {...props}
@@ -52,8 +52,8 @@ export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLS
   return (
     <select
       className={cn(
-        "pixel-box--inset h-10 w-full bg-card px-3 text-sm text-foreground",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "h-10 w-full rounded-lg border border-border/60 bg-foreground/[0.03] px-3 text-sm text-foreground transition-colors",
+        "hover:border-border focus:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className
       )}
       {...props}
@@ -71,14 +71,14 @@ export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLab
 }
 
 export function Panel({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("pixel-box bg-card", className)} {...props} />;
+  return <div className={cn("rounded-2xl border border-border/50 bg-card", className)} {...props} />;
 }
 
 export function Badge({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
   return (
     <span
       className={cn(
-        "inline-flex items-center border-2 border-current px-1.5 py-0.5 font-sans text-[10px] uppercase tracking-wide",
+        "inline-flex items-center rounded-full border border-border/60 bg-foreground/5 px-2 py-0.5 text-[11px] font-medium",
         className
       )}
       {...props}
