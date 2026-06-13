@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import { CardThumb } from "@/components/card-thumb";
@@ -74,6 +75,7 @@ export function HierarchyExplorer({
   const [ownedLocal, setOwnedLocal] = useState<Set<string>>(new Set());
   const [celebrating, setCelebrating] = useState(false);
   const [, startAdd] = useTransition();
+  const router = useRouter();
 
   const isOwned = (c: ExplorerCard) => c.owned || ownedLocal.has(c.id);
 
@@ -364,13 +366,13 @@ export function HierarchyExplorer({
                     {card.for_trade && (
                       <span className="pointer-events-none absolute left-1 top-1 rounded-full bg-accent px-1.5 text-[9px] font-semibold text-black">T</span>
                     )}
-                    {signedIn && !owned && (
+                    {!owned && (
                       <button
                         type="button"
-                        aria-label="Add to my collection"
-                        onClick={(e) => { e.preventDefault(); quickAdd(card); }}
-                        className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-accent text-xs font-semibold text-black opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:brightness-110"
-                        title="Quick add (owned)"
+                        aria-label={signedIn ? "Add to my collection" : "Sign in to add"}
+                        onClick={(e) => { e.preventDefault(); if (signedIn) quickAdd(card); else router.push("/login"); }}
+                        className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-accent text-xs font-semibold text-black opacity-100 transition-opacity hover:brightness-110 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                        title={signedIn ? "Add to my collection" : "Sign in to add"}
                       >
                         +
                       </button>
