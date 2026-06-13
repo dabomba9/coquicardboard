@@ -188,7 +188,7 @@ export default async function CardDetailPage({
         {headline ? (
           <>
             <div className="mt-3 flex items-end gap-3">
-              <div className="font-data text-4xl leading-none text-foreground">{formatUsd(headline.median_cents)}</div>
+              <div className="font-num text-4xl leading-none text-foreground">{formatUsd(headline.median_cents)}</div>
               <div className="pb-1">
                 <div className="text-[11px] uppercase tracking-wide text-muted">{headline.grade_key}</div>
                 <div className={cn("text-[11px]", headline.source?.startsWith("ebay") ? "text-accent" : "text-muted")}>{priceLabel(headline)}</div>
@@ -199,7 +199,7 @@ export default async function CardDetailPage({
                 {otherPrices.map((p) => (
                   <div key={p.grade_key} className="rounded-full border border-border/50 bg-elevated px-3 py-1.5 text-sm">
                     <span className="text-muted">{p.grade_key}</span>{" "}
-                    <span className="font-data text-foreground">{formatUsd(p.median_cents)}</span>
+                    <span className="font-num text-foreground">{formatUsd(p.median_cents)}</span>
                   </div>
                 ))}
               </div>

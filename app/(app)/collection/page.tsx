@@ -7,6 +7,7 @@ import { PortfolioChart } from "@/components/portfolio-chart";
 import { CompletionRing } from "@/components/completion-ring";
 import { CollectionGrid } from "@/components/collection-grid";
 import { CardThumb } from "@/components/card-thumb";
+import { EmptyState } from "@/components/empty-state";
 import { Panel } from "@/components/ui/primitives";
 import { cn, formatUsd, gradeKey, TIER_COLORS } from "@/lib/utils";
 
@@ -55,7 +56,7 @@ export default async function CollectionPage() {
   const stat = (label: string, value: string, sub: string, valueCls?: string) => (
     <Panel className="p-4">
       <div className="font-sans text-[9px] uppercase tracking-wide text-muted">{label}</div>
-      <div className={cn("mt-1 font-data text-2xl leading-none", valueCls)}>{value}</div>
+      <div className={cn("mt-1 font-num text-2xl leading-none", valueCls)}>{value}</div>
       <div className="mt-1 text-[11px] text-muted">{sub}</div>
     </Panel>
   );
@@ -65,11 +66,10 @@ export default async function CollectionPage() {
       <h1 className="font-display text-lg uppercase tracking-tight">My Collection</h1>
 
       {totalOwned === 0 ? (
-        <Panel className="mt-6 p-8 text-center text-sm text-muted">
-          You haven&apos;t added any cards yet. Browse the{" "}
-          <Link href="/mj-hierarchy" className="text-accent hover:underline">hierarchy</Link>{" "}
-          and open a card to add a copy.
-        </Panel>
+        <EmptyState
+          title="Your collection is empty"
+          body="Add the cards you own to track tier completion, follow market value, and log grades. Start from either catalog."
+        />
       ) : (
         <>
           {/* Dashboard header: ring + stats */}
@@ -120,7 +120,7 @@ export default async function CollectionPage() {
               <div className="meter mt-2" style={{ ["--meter" as string]: `var(--tier-${s.tier_id})` } as React.CSSProperties}>
                 <span style={{ width: `${pct}%` }} />
               </div>
-              <div className="mt-2 font-data text-base text-muted">{formatUsd(s.est_value_cents)}</div>
+              <div className="mt-2 font-num text-base text-muted">{formatUsd(s.est_value_cents)}</div>
             </Panel>
           );
         })}

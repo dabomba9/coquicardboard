@@ -10,7 +10,7 @@ import { SoundToggle } from "@/components/sound-toggle";
 import { CoquiGlyph } from "@/components/coqui-glyph";
 import { cn } from "@/lib/utils";
 
-type Item = { href: string; label: string; accent?: boolean };
+type Item = { href: string; label: string; accent?: boolean; divider?: boolean };
 
 const openSearch = () => window.dispatchEvent(new Event("mj:open-search"));
 
@@ -24,7 +24,7 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
     { href: "/guides", label: "Guides" },
     ...(authed
       ? [
-          { href: "/collection", label: "My Collection" },
+          { href: "/collection", label: "My Collection", divider: true },
           { href: "/analytics", label: "Insights" },
           { href: "/want-list", label: "Want List" },
         ]
@@ -57,31 +57,25 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
         {/* Desktop links */}
         <div className="ml-3 hidden items-center gap-1 md:flex">
           {links.map((l) => (
-            <Link key={l.href} href={l.href} className={linkCls(l)}>{l.label}</Link>
+            <span key={l.href} className="flex items-center gap-1">
+              {l.divider && <span className="mx-1 h-5 w-px bg-border/40" aria-hidden="true" />}
+              <Link href={l.href} className={linkCls(l)}>{l.label}</Link>
+            </span>
           ))}
         </div>
 
         {/* Right actions */}
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-          {/* Prominent search pill (desktop) */}
+          {/* Prominent search pill (tablet+) */}
           <button
             type="button"
             aria-label="Search cards (⌘K)"
             onClick={openSearch}
-            className="hidden h-9 w-56 items-center gap-2 rounded-full border border-border/60 bg-foreground/[0.03] px-3.5 text-sm text-muted transition-colors hover:border-border hover:bg-foreground/5 hover:text-foreground lg:inline-flex"
+            className="hidden h-9 w-44 items-center gap-2 rounded-full border border-border/60 bg-foreground/[0.03] px-3.5 text-sm text-muted transition-colors hover:border-border hover:bg-foreground/5 hover:text-foreground md:inline-flex lg:w-56"
           >
             <Search size={15} />
             <span>Search cards…</span>
             <kbd className="ml-auto rounded-md border border-border/60 bg-foreground/5 px-1.5 py-0.5 text-[10px] font-medium leading-none">⌘K</kbd>
-          </button>
-          {/* Search icon (tablet) */}
-          <button
-            type="button"
-            aria-label="Search cards (⌘K)"
-            onClick={openSearch}
-            className="hidden h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-foreground/5 hover:text-foreground md:inline-flex lg:hidden"
-          >
-            <Search size={16} />
           </button>
 
           <SoundToggle />

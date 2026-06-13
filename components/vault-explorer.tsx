@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Search, Plus, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -46,6 +47,7 @@ export function VaultExplorer({ cards, signedIn, ownedCount }: { cards: VaultTil
   const [page, setPage] = useState(0);
   const [ownedLocal, setOwnedLocal] = useState<Set<string>>(new Set());
   const [, startAdd] = useTransition();
+  const router = useRouter();
 
   const isOwned = (c: VaultTile) => c.owned || ownedLocal.has(c.id);
 
@@ -227,11 +229,12 @@ export function VaultExplorer({ cards, signedIn, ownedCount }: { cards: VaultTil
                   {c.forTrade && (
                     <span className="pointer-events-none absolute left-1 top-1 rounded-full bg-accent px-1.5 text-[9px] font-bold uppercase text-black">T</span>
                   )}
-                  {signedIn && !owned && (
+                  {!owned && (
                     <button
-                      onClick={(e) => quickAdd(e, c)}
-                      title="Add to my collection"
-                      className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/85 text-muted opacity-0 backdrop-blur transition-opacity hover:text-accent group-hover:opacity-100 focus:opacity-100"
+                      aria-label={signedIn ? "Add to my collection" : "Sign in to add"}
+                      onClick={(e) => { if (signedIn) { quickAdd(e, c); } else { e.preventDefault(); e.stopPropagation(); router.push("/login"); } }}
+                      title={signedIn ? "Add to my collection" : "Sign in to add"}
+                      className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background/85 text-muted backdrop-blur transition-opacity hover:text-accent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
                     >
                       <Plus size={15} />
                     </button>

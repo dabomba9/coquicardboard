@@ -25,7 +25,7 @@ export function PortfolioChart({ points }: { points: { date: string; value: numb
           </defs>
           <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
           <XAxis dataKey="date" tick={{ fontSize: 13, fill: "var(--chart-axis)", fontFamily: "var(--font-data)" }} minTickGap={28} />
-          <YAxis tick={{ fontSize: 13, fill: "var(--chart-axis)", fontFamily: "var(--font-data)" }} width={64} tickFormatter={(v) => formatUsd(v * 100)} />
+          <YAxis tick={{ fontSize: 13, fill: "var(--chart-axis)", fontFamily: "var(--font-sans)" }} width={64} tickFormatter={(v) => formatUsd(v * 100)} />
           <Tooltip
             contentStyle={{ background: "var(--card)", border: "2px solid var(--border)", borderRadius: 0, fontSize: 12 }}
             labelStyle={{ color: "var(--foreground)" }}
