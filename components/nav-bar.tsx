@@ -10,7 +10,7 @@ import { SoundToggle } from "@/components/sound-toggle";
 import { CoquiGlyph } from "@/components/coqui-glyph";
 import { cn } from "@/lib/utils";
 
-type Item = { href: string; label: string; accent?: boolean };
+type Item = { href: string; label: string; accent?: boolean; divider?: boolean };
 
 const openSearch = () => window.dispatchEvent(new Event("mj:open-search"));
 
@@ -24,7 +24,7 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
     { href: "/guides", label: "Guides" },
     ...(authed
       ? [
-          { href: "/collection", label: "My Collection" },
+          { href: "/collection", label: "My Collection", divider: true },
           { href: "/analytics", label: "Insights" },
           { href: "/want-list", label: "Want List" },
         ]
@@ -57,7 +57,10 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
         {/* Desktop links */}
         <div className="ml-3 hidden items-center gap-1 md:flex">
           {links.map((l) => (
-            <Link key={l.href} href={l.href} className={linkCls(l)}>{l.label}</Link>
+            <span key={l.href} className="flex items-center gap-1">
+              {l.divider && <span className="mx-1 h-5 w-px bg-border/40" aria-hidden="true" />}
+              <Link href={l.href} className={linkCls(l)}>{l.label}</Link>
+            </span>
           ))}
         </div>
 

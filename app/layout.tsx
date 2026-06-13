@@ -49,16 +49,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`${pixelDisplay.variable} ${pixelData.variable} h-full`}
     >
       <body className="min-h-full flex flex-col font-sans">
-        {/* Global posterize/illustration filter referenced by .card-illus on pixel cards. */}
-        <svg aria-hidden="true" width="0" height="0" className="absolute">
-          <filter id="cc-illus">
-            <feComponentTransfer>
-              <feFuncR type="discrete" tableValues="0 0.33 0.67 1" />
-              <feFuncG type="discrete" tableValues="0 0.33 0.67 1" />
-              <feFuncB type="discrete" tableValues="0 0.33 0.67 1" />
-            </feComponentTransfer>
-          </filter>
-        </svg>
         <Providers>
           <SiteNav />
           <CommandPalette />
