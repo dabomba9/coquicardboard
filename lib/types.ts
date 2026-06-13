@@ -39,6 +39,7 @@ export type Card = {
   image_url: string | null;
   image_source: string | null;
   slug: string;
+  catalog: string; // 'mj-hierarchy' | 'mj-vault'
 };
 
 export type CardWithSet = Card & { sets: CardSet | null };

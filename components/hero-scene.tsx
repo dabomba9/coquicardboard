@@ -55,7 +55,7 @@ export function HeroScene({ cards }: { cards: HeroCard[] }) {
   return (
     <section
       ref={rootRef}
-      className="tile-bg tile-drift relative flex min-h-[88vh] items-center overflow-hidden border-b-2 border-border"
+      className="tile-bg tile-drift relative flex min-h-[88vh] items-center overflow-hidden border-b border-border/50"
     >
       {/* Layered backdrop: jewel-tone glow + top accent + grain + vignette */}
       <div

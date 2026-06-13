@@ -24,7 +24,9 @@ type VaultCard = {
   id: number; slug: string | null; name: string | null; year: number | null;
   manufacturer: string | null; brand: string | null; cardNumber: string | null;
   cardType: string | null; tier: number | null; page: number | null; row: number | null;
-  frontImage: string | null; backImage: string | null; psaPopReport: string | null;
+  // Image presence only — the actual URL (Supabase Storage) is built at runtime in
+  // lib/vault.ts from NEXT_PUBLIC_SUPABASE_URL so it works in any environment.
+  hasFront: boolean; hasBack: boolean; psaPopReport: string | null;
 };
 
 async function main() {
@@ -41,14 +43,14 @@ async function main() {
     tier: c.tier,
     page: c.page,
     row: c.row,
-    frontImage: c.frontImage ? `/vault/${c.id}-front.jpg` : null,
-    backImage: c.backImage ? `/vault/${c.id}-back.jpg` : null,
+    hasFront: !!c.frontImage,
+    hasBack: !!c.backImage,
     psaPopReport: c.psaPopReport,
   }));
   out.sort((a, b) => a.id - b.id);
   await writeFile(join(HERE, "..", "data", "vault.json"), JSON.stringify(out));
   console.log(`Wrote data/vault.json — ${out.length} cards (` +
-    `${out.filter((c) => c.frontImage).length} front, ${out.filter((c) => c.backImage).length} back).`);
+    `${out.filter((c) => c.hasFront).length} front, ${out.filter((c) => c.hasBack).length} back).`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

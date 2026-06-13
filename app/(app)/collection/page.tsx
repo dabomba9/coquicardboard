@@ -1,11 +1,12 @@
 import Link from "next/link";
 import {
   getTiers, getCardsByTier, getMyHoldings, getCardIndex, getPriceMap, computeTierSummary,
-  getPortfolioSeries,
+  getPortfolioSeries, getOwnedVaultCards,
 } from "@/lib/queries";
 import { PortfolioChart } from "@/components/portfolio-chart";
 import { CompletionRing } from "@/components/completion-ring";
 import { CollectionGrid } from "@/components/collection-grid";
+import { CardThumb } from "@/components/card-thumb";
 import { Panel } from "@/components/ui/primitives";
 import { cn, formatUsd, gradeKey, TIER_COLORS } from "@/lib/utils";
 
@@ -41,7 +42,10 @@ export default async function CollectionPage() {
         return { ...c, copies: copiesByCard.get(c.id) ?? 1, marketValueCents };
       })
   );
+  // Owned Jordan Vault cards (no tier → shown in their own section, not the tier grid).
+  const ownedVaultCards = await getOwnedVaultCards([...ownedCardIds]);
   const totalCards = tiers.reduce((s, t) => s + t.card_count, 0);
+  const hierarchyOwned = ownedFlat.length; // distinct hierarchy cards owned (for the 378 completion ring)
   const totalOwned = ownedCardIds.size;
   const totalValue = summary.reduce((s, t) => s + (t.est_value_cents ?? 0), 0);
   const costBasis = holdings.reduce((s, h) => s + (h.purchase_price_cents ?? 0), 0);
@@ -71,10 +75,13 @@ export default async function CollectionPage() {
           {/* Dashboard header: ring + stats */}
           <div className="mt-6 grid gap-4 lg:grid-cols-[auto_1fr] lg:items-center">
             <Panel className="flex items-center gap-5 p-5">
-              <CompletionRing owned={totalOwned} total={totalCards} />
+              <CompletionRing owned={hierarchyOwned} total={totalCards} />
               <div>
-                <div className="text-sm font-medium">Collection complete</div>
-                <div className="mt-1 text-sm text-muted">{totalOwned} of {totalCards} cards</div>
+                <div className="text-sm font-medium">Hierarchy complete</div>
+                <div className="mt-1 text-sm text-muted">{hierarchyOwned} of {totalCards} cards</div>
+                {ownedVaultCards.length > 0 && (
+                  <div className="mt-1 text-sm text-muted">+ {ownedVaultCards.length} Jordan Vault</div>
+                )}
               </div>
             </Panel>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -120,7 +127,36 @@ export default async function CollectionPage() {
       </div>
 
       {/* Owned cards — modern filter bar + grid/list */}
-      <CollectionGrid cards={ownedFlat} tiers={tiers.map((t) => ({ id: t.id, name: t.name }))} />
+      {ownedFlat.length > 0 && (
+        <CollectionGrid cards={ownedFlat} tiers={tiers.map((t) => ({ id: t.id, name: t.name }))} />
+      )}
+
+      {/* Owned Jordan Vault cards (no tier — their own section) */}
+      {ownedVaultCards.length > 0 && (
+        <section className="mt-10">
+          <h2 className="flex items-baseline justify-between border-b border-border/50 pb-2">
+            <span className="font-sans text-sm uppercase tracking-wide">Jordan Vault</span>
+            <span className="font-data text-base text-muted">{ownedVaultCards.length}</span>
+          </h2>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+            {ownedVaultCards.map((c) => (
+              <Link key={c.id} href={`/cards/${c.slug}`} className="group">
+                <CardThumb
+                  card={{
+                    name: c.name ?? "",
+                    card_number: c.card_number,
+                    year: c.year,
+                    tier_id: 4,
+                    image_url: c.image_url,
+                    sets: (c.attributes?.manufacturer as string) ? { name: c.attributes.manufacturer as string } : null,
+                  }}
+                  className="transition-transform group-hover:-translate-y-1 border-[var(--gold)]"
+                />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
       </>
       )}
     </div>

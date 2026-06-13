@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCardBySlug, getCardPrices, getMyWantCardIds, getPriceHistory, getCardOwnerCount, getRelatedCards } from "@/lib/queries";
+import { getCardBySlug, getCardPrices, getMyWantCardIds, getPriceHistory, getCardOwnerCount, getRelatedCards, getMyHoldingsForCard } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
 import { CardThumb } from "@/components/card-thumb";
 import { CardLightbox } from "@/components/card-lightbox";
 import { WantButton } from "@/components/want-button";
+import { AddToCollectionButton } from "@/components/add-to-collection-button";
+import { ShareButton } from "@/components/share-button";
 import { PriceChart } from "@/components/price-chart";
 import { RefreshPriceButton } from "@/components/refresh-price-button";
 import { Badge, Button, Panel } from "@/components/ui/primitives";
-import { cn, formatUsd, TIER_COLORS } from "@/lib/utils";
+import { cn, formatUsd, gradeLabel, TIER_COLORS } from "@/lib/utils";
+import type { CardPrice } from "@/lib/types";
 
 export default async function CardDetailPage({
   params,
@@ -22,95 +25,151 @@ export default async function CardDetailPage({
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const [prices, history, wantIds, ownerCount, related] = await Promise.all([
+  const [prices, history, wantIds, ownerCount, related, myHoldings] = await Promise.all([
     getCardPrices(card.id),
     getPriceHistory(card.id),
     user ? getMyWantCardIds() : Promise.resolve(new Set<string>()),
     getCardOwnerCount(card.id),
     card.set_id ? getRelatedCards(card.set_id, card.id) : Promise.resolve([]),
+    user ? getMyHoldingsForCard(card.id) : Promise.resolve([]),
   ]);
 
+  const isVault = card.catalog === "mj-vault";
+  const attrs = (card.attributes ?? {}) as Record<string, unknown>;
+  const attr = (k: string) => (typeof attrs[k] === "string" ? (attrs[k] as string) : null);
+  const backImage = attr("backImage");
   const c = TIER_COLORS[card.tier_id] ?? TIER_COLORS[4];
-  const cardType = typeof card.attributes?.type === "string" ? card.attributes.type : null;
+  const cardType = attr("type") ?? attr("cardType");
   const facts: [string, string | null][] = [
     ["Set", card.sets?.name ?? null],
     ["Year", card.year ? String(card.year) : null],
     ["Card #", card.card_number ? `#${card.card_number}` : null],
     ["Type", cardType],
-    ["Manufacturer", card.sets?.manufacturer ?? null],
+    ["Manufacturer", card.sets?.manufacturer ?? attr("manufacturer")],
     ["Print run", card.print_run ? `/${card.print_run}` : card.serial_numbered ? "Serial #'d" : null],
     ["Pack odds", card.pack_odds],
   ];
+
+  // The user's own copies of this card.
+  const owned = myHoldings.length > 0;
+  const copies = myHoldings.reduce((s, h) => s + Math.max(h.quantity, 1), 0);
+  const gradeSummary = (() => {
+    const counts = new Map<string, number>();
+    for (const h of myHoldings) {
+      const g = gradeLabel(h.condition_type, h.grading_company, h.grade);
+      counts.set(g, (counts.get(g) ?? 0) + Math.max(h.quantity, 1));
+    }
+    return [...counts.entries()].map(([g, n]) => `${n} ${g}`).join(" · ");
+  })();
+
+  // Value: lead with a headline price (raw preferred), other grades as chips.
+  const sortedPrices = prices.slice().sort((a, b) => (a.grade_key === "raw" ? -1 : b.grade_key === "raw" ? 1 : 0));
+  const headline = sortedPrices[0] ?? null;
+  const otherPrices = sortedPrices.slice(1);
+  const priceLabel = (p: CardPrice) => {
+    const asOf = p.as_of ? new Date(p.as_of).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : null;
+    if (p.source === "ebay (sold)") return `eBay sold${asOf ? ` · ${asOf}` : ""}`;
+    if (p.source?.startsWith("ebay")) return `eBay asking${asOf ? ` · ${asOf}` : ""}`;
+    return "estimated";
+  };
 
   const q = encodeURIComponent(`${card.name} Michael Jordan`);
   const ebayUrl = `https://www.ebay.com/sch/i.html?_nkw=${q}`;
   const googleUrl = `https://www.google.com/search?tbm=isch&q=${q}`;
 
-  // Holographic foil scales with rarity — legendary (tier 1) shimmers hardest.
-  const foilClass =
+  // Holographic foil scales with rarity. Vault cards have no tier → no foil.
+  const foilClass = isVault ? "" :
     card.tier_id === 1 ? "foil foil--strong" : card.tier_id === 2 ? "foil" : card.tier_id === 3 ? "foil foil--soft" : "";
-  const tierStyle = { ["--border" as string]: `var(--tier-${card.tier_id})` } as React.CSSProperties;
-  const tierName = ["Legendary", "Epic", "Rare", "Common"][card.tier_id - 1] ?? "Common";
+  const tierStyle = (isVault ? {} : { ["--border" as string]: `var(--tier-${card.tier_id})` }) as React.CSSProperties;
+  const tierName = card.tier_id ? (["Legendary", "Epic", "Rare", "Common"][card.tier_id - 1] ?? "Common") : "";
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
-      <Link href="/mj-hierarchy" className="font-sans text-[10px] uppercase tracking-wide text-muted hover:text-foreground">← Hierarchy</Link>
+      <Link href={isVault ? "/vault" : "/mj-hierarchy"} className="text-[11px] uppercase tracking-wide text-muted hover:text-foreground">← {isVault ? "Jordan Vault" : "Hierarchy"}</Link>
 
       <div className="mt-4 grid gap-8 sm:grid-cols-[280px_1fr]">
-        <div>
-          <div className={cn("relative overflow-hidden pixel-box bg-card p-1", foilClass)} style={tierStyle}>
+        <div className="space-y-3">
+          <div className={cn("relative overflow-hidden rounded-md border border-border/50 bg-card p-1", foilClass)} style={tierStyle}>
             <CardLightbox imageUrl={card.image_url} alt={card.name}>
               <CardThumb card={card} className="w-full !border-0 !shadow-none" />
             </CardLightbox>
           </div>
+          {backImage && (
+            <div>
+              <div className="relative overflow-hidden rounded-md border border-border/50 bg-card p-1">
+                <CardLightbox imageUrl={backImage} alt={`${card.name} (back)`}>
+                  <CardThumb card={{ ...card, image_url: backImage }} className="w-full !border-0 !shadow-none" />
+                </CardLightbox>
+              </div>
+              <p className="mt-1 text-[10px] uppercase tracking-wide text-muted">Back</p>
+            </div>
+          )}
           {card.image_source && (
-            <p className="mt-1.5 text-[10px] text-muted">Image: {card.image_source}</p>
+            <p className="text-[10px] text-muted">Image: {card.image_source}</p>
           )}
         </div>
 
-        {/* Item stats dialog */}
+        {/* Identity + actions */}
         <Panel className="self-start p-5" style={tierStyle}>
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={cn("pixel-box px-2 py-0.5 font-sans text-[10px] uppercase", c.bg, c.text)}
+              className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium", isVault ? "bg-accent/12 text-accent" : cn(c.bg, c.text))}
               style={tierStyle}
             >
-              Tier {card.tier_id} · {tierName}
+              {isVault ? "Jordan Vault" : `Tier ${card.tier_id} · ${tierName}`}
             </span>
             {card.is_rookie && <Badge className={c.text}>Rookie</Badge>}
             {card.is_insert && <Badge className={c.text}>Insert</Badge>}
             {card.is_parallel && <Badge className={c.text}>Parallel</Badge>}
           </div>
           <h1 className="mt-4 font-display text-lg leading-relaxed tracking-tight">{card.name}</h1>
-          <p className="mt-2 text-sm text-muted">
-            {ownerCount > 0
-              ? `Owned by ${ownerCount} collector${ownerCount === 1 ? "" : "s"}`
-              : "Be the first to add it to your collection"}
-          </p>
 
-          <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          {/* Your ownership */}
+          {owned && (
+            <div className="mt-4 rounded-xl border border-accent/30 bg-accent/[0.06] px-3 py-2.5 text-sm">
+              <span className="font-semibold text-accent">✓ In your collection</span>
+              <span className="text-muted"> · {copies} cop{copies === 1 ? "y" : "ies"}{gradeSummary ? ` · ${gradeSummary}` : ""}</span>
+            </div>
+          )}
+          {ownerCount > 0 && (
+            <p className="mt-2 text-xs text-muted">Owned by {ownerCount} collector{ownerCount === 1 ? "" : "s"} in the community.</p>
+          )}
+
+          {/* Actions */}
+          <div className="mt-5 flex flex-wrap gap-3">
+            {user ? (
+              owned ? (
+                <>
+                  <Link href={`/collection/${card.slug}`}><Button>Manage</Button></Link>
+                  <AddToCollectionButton cardId={card.id} label="Add another" variant="secondary" />
+                  <WantButton cardId={card.id} wanted={wantIds.has(card.id)} />
+                  <ShareButton title={card.name} />
+                </>
+              ) : (
+                <>
+                  <AddToCollectionButton cardId={card.id} />
+                  <WantButton cardId={card.id} wanted={wantIds.has(card.id)} />
+                  <ShareButton title={card.name} />
+                </>
+              )
+            ) : (
+              <>
+                <Link href="/login"><Button>Sign in to add</Button></Link>
+                <ShareButton title={card.name} />
+              </>
+            )}
+          </div>
+
+          <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
             {facts.filter(([, v]) => v).map(([k, v]) => (
               <div key={k}>
-                <dt className="font-sans text-[9px] uppercase tracking-wide text-muted">{k}</dt>
+                <dt className="text-[10px] uppercase tracking-wide text-muted">{k}</dt>
                 <dd className="font-data text-lg leading-tight">{v}</dd>
               </div>
             ))}
           </dl>
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            {user ? (
-              <>
-                <Link href={`/collection/${card.slug}`}>
-                  <Button>Manage in my collection</Button>
-                </Link>
-                <WantButton cardId={card.id} wanted={wantIds.has(card.id)} />
-              </>
-            ) : (
-              <Link href="/login"><Button>Sign in to track</Button></Link>
-            )}
-          </div>
-
-          <p className="mt-4 text-xs text-muted">
+          <p className="mt-5 text-xs text-muted">
             Find this card:{" "}
             <a href={ebayUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">eBay</a>
             {" · "}
@@ -119,63 +178,49 @@ export default async function CardDetailPage({
         </Panel>
       </div>
 
+      {/* Market value */}
       <Panel className="mt-8 p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-sans text-xs uppercase tracking-wide">Market value</h2>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-muted">
+          <h2 className="text-xs font-semibold uppercase tracking-wide">Market value</h2>
+          {isAdmin(user?.email) && <RefreshPriceButton cardId={card.id} />}
+        </div>
+
+        {headline ? (
+          <>
+            <div className="mt-3 flex items-end gap-3">
+              <div className="font-data text-4xl leading-none text-foreground">{formatUsd(headline.median_cents)}</div>
+              <div className="pb-1">
+                <div className="text-[11px] uppercase tracking-wide text-muted">{headline.grade_key}</div>
+                <div className={cn("text-[11px]", headline.source?.startsWith("ebay") ? "text-accent" : "text-muted")}>{priceLabel(headline)}</div>
+              </div>
+            </div>
+            {otherPrices.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {otherPrices.map((p) => (
+                  <div key={p.grade_key} className="rounded-full border border-border/50 bg-elevated px-3 py-1.5 text-sm">
+                    <span className="text-muted">{p.grade_key}</span>{" "}
+                    <span className="font-data text-foreground">{formatUsd(p.median_cents)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="mt-3 text-[11px] text-muted">
               {prices.some((p) => p.source === "ebay (sold)")
                 ? "Real eBay sold prices where available · otherwise estimated · not investment advice"
                 : prices.some((p) => p.source?.startsWith("ebay"))
                   ? "eBay asking where available · otherwise estimated · not investment advice"
                   : "Estimated · not investment advice"}
-            </span>
-            {isAdmin(user?.email) && <RefreshPriceButton cardId={card.id} />}
-          </div>
-        </div>
-
-        {prices.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-3 text-sm">
-            {prices
-              .slice()
-              .sort((a, b) => (a.grade_key === "raw" ? -1 : b.grade_key === "raw" ? 1 : 0))
-              .map((p) => {
-                const isSold = p.source === "ebay (sold)";
-                const isEbay = p.source?.startsWith("ebay");
-                const asOf = p.as_of ? new Date(p.as_of).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : null;
-                const label = isSold
-                  ? `eBay sold${asOf ? ` · ${asOf}` : ""}`
-                  : isEbay
-                    ? `eBay asking${asOf ? ` · ${asOf}` : ""}`
-                    : "estimated";
-                return (
-                  <div key={p.grade_key} className="pixel-box bg-elevated px-3 py-2">
-                    <span className="font-sans text-[9px] uppercase text-muted">{p.grade_key}</span>
-                    <div className="font-data text-xl leading-none text-foreground">{formatUsd(p.median_cents)}</div>
-                    <div className={cn("text-[10px]", isEbay ? "text-accent" : "text-muted")}>
-                      {label}
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-        )}
-
-        {history.length > 0 ? (
-          <div className="mt-4">
-            <PriceChart series={history} />
-          </div>
+            </p>
+            {history.length > 0 && <div className="mt-4"><PriceChart series={history} /></div>}
+          </>
         ) : (
-          <p className="mt-2 text-sm text-muted">
-            No price history yet. Values are estimated/seeded — run{" "}
-            <code>npm run seed:prices</code> (see README).
-          </p>
+          <p className="mt-3 text-sm text-muted">No recent sales yet — value will appear here as sales come in.</p>
         )}
       </Panel>
 
       {related.length > 0 && (
         <section className="mt-8">
-          <h2 className="font-sans text-xs uppercase tracking-wide">More from {card.sets?.name ?? "this set"}</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide">More from {card.sets?.name ?? "this set"}</h2>
           <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-6">
             {related.map((r) => (
               <Link key={r.id} href={`/cards/${r.slug}`} className="group">

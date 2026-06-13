@@ -13,7 +13,7 @@ The codebase is production-ready; this runbook covers the account/DNS steps.
 2. Apply the schema (from this repo):
    ```bash
    npx supabase link --project-ref <your-ref>
-   npx supabase db push          # applies supabase/migrations/0001–0004 (tables, RLS, RPC, storage bucket)
+   npx supabase db push          # applies supabase/migrations/0001–0006 (tables, RLS, RPC, card + vault image buckets, vault catalog)
    ```
 
 ## 2. Seed the cloud data
@@ -34,6 +34,17 @@ Images — choose one:
   ```
   (copies the vision-verified images from local Storage → cloud, matched by slug).
 - **Or re-fetch fresh on cloud:** `npm run fetch:images` (simpler; re-picks images).
+
+### Jordan Vault (the 12k-card `/vault` section)
+The 12,114 vault cards live in the shared `cards` table (`catalog='mj-vault'`, added by migration `0006`); their
+images live in the **`vault-images`** Storage bucket (migration `0005`) — **not** in the repo (`public/vault/` is
+git-ignored). With the same temporary cloud-pointing `.env.local` as above:
+```bash
+npx tsx admin/seed-vault.ts            # loads data/vault.json → cards (catalog='mj-vault')
+npx tsx jordan-vault/upload-images.ts  # uploads public/vault/*.jpg → vault-images (idempotent/resumable)
+```
+Cards without an uploaded image fall back to a placeholder, so a partial image set is fine. (Locally,
+`jordan-vault/auto-resume.sh` downloads + uploads automatically against whatever `.env.local` points at.)
 
 ## 3. Auth (Supabase → Authentication)
 - **URL Configuration:** Site URL `https://coquicardboard.com`; add redirect `https://coquicardboard.com/callback` (and your Vercel preview URL if used).
@@ -65,4 +76,5 @@ Images — choose one:
 ## Notes
 - Market values are **estimated** + **eBay asking** (not sold comps) — labeled in-app.
 - Card images are self-hosted in the `card-images` Storage bucket; provenance is in `image_source`.
+- Jordan Vault (`/vault`) images are self-hosted in the `vault-images` Storage bucket (built from `NEXT_PUBLIC_SUPABASE_URL` at runtime); `public/vault/` is a local staging cache only and is not deployed.
 - `npm run test:rls` can be pointed at the cloud project to re-verify the security boundary post-deploy.

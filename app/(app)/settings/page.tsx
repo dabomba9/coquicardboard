@@ -9,7 +9,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+      <h1 className="font-display text-lg uppercase tracking-tight">Settings</h1>
       <p className="mt-1 text-sm text-muted">Your public profile and sharing preferences.</p>
       <Panel className="mt-6 p-6">
         {profile ? <SettingsForm profile={profile} /> : <p className="text-sm text-muted">No profile found.</p>}

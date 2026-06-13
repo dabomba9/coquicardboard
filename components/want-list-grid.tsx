@@ -143,7 +143,7 @@ export function WantListGrid({ cards, tiers }: { cards: WantCard[]; tiers: TierM
           {groups.map((g, gi) => (
             <section key={g.label ?? gi}>
               {g.label && (
-                <h2 className="border-b-2 border-border pb-2 font-sans text-sm uppercase tracking-wide">{g.label}</h2>
+                <h2 className="border-b border-border/50 pb-2 font-sans text-sm uppercase tracking-wide">{g.label}</h2>
               )}
               {view === "grid" ? (
                 <div className={cn("grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8", g.label && "mt-4")}>

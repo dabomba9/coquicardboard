@@ -27,21 +27,38 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient();
   const today = new Date().toISOString().slice(0, 10);
 
-  // Stalest-priced distinct cards first.
+  const seen = new Set<string>();
+  const targets: { id: string; name: string; tier: number }[] = [];
+
+  // Half the batch goes to NEW coverage — cards with no price row yet (newest
+  // first, which surfaces the 12k Jordan Vault cards) — so they enter the
+  // rotation over time. Tier is null for vault → price as a common (no BGS).
+  const NEW = Math.ceil(BATCH / 2);
+  const { data: unpriced } = await admin
+    .from("cards")
+    .select("id, name, tier_id, card_prices!left(card_id)")
+    .is("card_prices", null)
+    .order("created_at", { ascending: false })
+    .limit(NEW);
+  for (const c of (unpriced as { id: string; name: string; tier_id: number | null }[]) ?? []) {
+    if (seen.has(c.id)) continue;
+    seen.add(c.id);
+    targets.push({ id: c.id, name: c.name, tier: c.tier_id ?? 4 });
+  }
+
+  // Fill the rest with the stalest-priced distinct cards (rotating refresh).
   const { data: rows } = await admin
     .from("card_prices")
     .select("card_id, as_of, cards(name, tier_id)")
     .order("as_of", { ascending: true })
     .limit(BATCH * 6);
-  type Row = { card_id: string; cards: { name: string; tier_id: number }[] | { name: string; tier_id: number } | null };
-  const seen = new Set<string>();
-  const targets: { id: string; name: string; tier: number }[] = [];
+  type Row = { card_id: string; cards: { name: string; tier_id: number | null }[] | { name: string; tier_id: number | null } | null };
   for (const r of (rows as Row[]) ?? []) {
+    if (targets.length >= BATCH) break;
     const cardObj = Array.isArray(r.cards) ? r.cards[0] : r.cards;
     if (seen.has(r.card_id) || !cardObj) continue;
     seen.add(r.card_id);
-    targets.push({ id: r.card_id, name: cardObj.name, tier: cardObj.tier_id });
-    if (targets.length >= BATCH) break;
+    targets.push({ id: r.card_id, name: cardObj.name, tier: cardObj.tier_id ?? 4 });
   }
 
   let updated = 0, soldRows = 0;

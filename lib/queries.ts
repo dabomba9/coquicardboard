@@ -18,6 +18,7 @@ export async function getCardsByTier(): Promise<Record<number, CardWithSet[]>> {
   const { data, error } = await supabase
     .from("cards")
     .select("*, sets(*)")
+    .eq("catalog", "mj-hierarchy") // the 378-card hierarchy only; vault cards live under catalog='mj-vault'
     .order("tier_id")
     .order("rarity_rank");
   if (error) throw error;
@@ -33,6 +34,7 @@ export async function getAllCards(): Promise<CardWithSet[]> {
   const { data, error } = await supabase
     .from("cards")
     .select("*, sets(*)")
+    .eq("catalog", "mj-hierarchy") // hierarchy only
     .order("tier_id")
     .order("rarity_rank");
   if (error) throw error;
@@ -43,7 +45,7 @@ export async function getAllCards(): Promise<CardWithSet[]> {
 export async function getCatalogValueMap(): Promise<Map<string, number>> {
   const supabase = await createClient();
   const map = new Map<string, number>();
-  const { data: cards } = await supabase.from("cards").select("id, catalog_value_cents");
+  const { data: cards } = await supabase.from("cards").select("id, catalog_value_cents").eq("catalog", "mj-hierarchy");
   for (const c of (cards as { id: string; catalog_value_cents: number | null }[]) ?? []) {
     if (c.catalog_value_cents != null) map.set(c.id, c.catalog_value_cents);
   }
@@ -113,6 +115,51 @@ export async function getRelatedCards(setId: string, excludeId: string, limit = 
   return (data as CardWithSet[]) ?? [];
 }
 
+// All Jordan Vault cards (catalog='mj-vault'). PostgREST caps a select at 1000
+// rows, so page through the ~12k in chunks. Returns the slim fields the explorer
+// needs (vault metadata lives in `attributes`).
+export type VaultRow = {
+  id: string;
+  slug: string;
+  name: string | null;
+  card_number: string | null;
+  year: number | null;
+  image_url: string | null;
+  attributes: Record<string, unknown>;
+};
+export async function getVaultCards(): Promise<VaultRow[]> {
+  const supabase = await createClient();
+  const out: VaultRow[] = [];
+  const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("cards")
+      .select("id, slug, name, card_number, year, image_url, attributes")
+      .eq("catalog", "mj-vault")
+      .order("rarity_rank")
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    const rows = (data as VaultRow[]) ?? [];
+    out.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return out;
+}
+
+// Owned Jordan Vault cards (catalog='mj-vault') among the given card ids — for the
+// Vault section of /collection (they have no tier, so they're not in the tier grid).
+export async function getOwnedVaultCards(cardIds: string[]): Promise<VaultRow[]> {
+  if (cardIds.length === 0) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("cards")
+    .select("id, slug, name, card_number, year, image_url, attributes")
+    .eq("catalog", "mj-vault")
+    .in("id", cardIds)
+    .order("name");
+  return (data as VaultRow[]) ?? [];
+}
+
 export async function getCardBySlug(slug: string): Promise<CardWithSet | null> {
   const supabase = await createClient();
   const { data } = await supabase.from("cards").select("*, sets(*)").eq("slug", slug).maybeSingle();
@@ -149,7 +196,7 @@ export { computeTierSummary, type CardIndexRow };
 // Lightweight card index (378 rows) for mapping holdings -> tier and base value.
 export async function getCardIndex(): Promise<CardIndexRow[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("cards").select("id, tier_id, catalog_value_cents");
+  const { data } = await supabase.from("cards").select("id, tier_id, catalog_value_cents").eq("catalog", "mj-hierarchy");
   return (data as CardIndexRow[]) ?? [];
 }
 

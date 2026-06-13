@@ -21,7 +21,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
   return (
     <article className="mx-auto max-w-2xl px-4 py-10">
       <Link href="/guides" className="text-sm text-muted hover:text-foreground">← Guides</Link>
-      <h1 className="mt-4 text-3xl font-bold tracking-tight">{guide.title}</h1>
+      <h1 className="mt-4 font-display text-2xl tracking-tight">{guide.title}</h1>
       <div className="mt-1 text-sm text-muted">
         {new Date(guide.date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
       </div>

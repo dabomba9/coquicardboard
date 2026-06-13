@@ -139,15 +139,15 @@ export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tier
           {groups.map((g, gi) => (
             <section key={g.label ?? gi}>
               {g.label && (
-                <h2 className="border-b-2 border-border pb-2 font-sans text-sm uppercase tracking-wide">{g.label}</h2>
+                <h2 className="border-b border-border/50 pb-2 font-sans text-sm uppercase tracking-wide">{g.label}</h2>
               )}
               {view === "grid" ? (
                 <div className={cn("grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8", g.label && "mt-4")}>
                   {g.items.map((card) => (
                     <Link key={card.id} href={`/collection/${card.slug}`} className="group relative">
-                      <CardThumb card={card} className="transition-transform group-hover:-translate-y-1 [--border:var(--gold)]" />
+                      <CardThumb card={card} className="transition-transform group-hover:-translate-y-1 border-[var(--gold)]" />
                       {card.copies > 1 && (
-                        <span className="pointer-events-none absolute right-1 top-1 pixel-box bg-[var(--gold)] px-1 font-sans text-[9px] text-black [--border:var(--gold)]">×{card.copies}</span>
+                        <span className="pointer-events-none absolute right-1 top-1 rounded-full bg-[var(--gold)] px-1.5 text-[9px] font-semibold text-black">×{card.copies}</span>
                       )}
                     </Link>
                   ))}

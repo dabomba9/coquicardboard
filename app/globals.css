@@ -87,7 +87,9 @@
   --color-border: var(--border);
   --color-accent: var(--accent);
   --color-gold: var(--gold);
-  --font-sans: var(--font-body);
+  /* Body/UI is a clean modern sans (matches the navbar); pixel fonts are kept
+     only for display titles (--font-display) and numeric data (--font-mono). */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-display: var(--font-display);
   --font-mono: var(--font-data);
 }
@@ -95,10 +97,9 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  /* Pixel fonts read crisper with a touch more spacing/leading. */
-  letter-spacing: 0.01em;
-  line-height: 1.55;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  letter-spacing: 0;
+  line-height: 1.5;
 }
 
 * {
@@ -377,25 +378,20 @@ body {
   animation: blink 4.2s ease-in-out infinite;
 }
 
-/* Segmented completion meter (JRPG status bar). Fill color via --meter. */
+/* Smooth completion meter (fill color via --meter). */
 .meter {
   position: relative;
-  height: 10px;
-  border: 2px solid var(--border);
-  background: var(--elevated);
+  height: 8px;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--foreground) 10%, transparent);
   overflow: hidden;
 }
 .meter > span {
   display: block;
   height: 100%;
+  border-radius: 9999px;
   background-color: var(--meter, var(--accent));
-  background-image: repeating-linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 0.32) 0,
-    rgba(0, 0, 0, 0.32) 1px,
-    transparent 1px,
-    transparent 6px
-  );
+  transition: width 0.4s ease;
 }
 
 /* =========================================================================
@@ -480,4 +476,27 @@ body {
   .parallax-emblem, .parallax-fan { translate: 0 0 !important; transition: none; }
   .hero-tilt { transform: none !important; transition: none; }
   .skeleton::after { animation: none; }
+  .float-idle { animation: none !important; }
+  .reveal { opacity: 1 !important; transform: none !important; }
+}
+
+/* ---- Landing motion (tasteful; disabled above under reduced-motion) ---- */
+@keyframes float-idle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.float-idle {
+  animation: float-idle 5s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Scroll-in reveal (toggled by components/reveal.tsx) */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.in-view {
+  opacity: 1;
+  transform: none;
 }
