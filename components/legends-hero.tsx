@@ -107,7 +107,7 @@ export function LegendsHero() {
         <p className="font-display text-[10px] uppercase tracking-[0.4em] text-[#b8791b] dark:text-[#ffd84a]/90 sm:text-xs">
           ▸ Legends of the Game
         </p>
-        <h1 className="marquee-gold mt-3 font-display text-5xl uppercase leading-none tracking-tight sm:text-6xl lg:text-7xl">
+        <h1 className="mt-3 font-display text-5xl uppercase leading-none tracking-tight text-foreground [text-shadow:0_2px_12px_rgba(0,0,0,0.25)] sm:text-6xl lg:text-7xl">
           Coqui Cardboard
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-sm text-muted sm:text-base">
