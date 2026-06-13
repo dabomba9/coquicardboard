@@ -62,7 +62,7 @@ export default async function CardDetailPage({
 
       <div className="mt-4 grid gap-8 sm:grid-cols-[280px_1fr]">
         <div>
-          <div className={cn("relative overflow-hidden rounded-xl border border-border/50 bg-card p-1", foilClass)} style={tierStyle}>
+          <div className={cn("relative overflow-hidden rounded-md border border-border/50 bg-card p-1", foilClass)} style={tierStyle}>
             <CardLightbox imageUrl={card.image_url} alt={card.name}>
               <CardThumb card={card} className="w-full !border-0 !shadow-none" />
             </CardLightbox>

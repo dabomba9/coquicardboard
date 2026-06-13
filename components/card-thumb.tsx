@@ -20,7 +20,7 @@ export function CardThumb({ card, className }: { card: ThumbCard; className?: st
   return (
     <div
       className={cn(
-        "relative flex aspect-[5/7] flex-col justify-between overflow-hidden rounded-xl border border-border/50",
+        "relative flex aspect-[5/7] flex-col justify-between overflow-hidden rounded-md border border-border/50",
         !showImage && "p-3",
         showImage ? "bg-card" : c.bg,
         className
