@@ -30,14 +30,17 @@ export default async function CardDetailPage({
     card.set_id ? getRelatedCards(card.set_id, card.id) : Promise.resolve([]),
   ]);
 
+  const isVault = card.catalog === "mj-vault";
+  const attrs = (card.attributes ?? {}) as Record<string, unknown>;
+  const attr = (k: string) => (typeof attrs[k] === "string" ? (attrs[k] as string) : null);
   const c = TIER_COLORS[card.tier_id] ?? TIER_COLORS[4];
-  const cardType = typeof card.attributes?.type === "string" ? card.attributes.type : null;
+  const cardType = attr("type") ?? attr("cardType");
   const facts: [string, string | null][] = [
     ["Set", card.sets?.name ?? null],
     ["Year", card.year ? String(card.year) : null],
     ["Card #", card.card_number ? `#${card.card_number}` : null],
     ["Type", cardType],
-    ["Manufacturer", card.sets?.manufacturer ?? null],
+    ["Manufacturer", card.sets?.manufacturer ?? attr("manufacturer")],
     ["Print run", card.print_run ? `/${card.print_run}` : card.serial_numbered ? "Serial #'d" : null],
     ["Pack odds", card.pack_odds],
   ];
@@ -47,14 +50,15 @@ export default async function CardDetailPage({
   const googleUrl = `https://www.google.com/search?tbm=isch&q=${q}`;
 
   // Holographic foil scales with rarity — legendary (tier 1) shimmers hardest.
-  const foilClass =
+  // Vault cards have no tier, so no foil / neutral border.
+  const foilClass = isVault ? "" :
     card.tier_id === 1 ? "foil foil--strong" : card.tier_id === 2 ? "foil" : card.tier_id === 3 ? "foil foil--soft" : "";
-  const tierStyle = { ["--border" as string]: `var(--tier-${card.tier_id})` } as React.CSSProperties;
-  const tierName = ["Legendary", "Epic", "Rare", "Common"][card.tier_id - 1] ?? "Common";
+  const tierStyle = (isVault ? {} : { ["--border" as string]: `var(--tier-${card.tier_id})` }) as React.CSSProperties;
+  const tierName = card.tier_id ? (["Legendary", "Epic", "Rare", "Common"][card.tier_id - 1] ?? "Common") : "";
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
-      <Link href="/mj-hierarchy" className="font-sans text-[10px] uppercase tracking-wide text-muted hover:text-foreground">← Hierarchy</Link>
+      <Link href={isVault ? "/vault" : "/mj-hierarchy"} className="font-sans text-[10px] uppercase tracking-wide text-muted hover:text-foreground">← {isVault ? "Jordan Vault" : "Hierarchy"}</Link>
 
       <div className="mt-4 grid gap-8 sm:grid-cols-[280px_1fr]">
         <div>
@@ -72,10 +76,10 @@ export default async function CardDetailPage({
         <Panel className="self-start p-5" style={tierStyle}>
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={cn("pixel-box px-2 py-0.5 font-sans text-[10px] uppercase", c.bg, c.text)}
+              className={cn("pixel-box px-2 py-0.5 font-sans text-[10px] uppercase", isVault ? "text-accent" : cn(c.bg, c.text))}
               style={tierStyle}
             >
-              Tier {card.tier_id} · {tierName}
+              {isVault ? "Jordan Vault" : `Tier ${card.tier_id} · ${tierName}`}
             </span>
             {card.is_rookie && <Badge className={c.text}>Rookie</Badge>}
             {card.is_insert && <Badge className={c.text}>Insert</Badge>}

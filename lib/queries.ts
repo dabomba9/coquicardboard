@@ -146,6 +146,20 @@ export async function getVaultCards(): Promise<VaultRow[]> {
   return out;
 }
 
+// Owned Jordan Vault cards (catalog='mj-vault') among the given card ids — for the
+// Vault section of /collection (they have no tier, so they're not in the tier grid).
+export async function getOwnedVaultCards(cardIds: string[]): Promise<VaultRow[]> {
+  if (cardIds.length === 0) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("cards")
+    .select("id, slug, name, card_number, year, image_url, attributes")
+    .eq("catalog", "mj-vault")
+    .in("id", cardIds)
+    .order("name");
+  return (data as VaultRow[]) ?? [];
+}
+
 export async function getCardBySlug(slug: string): Promise<CardWithSet | null> {
   const supabase = await createClient();
   const { data } = await supabase.from("cards").select("*, sets(*)").eq("slug", slug).maybeSingle();
