@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { playSelect } from "@/lib/sfx";
 import { cn } from "@/lib/utils";
 
-type Item = { name: string; slug: string; tier_id: number; set: string | null };
+type Item = { name: string; slug: string; tier_id: number | null; catalog: string; set: string | null };
 
 export function CommandPalette() {
   const router = useRouter();
@@ -35,24 +35,27 @@ export function CommandPalette() {
     };
   }, []);
 
-  // Lazy-load the catalog the first time it opens.
+  // Focus on open; reset query on close.
   useEffect(() => {
-    if (open && items.length === 0) {
-      fetch("/api/cards").then((r) => r.json()).then((d) => setItems(d.cards ?? [])).catch(() => {});
-    }
     if (open) setTimeout(() => inputRef.current?.focus(), 10);
-    // Reset query when the palette closes.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!open) { setQ(""); setActive(0); }
-  }, [open, items.length]);
+  }, [open]);
 
-  const results = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    if (!needle) return items.slice(0, 12);
-    return items
-      .filter((i) => `${i.name} ${i.set ?? ""}`.toLowerCase().includes(needle))
-      .slice(0, 30);
-  }, [q, items]);
+  // Server-side search across both catalogs (debounced) while the palette is open.
+  useEffect(() => {
+    if (!open) return;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => {
+      fetch(`/api/cards?q=${encodeURIComponent(q.trim())}`, { signal: ctrl.signal })
+        .then((r) => r.json())
+        .then((d) => setItems(d.cards ?? []))
+        .catch(() => {});
+    }, q.trim() ? 180 : 0);
+    return () => { clearTimeout(t); ctrl.abort(); };
+  }, [open, q]);
+
+  const results = items;
 
   function go(i: Item) {
     playSelect();
@@ -98,7 +101,9 @@ export function CommandPalette() {
                 )}
               >
                 <span className="truncate">{i.name}</span>
-                <span className={cn("shrink-0 text-xs", idx === active ? "text-accent" : "text-muted")}>Tier {i.tier_id}</span>
+                <span className={cn("shrink-0 text-xs", idx === active ? "text-accent" : "text-muted")}>
+                  {i.catalog === "mj-vault" ? "Vault" : i.tier_id ? `Tier ${i.tier_id}` : ""}
+                </span>
               </button>
             </li>
           ))}
