@@ -40,10 +40,13 @@ The 12,114 vault cards live in the shared `cards` table (`catalog='mj-vault'`, a
 images live in the **`vault-images`** Storage bucket (migration `0005`) — **not** in the repo (`public/vault/` is
 git-ignored). With the same temporary cloud-pointing `.env.local` as above:
 ```bash
-npx tsx admin/seed-vault.ts            # loads data/vault.json → cards (catalog='mj-vault')
-npx tsx jordan-vault/upload-images.ts  # uploads public/vault/*.jpg → vault-images (idempotent/resumable)
+npx tsx admin/seed-vault.ts               # loads data/vault.json → cards (catalog='mj-vault'); image links left null
+npx tsx jordan-vault/upload-images.ts     # uploads public/vault/*.jpg → vault-images (idempotent/resumable)
+npx tsx admin/reconcile-vault-images.ts   # points image_url/backImage only at images that exist in the bucket
 ```
-Cards without an uploaded image fall back to a placeholder, so a partial image set is fine. (Locally,
+Run `reconcile-vault-images.ts` after every upload batch — it's what populates the image links (the seed leaves them
+null so no card ever points at a missing 404 image). Cards without an uploaded image fall back to a placeholder, so a
+partial image set is fine. (Locally,
 `jordan-vault/auto-resume.sh` downloads + uploads automatically against whatever `.env.local` points at.)
 
 ## 3. Auth (Supabase → Authentication)

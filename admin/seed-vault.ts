@@ -5,8 +5,9 @@
  *
  *   npx tsx admin/seed-vault.ts
  *
- * Reads data/vault.json (the generated app dataset) and builds image_url from the
- * vault-images Storage bucket via NEXT_PUBLIC_SUPABASE_URL.
+ * Reads data/vault.json (the generated app dataset). Image links are populated
+ * separately by admin/reconcile-vault-images.ts (from what's actually uploaded to
+ * the vault-images bucket), not here, so the seed never creates broken 404 links.
  */
 import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
@@ -22,7 +23,6 @@ if (!url || !serviceKey) {
   process.exit(1);
 }
 const db = createClient(url, serviceKey, { auth: { persistSession: false } });
-const STORAGE_BASE = `${url}/storage/v1/object/public/vault-images`;
 
 type RawVaultCard = {
   id: number; slug: string | null; name: string | null; year: number | null;
@@ -48,15 +48,19 @@ async function main() {
     year: c.year ?? null,
     rarity_rank: i,
     catalog_value_cents: null,
-    image_url: c.hasFront ? `${STORAGE_BASE}/${c.id}-front.jpg` : null,
-    image_source: c.hasFront ? "jordan-vault" : null,
+    // Image links are intentionally left null at seed time: tcdb's hasFront/hasBack
+    // only mean the image *existed upstream*, not that we've fetched + uploaded it.
+    // Run upload-images.ts then admin/reconcile-vault-images.ts to populate these
+    // from what's actually in the vault-images bucket (avoids broken 404 links).
+    image_url: null,
+    image_source: null,
     attributes: {
       manufacturer: c.manufacturer ?? null,
       brand: c.brand ?? null,
       cardType: c.cardType ?? null,
       page: c.page ?? null,
       row: c.row ?? null,
-      backImage: c.hasBack ? `${STORAGE_BASE}/${c.id}-back.jpg` : null,
+      backImage: null,
       psaPopReport: c.psaPopReport ?? null,
       vault_id: c.id,
     },
