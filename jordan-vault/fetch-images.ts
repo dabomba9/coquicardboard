@@ -93,7 +93,7 @@ async function main() {
   const ABORT_AFTER = 20; // consecutive fails (surviving a re-warm) ⇒ this IP is blocked
   let ok = 0, fail = 0, done = 0, aborted = false;
 
-  async function runShard(shard: Job[], label: number) {
+  async function runShard(shard: Job[]) {
     const context = await browser.newContext({ userAgent: UA, viewport: { width: 1280, height: 800 } });
     const req = context.request;
     const page = await context.newPage();
@@ -133,7 +133,7 @@ async function main() {
   console.log(`Warming up ${WORKERS} Cloudflare contexts…`);
   const shards: Job[][] = Array.from({ length: WORKERS }, () => []);
   jobs.forEach((j, i) => shards[i % WORKERS].push(j));
-  await Promise.all(shards.map((s, i) => runShard(s, i)));
+  await Promise.all(shards.map((s) => runShard(s)));
   process.stdout.write("\n");
 
   await browser.close();
