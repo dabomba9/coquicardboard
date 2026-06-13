@@ -82,21 +82,21 @@ export function LegendsHero() {
   return (
     <section
       className="relative overflow-hidden border-b border-border/50 pb-16 pt-28 sm:pt-32"
-      style={{ background: "#0c0a22" }}
+      style={{ background: "#07140d" }}
     >
       {/* --- layered dark arcade backdrop --- */}
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: "linear-gradient(180deg, #161232 0%, #0e0b26 46%, #07061a 100%)" }}
+        style={{ background: "linear-gradient(180deg, #14281b 0%, #0d1c13 46%, #06120c 100%)" }}
       />
       <div className="tile-bg pointer-events-none absolute inset-0" style={{ opacity: 0.16 }} />
       {/* twin floodlights */}
-      <div className="pointer-events-none absolute -top-24 left-[18%] h-72 w-72 rounded-full" style={{ background: "radial-gradient(closest-side, rgba(120,140,255,0.18), transparent 70%)" }} />
+      <div className="pointer-events-none absolute -top-24 left-[18%] h-72 w-72 rounded-full" style={{ background: "radial-gradient(closest-side, rgba(95,211,95,0.16), transparent 70%)" }} />
       <div className="pointer-events-none absolute -top-24 right-[18%] h-72 w-72 rounded-full" style={{ background: "radial-gradient(closest-side, rgba(245,197,66,0.12), transparent 70%)" }} />
       {/* soft spotlight behind the sprite row */}
       <div
         className="pointer-events-none absolute left-1/2 top-[62%] h-[30rem] w-[44rem] max-w-[120%] -translate-x-1/2 -translate-y-1/2"
-        style={{ background: "radial-gradient(closest-side, rgba(150,160,255,0.16), transparent 70%)" }}
+        style={{ background: "radial-gradient(closest-side, rgba(120,200,140,0.16), transparent 70%)" }}
       />
       {/* faint floor line for depth */}
       <div className="pointer-events-none absolute inset-x-0 bottom-20 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent)" }} />
