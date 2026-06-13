@@ -13,7 +13,7 @@ The codebase is production-ready; this runbook covers the account/DNS steps.
 2. Apply the schema (from this repo):
    ```bash
    npx supabase link --project-ref <your-ref>
-   npx supabase db push          # applies supabase/migrations/0001–0005 (tables, RLS, RPC, card + vault image buckets)
+   npx supabase db push          # applies supabase/migrations/0001–0006 (tables, RLS, RPC, card + vault image buckets, vault catalog)
    ```
 
 ## 2. Seed the cloud data
@@ -35,16 +35,16 @@ Images — choose one:
   (copies the vision-verified images from local Storage → cloud, matched by slug).
 - **Or re-fetch fresh on cloud:** `npm run fetch:images` (simpler; re-picks images).
 
-### Jordan Vault images (the 12k-card `/vault` section)
-`/vault` is **file-backed** (`data/vault.json`, committed) and its images live in the **`vault-images`** Storage
-bucket — **not** in the repo (`public/vault/` is git-ignored). The bucket is created by migration `0005`. With the
-images downloaded locally (see [jordan-vault/README.md](jordan-vault/README.md) — the headless backfill populates
-`public/vault/`) and the same temporary cloud-pointing `.env.local` as above, sync them to the cloud bucket:
+### Jordan Vault (the 12k-card `/vault` section)
+The 12,114 vault cards live in the shared `cards` table (`catalog='mj-vault'`, added by migration `0006`); their
+images live in the **`vault-images`** Storage bucket (migration `0005`) — **not** in the repo (`public/vault/` is
+git-ignored). With the same temporary cloud-pointing `.env.local` as above:
 ```bash
-npx tsx jordan-vault/upload-images.ts        # uploads public/vault/*.jpg → vault-images (idempotent/resumable)
+npx tsx admin/seed-vault.ts            # loads data/vault.json → cards (catalog='mj-vault')
+npx tsx jordan-vault/upload-images.ts  # uploads public/vault/*.jpg → vault-images (idempotent/resumable)
 ```
-Cards without an uploaded image fall back to a placeholder, so a partial set is fine. (The local
-`jordan-vault/auto-resume.sh` job downloads + uploads automatically against whatever `.env.local` points at.)
+Cards without an uploaded image fall back to a placeholder, so a partial image set is fine. (Locally,
+`jordan-vault/auto-resume.sh` downloads + uploads automatically against whatever `.env.local` points at.)
 
 ## 3. Auth (Supabase → Authentication)
 - **URL Configuration:** Site URL `https://coquicardboard.com`; add redirect `https://coquicardboard.com/callback` (and your Vercel preview URL if used).
