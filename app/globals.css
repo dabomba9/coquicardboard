@@ -476,4 +476,39 @@ body {
   .parallax-emblem, .parallax-fan { translate: 0 0 !important; transition: none; }
   .hero-tilt { transform: none !important; transition: none; }
   .skeleton::after { animation: none; }
+  .float-idle { animation: none !important; }
+  .marquee-track { animation: none !important; }
+  .reveal { opacity: 1 !important; transform: none !important; }
+}
+
+/* ---- Landing motion (tasteful; disabled above under reduced-motion) ---- */
+@keyframes float-idle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.float-idle {
+  animation: float-idle 5s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee var(--marquee-duration, 60s) linear infinite;
+}
+.marquee-mask:hover .marquee-track { animation-play-state: paused; }
+
+/* Scroll-in reveal (toggled by components/reveal.tsx) */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.in-view {
+  opacity: 1;
+  transform: none;
 }

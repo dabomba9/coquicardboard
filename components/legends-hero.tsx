@@ -23,24 +23,31 @@ const LEGENDS: Legend[] = [
   { name: "Killebrew", number: "3", team: "Twins", img: "/legends/killebrew.png", href: null, live: false, accent: "#5aa6f5" },
 ];
 
-function SlotInner({ l }: { l: Legend }) {
+function SlotInner({ l, i }: { l: Legend; i: number }) {
   return (
     <div
       className={cn(
-        "group/slot pixel-box relative flex h-full flex-col overflow-hidden transition-transform",
-        l.live ? "hover:-translate-y-1.5 focus-within:-translate-y-1.5" : "opacity-90"
+        "group/slot relative flex h-full flex-col overflow-hidden rounded-2xl border backdrop-blur-sm transition-all duration-300",
+        l.live
+          ? "border-white/15 bg-white/[0.05] hover:-translate-y-1.5 focus-within:-translate-y-1.5"
+          : "border-white/10 bg-white/[0.03] opacity-80 hover:opacity-100"
       )}
-      style={{
-        background: "rgba(10, 8, 30, 0.66)",
-        ["--border" as string]: l.live ? l.accent : "var(--border)",
-      } as React.CSSProperties}
+      style={{ ["--accent" as string]: l.accent } as React.CSSProperties}
     >
-      {/* hover glow */}
+      {/* accent glow behind the sprite (brightens on hover) */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover/slot:opacity-100 group-focus-within/slot:opacity-100"
-        style={{ boxShadow: `inset 0 0 34px -8px ${l.accent}` }}
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 opacity-40 transition-opacity duration-300 group-hover/slot:opacity-80"
+        style={{ background: `radial-gradient(60% 60% at 50% 100%, ${l.accent}55, transparent 70%)` }}
         aria-hidden="true"
       />
+      {/* live ring */}
+      {l.live && (
+        <div
+          className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover/slot:opacity-100"
+          style={{ boxShadow: `inset 0 0 0 1px ${l.accent}, inset 0 0 36px -10px ${l.accent}` }}
+          aria-hidden="true"
+        />
+      )}
       {/* sprite */}
       <div className="relative aspect-[2/3] w-full">
         <Image
@@ -49,17 +56,18 @@ function SlotInner({ l }: { l: Legend }) {
           fill
           unoptimized
           sizes="(max-width: 768px) 45vw, 22vw"
-          className="pixelated origin-bottom scale-[1.08] object-contain object-bottom drop-shadow-[0_10px_12px_rgba(0,0,0,0.6)]"
+          className="float-idle pixelated origin-bottom scale-[1.08] object-contain object-bottom drop-shadow-[0_12px_14px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover/slot:scale-[1.13]"
+          style={{ animationDelay: `${i * 0.6}s` }}
         />
       </div>
       {/* name plate */}
-      <div className="border-t-2 border-border bg-[#0a0818]/85 px-2 py-2 text-center">
-        <div className="font-display text-xs uppercase tracking-wide text-foreground">{l.name}</div>
-        <div className="font-data text-sm leading-none text-muted">#{l.number} · {l.team}</div>
+      <div className="relative border-t border-white/10 bg-black/30 px-2 py-2.5 text-center backdrop-blur-sm">
+        <div className="font-display text-sm uppercase tracking-wide text-white">{l.name}</div>
+        <div className="font-data text-sm leading-none text-white/55">#{l.number} · {l.team}</div>
         <div
           className={cn(
-            "mt-1.5 inline-block px-1.5 py-0.5 font-display text-[9px] uppercase leading-none",
-            l.live ? "text-black" : "border border-border text-muted"
+            "mt-2 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wide",
+            l.live ? "text-black" : "border border-white/20 text-white/55"
           )}
           style={l.live ? { background: l.accent } : undefined}
         >
@@ -73,44 +81,49 @@ function SlotInner({ l }: { l: Legend }) {
 export function LegendsHero() {
   return (
     <section
-      className="relative overflow-hidden border-b-2 border-border pb-14 pt-28 sm:pt-32"
+      className="relative overflow-hidden border-b border-border/50 pb-16 pt-28 sm:pt-32"
       style={{ background: "#0c0a22" }}
     >
-      {/* --- clean dark arcade backdrop --- */}
-      {/* deep gradient — a touch of light up top, fading to near-black */}
+      {/* --- layered dark arcade backdrop --- */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{ background: "linear-gradient(180deg, #161232 0%, #0e0b26 46%, #07061a 100%)" }}
       />
-      {/* subtle pixel grid texture */}
-      <div className="tile-bg pointer-events-none absolute inset-0" style={{ opacity: 0.18 }} />
+      <div className="tile-bg pointer-events-none absolute inset-0" style={{ opacity: 0.16 }} />
+      {/* twin floodlights */}
+      <div className="pointer-events-none absolute -top-24 left-[18%] h-72 w-72 rounded-full" style={{ background: "radial-gradient(closest-side, rgba(120,140,255,0.18), transparent 70%)" }} />
+      <div className="pointer-events-none absolute -top-24 right-[18%] h-72 w-72 rounded-full" style={{ background: "radial-gradient(closest-side, rgba(245,197,66,0.12), transparent 70%)" }} />
       {/* soft spotlight behind the sprite row */}
       <div
-        className="pointer-events-none absolute left-1/2 top-[60%] h-[30rem] w-[42rem] max-w-[120%] -translate-x-1/2 -translate-y-1/2"
-        style={{ background: "radial-gradient(closest-side, rgba(150,160,255,0.14), transparent 70%)" }}
+        className="pointer-events-none absolute left-1/2 top-[62%] h-[30rem] w-[44rem] max-w-[120%] -translate-x-1/2 -translate-y-1/2"
+        style={{ background: "radial-gradient(closest-side, rgba(150,160,255,0.16), transparent 70%)" }}
       />
-      {/* vignette */}
-      <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0,0,0,0.55) 100%)" }} />
+      {/* faint floor line for depth */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-20 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent)" }} />
+      <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0,0,0,0.6) 100%)" }} />
 
       {/* --- content --- */}
       <div className="relative z-10 mx-auto max-w-6xl px-4 text-center">
-        <h1 className="marquee-gold font-display text-4xl uppercase leading-none tracking-tight sm:text-5xl lg:text-6xl">
+        <p className="font-display text-[10px] uppercase tracking-[0.4em] text-[#ffd84a]/90 sm:text-xs">
+          ▸ Legends of the Game
+        </p>
+        <h1 className="marquee-gold mt-3 font-display text-5xl uppercase leading-none tracking-tight sm:text-6xl lg:text-7xl">
           Coqui Cardboard
         </h1>
-        <p className="mt-3 font-display text-[10px] uppercase tracking-[0.35em] text-[#ffd84a] sm:text-xs">
-          ▸ Legends of the Game · Select your legend
+        <p className="mx-auto mt-4 max-w-xl text-sm text-white/65 sm:text-base">
+          Track, grade, value, and share the definitive card hierarchies — pick your legend to begin.
         </p>
 
         {/* character select */}
-        <div className="mx-auto mt-8 grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          {LEGENDS.map((l) =>
+        <div className="mx-auto mt-9 grid max-w-4xl grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+          {LEGENDS.map((l, i) =>
             l.href ? (
-              <Link key={l.name} href={l.href} onMouseEnter={() => playSelect()} className="block focus:outline-none">
-                <SlotInner l={l} />
+              <Link key={l.name} href={l.href} onMouseEnter={() => playSelect()} className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40">
+                <SlotInner l={l} i={i} />
               </Link>
             ) : (
               <div key={l.name} onMouseEnter={() => playSelect()}>
-                <SlotInner l={l} />
+                <SlotInner l={l} i={i} />
               </div>
             )
           )}
@@ -118,7 +131,7 @@ export function LegendsHero() {
 
         <div className="mt-9 flex flex-wrap justify-center gap-3">
           <Link href="/mj-hierarchy"><Button className="h-12 px-6 text-base">▶ Explore the MJ Hierarchy</Button></Link>
-          <Link href="/guides"><Button variant="secondary" className="h-12 px-6 text-base">Read the guides</Button></Link>
+          <Link href="/vault"><Button variant="secondary" className="h-12 border-white/20 px-6 text-base text-white hover:bg-white/10">Browse the Jordan Vault</Button></Link>
         </div>
       </div>
     </section>

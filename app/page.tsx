@@ -1,11 +1,23 @@
 import Link from "next/link";
+import { Layers, Library, Award, TrendingUp, Heart, Share2, ArrowRight } from "lucide-react";
 import { getTiers, getAllCards } from "@/lib/queries";
 import { CardThumb } from "@/components/card-thumb";
-import { Panel } from "@/components/ui/primitives";
+import { Panel, Button } from "@/components/ui/primitives";
 import { LegendsHero } from "@/components/legends-hero";
+import { CardMarquee } from "@/components/card-marquee";
+import { Reveal } from "@/components/reveal";
 import type { CardWithSet, Tier } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+const FEATURES = [
+  { Icon: Layers, title: "Track every tier", body: "Quick-add owned copies; watch each tier's completion fill in." },
+  { Icon: Award, title: "Grade & condition", body: "Log raw or graded copies (PSA/BGS/SGC) with cert numbers." },
+  { Icon: TrendingUp, title: "Real market value", body: "eBay-sourced prices and value-over-time, not guesswork." },
+  { Icon: Heart, title: "Build a want list", body: "Prioritize the chase and flag cards you're hunting." },
+  { Icon: Share2, title: "Share your collection", body: "A public profile shows off what you own and trade." },
+  { Icon: Library, title: "12,000+ card vault", body: "Browse the complete Michael Jordan catalog, beautifully." },
+];
 
 export default async function Home() {
   let tiers: Tier[] = [];
@@ -16,65 +28,130 @@ export default async function Home() {
     /* DB not connected — home still renders */
   }
   const mjTotal = tiers.reduce((s, t) => s + t.card_count, 0) || 378;
-  const heroCards = cards.filter((c) => c.tier_id === 1 && c.image_url).slice(0, 5);
+  const withImg = cards.filter((c) => c.image_url);
+  const marqueeImgs = withImg.slice(0, 22).map((c) => c.image_url!);
+  const hierGrid = withImg.filter((c) => c.tier_id === 1).slice(0, 5);
+  const vaultGrid = withImg.slice(5, 10);
+
+  const stats = [
+    { n: "12,000+", l: "Vault cards" },
+    { n: String(mjTotal), l: "MJ Hierarchy" },
+    { n: String(tiers.length || 4), l: "Rarity tiers" },
+    { n: "eBay", l: "Real values" },
+  ];
 
   return (
     <div className="-mt-[5.5rem]">
-      {/* Hero — "Select your legend" arcade character-select */}
       <LegendsHero />
 
-      {/* Features — quest / menu select */}
-      <section className="mx-auto max-w-6xl px-4 py-16">
-        <h2 className="font-sans text-base uppercase tracking-wide">Quest Log</h2>
-        <p className="mt-2 text-sm text-muted">More hierarchies and tools are on the way.</p>
+      {/* Stats band */}
+      <Reveal>
+        <section className="mx-auto max-w-5xl px-4 py-12">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {stats.map((s) => (
+              <div key={s.l} className="rounded-2xl border border-border/50 bg-card px-4 py-5 text-center">
+                <div className="font-data text-3xl leading-none text-foreground">{s.n}</div>
+                <div className="mt-1 text-xs uppercase tracking-wide text-muted">{s.l}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </Reveal>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-3">
-          {/* MJ Hierarchy — live */}
-          <Link href="/mj-hierarchy" className="group lg:col-span-2">
-            <Panel className="h-full overflow-hidden border-[var(--tier-1)] p-5 transition-transform group-hover:-translate-y-1">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="font-sans text-[10px] uppercase tracking-wide text-[var(--tier-1)]">● Live</div>
-                  <div className="mt-2 font-sans text-sm tracking-wide">The Michael Jordan Hierarchy</div>
-                  <div className="mt-2 text-sm text-muted">
-                    <span className="font-data text-base text-foreground">{mjTotal}</span> cards · 4 tiers ·
-                    track, grade, value & share
+      {/* Card showcase marquee */}
+      {marqueeImgs.length > 0 && (
+        <Reveal>
+          <section className="py-4">
+            <CardMarquee images={marqueeImgs} />
+          </section>
+        </Reveal>
+      )}
+
+      {/* Two catalogs */}
+      <Reveal>
+        <section className="mx-auto max-w-6xl px-4 py-12">
+          <h2 className="font-display text-lg uppercase tracking-tight">Explore the catalogs</h2>
+          <p className="mt-1 text-sm text-muted">Two curated worlds of Michael Jordan cardboard.</p>
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            {/* MJ Hierarchy */}
+            <Link href="/mj-hierarchy" className="group">
+              <Panel className="h-full overflow-hidden p-6 transition-transform group-hover:-translate-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/12 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-accent">
+                    <span className="h-1.5 w-1.5 rounded-full bg-accent" /> Live
+                  </span>
+                </div>
+                <h3 className="mt-3 font-display text-xl uppercase tracking-tight">The MJ Hierarchy</h3>
+                <p className="mt-1 text-sm text-muted">
+                  <span className="font-data text-base text-foreground">{mjTotal}</span> definitive cards across{" "}
+                  <span className="font-data text-base text-foreground">{tiers.length || 4}</span> rarity tiers — track, grade, value & share.
+                </p>
+                {hierGrid.length > 0 && (
+                  <div className="mt-5 grid grid-cols-5 gap-2">
+                    {hierGrid.map((c) => <CardThumb key={c.id} card={c} />)}
                   </div>
-                </div>
-                <span className="font-sans text-[10px] uppercase text-accent group-hover:underline">Open →</span>
-              </div>
-              {heroCards.length > 0 && (
-                <div className="mt-4 grid grid-cols-5 gap-2">
-                  {heroCards.map((c) => (
-                    <div key={c.id} className="rounded-xl border border-border/50 bg-card p-1">
-                      <CardThumb card={c} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Panel>
-          </Link>
+                )}
+                <span className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-accent group-hover:gap-2">Open the hierarchy <ArrowRight size={15} /></span>
+              </Panel>
+            </Link>
 
-          {/* Guides */}
-          <Link href="/guides" className="group">
-            <Panel className="flex h-full flex-col justify-between p-5 transition-transform group-hover:-translate-y-1">
-              <div>
-                <div className="font-sans text-[10px] uppercase tracking-wide text-muted">Read</div>
-                <div className="mt-2 font-sans text-sm tracking-wide">Guides</div>
-                <p className="mt-3 text-sm text-muted">Collecting guides — understanding tiers, grading, and value.</p>
-              </div>
-              <span className="mt-4 font-sans text-[10px] uppercase text-accent group-hover:underline">Browse →</span>
-            </Panel>
-          </Link>
+            {/* Jordan Vault */}
+            <Link href="/vault" className="group">
+              <Panel className="h-full overflow-hidden p-6 transition-transform group-hover:-translate-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--gold)]/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--gold)]">
+                    <Library size={12} /> Vault
+                  </span>
+                </div>
+                <h3 className="mt-3 font-display text-xl uppercase tracking-tight">The Jordan Vault</h3>
+                <p className="mt-1 text-sm text-muted">
+                  <span className="font-data text-base text-foreground">12,000+</span> cards — every Michael Jordan issue. Search, filter, and track the ones you own.
+                </p>
+                {vaultGrid.length > 0 && (
+                  <div className="mt-5 grid grid-cols-5 gap-2">
+                    {vaultGrid.map((c) => <CardThumb key={c.id} card={c} />)}
+                  </div>
+                )}
+                <span className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-[var(--gold)] group-hover:gap-2">Browse the vault <ArrowRight size={15} /></span>
+              </Panel>
+            </Link>
+          </div>
+        </section>
+      </Reveal>
 
-          {/* Coming soon — locked treasure */}
-          <Panel className="p-5 opacity-70 lg:col-span-3">
-            <div className="font-sans text-[10px] uppercase tracking-wide text-muted">🔒 Locked</div>
-            <div className="mt-2 font-sans text-sm tracking-wide">??? — More player hierarchies</div>
-            <p className="mt-3 text-sm text-muted">Kobe, LeBron and more legends — same tools, more quests. Coming soon.</p>
-          </Panel>
-        </div>
-      </section>
+      {/* Feature grid */}
+      <Reveal>
+        <section className="mx-auto max-w-6xl px-4 py-12">
+          <h2 className="font-display text-lg uppercase tracking-tight">Everything a collector needs</h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map(({ Icon, title, body }) => (
+              <div key={title} className="rounded-2xl border border-border/50 bg-card p-5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/12 text-accent">
+                  <Icon size={18} />
+                </div>
+                <h3 className="mt-3 text-sm font-semibold">{title}</h3>
+                <p className="mt-1 text-sm text-muted">{body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </Reveal>
+
+      {/* Final CTA */}
+      <Reveal>
+        <section className="mx-auto max-w-4xl px-4 pb-20 pt-4 text-center">
+          <div className="rounded-3xl border border-border/50 bg-card px-6 py-12">
+            <h2 className="font-display text-2xl uppercase tracking-tight sm:text-3xl">Start your collection</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted">
+              Free to browse. Sign in to track what you own, follow value, and build your want list.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Link href="/mj-hierarchy"><Button className="h-11 px-6">Explore the hierarchy</Button></Link>
+              <Link href="/login"><Button variant="secondary" className="h-11 px-6">Sign in</Button></Link>
+            </div>
+          </div>
+        </section>
+      </Reveal>
     </div>
   );
 }
