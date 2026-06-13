@@ -7,6 +7,7 @@ import { PortfolioChart } from "@/components/portfolio-chart";
 import { CompletionRing } from "@/components/completion-ring";
 import { CollectionGrid } from "@/components/collection-grid";
 import { CardThumb } from "@/components/card-thumb";
+import { EmptyState } from "@/components/empty-state";
 import { Panel } from "@/components/ui/primitives";
 import { cn, formatUsd, gradeKey, TIER_COLORS } from "@/lib/utils";
 
@@ -65,11 +66,10 @@ export default async function CollectionPage() {
       <h1 className="font-display text-lg uppercase tracking-tight">My Collection</h1>
 
       {totalOwned === 0 ? (
-        <Panel className="mt-6 p-8 text-center text-sm text-muted">
-          You haven&apos;t added any cards yet. Browse the{" "}
-          <Link href="/mj-hierarchy" className="text-accent hover:underline">hierarchy</Link>{" "}
-          and open a card to add a copy.
-        </Panel>
+        <EmptyState
+          title="Your collection is empty"
+          body="Add the cards you own to track tier completion, follow market value, and log grades. Start from either catalog."
+        />
       ) : (
         <>
           {/* Dashboard header: ring + stats */}

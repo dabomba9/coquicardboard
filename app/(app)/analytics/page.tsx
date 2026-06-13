@@ -4,6 +4,7 @@ import {
 } from "@/lib/queries";
 import { valueByGroup, biggestMovers, rarityHighlights, holdingValue, type GroupRow } from "@/lib/analytics";
 import { Panel } from "@/components/ui/primitives";
+import { EmptyState } from "@/components/empty-state";
 import { formatUsd } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -57,10 +58,10 @@ export default async function AnalyticsPage() {
       </p>
 
       {holdings.length === 0 ? (
-        <Panel className="mt-6 p-8 text-center text-sm text-muted">
-          Add cards to your collection to see analytics. Start from the{" "}
-          <Link href="/mj-hierarchy" className="text-accent hover:underline">hierarchy</Link>.
-        </Panel>
+        <EmptyState
+          title="No insights yet"
+          body="Add cards to your collection to unlock value breakdowns, tier progress, and price trends."
+        />
       ) : (
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
           <Panel className="p-5">
