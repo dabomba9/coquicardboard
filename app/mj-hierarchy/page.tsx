@@ -1,7 +1,22 @@
+import type { Metadata } from "next";
 import { getTiersCached, getHierarchyCatalog, getMyHoldings, getCatalogValueMapCached } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { HierarchyExplorer, type ExplorerCard } from "@/components/hierarchy-explorer";
 import { Coqui } from "@/components/mascot/coqui";
+
+export const metadata: Metadata = {
+  title: "The Michael Jordan Card Hierarchy",
+  description:
+    "All 378 essential Michael Jordan cards ranked across four tiers — track what you own, follow live market value, and build a focused collection.",
+  alternates: { canonical: "/mj-hierarchy" },
+  openGraph: {
+    title: "The Michael Jordan Card Hierarchy · Coqui Cardboard",
+    description:
+      "All 378 essential Michael Jordan cards ranked across four tiers — track what you own, follow live market value, and build a focused collection.",
+    url: "/mj-hierarchy",
+    type: "website",
+  },
+};
 
 export default async function HierarchyPage() {
   const supabase = await createClient();
