@@ -78,6 +78,7 @@ export type CardPrice = {
   grade_key: string;
   median_cents: number | null;
   last_sale_cents: number | null;
+  sample_size: number | null;
   source: string;
   as_of: string;
 };

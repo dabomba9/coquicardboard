@@ -138,6 +138,28 @@ export const getRelatedCardsCached = unstable_cache(
   { revalidate: 3600, tags: ["catalog"] }
 );
 
+// Related Jordan Vault cards: same manufacturer (vault cards have no set_id), with
+// the closest years surfaced first so a card's "siblings" feel coherent.
+export const getRelatedVaultCardsCached = unstable_cache(
+  async (manufacturer: string, year: number | null, excludeId: string, limit = 12): Promise<CardWithSet[]> => {
+    const { data } = await createAdminClient()
+      .from("cards")
+      .select("*, sets(*)")
+      .eq("catalog", "mj-vault")
+      .eq("attributes->>manufacturer", manufacturer)
+      .neq("id", excludeId)
+      .order("rarity_rank")
+      .limit(60);
+    const rows = (data as CardWithSet[]) ?? [];
+    if (year != null) {
+      rows.sort((a, b) => Math.abs((a.year ?? 9999) - year) - Math.abs((b.year ?? 9999) - year));
+    }
+    return rows.slice(0, limit);
+  },
+  ["related-vault-cards"],
+  { revalidate: 3600, tags: ["catalog"] }
+);
+
 // ---- Catalog (public, read-only) ----
 
 export async function getTiers(): Promise<Tier[]> {

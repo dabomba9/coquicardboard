@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCardBySlugCached, getCardPricesCached, getMyWantCardIds, getPriceHistoryCached, getCardOwnerCount, getRelatedCardsCached, getMyHoldingsForCard } from "@/lib/queries";
+import { getCardBySlugCached, getCardPricesCached, getMyWantCardIds, getPriceHistoryCached, getCardOwnerCount, getRelatedCardsCached, getRelatedVaultCardsCached, getMyHoldingsForCard } from "@/lib/queries";
+import { priceStats } from "@/lib/card-stats";
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
 import { CardThumb } from "@/components/card-thumb";
@@ -25,22 +26,28 @@ export default async function CardDetailPage({
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  const isVault = card.catalog === "mj-vault";
+  const attrs = (card.attributes ?? {}) as Record<string, unknown>;
+  const attr = (k: string) => (typeof attrs[k] === "string" ? (attrs[k] as string) : null);
+  const manufacturer = attr("manufacturer");
+
   const [allPrices, history, wantIds, ownerCount, related, myHoldings] = await Promise.all([
     getCardPricesCached(card.id),
     getPriceHistoryCached(card.id),
     user ? getMyWantCardIds() : Promise.resolve(new Set<string>()),
     getCardOwnerCount(card.id),
-    card.set_id ? getRelatedCardsCached(card.set_id, card.id) : Promise.resolve([]),
+    isVault
+      ? (manufacturer ? getRelatedVaultCardsCached(manufacturer, card.year, card.id) : Promise.resolve([]))
+      : (card.set_id ? getRelatedCardsCached(card.set_id, card.id) : Promise.resolve([])),
     user ? getMyHoldingsForCard(card.id) : Promise.resolve([]),
   ]);
   // Drop "no-comp" sentinel rows (median_cents=null, source='none') the cron writes
   // to advance coverage — they must never render as a $0 value.
   const prices = allPrices.filter((p) => p.median_cents != null);
 
-  const isVault = card.catalog === "mj-vault";
-  const attrs = (card.attributes ?? {}) as Record<string, unknown>;
-  const attr = (k: string) => (typeof attrs[k] === "string" ? (attrs[k] as string) : null);
   const backImage = attr("backImage");
+  const psaPopReport = attr("psaPopReport");
   const c = TIER_COLORS[card.tier_id] ?? TIER_COLORS[4];
   const cardType = attr("type") ?? attr("cardType");
   const facts: [string, string | null][] = [
@@ -69,6 +76,7 @@ export default async function CardDetailPage({
   const sortedPrices = prices.slice().sort((a, b) => (a.grade_key === "raw" ? -1 : b.grade_key === "raw" ? 1 : 0));
   const headline = sortedPrices[0] ?? null;
   const otherPrices = sortedPrices.slice(1);
+  const stats = headline ? priceStats(history, headline.grade_key) : null;
   const priceLabel = (p: CardPrice) => {
     const asOf = p.as_of ? new Date(p.as_of).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : null;
     if (p.source === "ebay (sold)") return `eBay sold${asOf ? ` · ${asOf}` : ""}`;
@@ -177,6 +185,12 @@ export default async function CardDetailPage({
             <a href={ebayUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">eBay</a>
             {" · "}
             <a href={googleUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">Google Images</a>
+            {psaPopReport && (
+              <>
+                {" · "}
+                <a href={psaPopReport} target="_blank" rel="noreferrer" className="text-accent hover:underline">PSA Pop Report ↗</a>
+              </>
+            )}
           </p>
         </Panel>
       </div>
@@ -195,24 +209,48 @@ export default async function CardDetailPage({
               <div className="pb-1">
                 <div className="text-[11px] uppercase tracking-wide text-muted">{headline.grade_key}</div>
                 <div className={cn("text-[11px]", headline.source?.startsWith("ebay") ? "text-accent" : "text-muted")}>{priceLabel(headline)}</div>
+                {headline.sample_size ? (
+                  <div className="text-[11px] text-muted">{headline.sample_size} sale{headline.sample_size === 1 ? "" : "s"}</div>
+                ) : null}
               </div>
             </div>
             {otherPrices.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-2">
                 {otherPrices.map((p) => (
-                  <div key={p.grade_key} className="rounded-full border border-border/50 bg-elevated px-3 py-1.5 text-sm">
+                  <div key={p.grade_key} className="rounded-full border border-border/50 bg-elevated px-3 py-1.5 text-sm" title={p.sample_size ? `${p.sample_size} sale${p.sample_size === 1 ? "" : "s"}` : undefined}>
                     <span className="text-muted">{p.grade_key}</span>{" "}
                     <span className="font-num text-foreground">{formatUsd(p.median_cents)}</span>
                   </div>
                 ))}
               </div>
             )}
+            {/* Price-history stat strip: all-time high/low + change since first record */}
+            {stats && (
+              <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t border-border/40 pt-3 text-sm">
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-muted">All-time high</div>
+                  <div className="font-num text-foreground">{formatUsd(stats.high)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-muted">All-time low</div>
+                  <div className="font-num text-foreground">{formatUsd(stats.low)}</div>
+                </div>
+                {stats.changePct != null && (
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted">Change</div>
+                    <div className={cn("font-num", stats.changePct >= 0 ? "text-accent" : "text-red-500")}>
+                      {stats.changePct >= 0 ? "+" : ""}{stats.changePct}%
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <p className="mt-3 text-[11px] text-muted">
               {prices.some((p) => p.source === "ebay (sold)")
-                ? "Real eBay sold prices where available · otherwise estimated · not investment advice"
+                ? "Real eBay sold prices where available · not investment advice"
                 : prices.some((p) => p.source?.startsWith("ebay"))
-                  ? "eBay asking where available · otherwise estimated · not investment advice"
-                  : "Estimated · not investment advice"}
+                  ? "eBay asking prices where available · not investment advice"
+                  : "Not investment advice"}
             </p>
             {history.length > 0 && <div className="mt-4"><PriceChart series={history} /></div>}
           </>
@@ -223,7 +261,7 @@ export default async function CardDetailPage({
 
       {related.length > 0 && (
         <section className="mt-8">
-          <h2 className="text-xs font-semibold uppercase tracking-wide">More from {card.sets?.name ?? "this set"}</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide">More from {isVault ? (manufacturer ?? "the Vault") : (card.sets?.name ?? "this set")}</h2>
           <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-6">
             {related.map((r) => (
               <Link key={r.id} href={`/cards/${r.slug}`} className="group">
