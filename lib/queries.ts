@@ -456,17 +456,28 @@ export async function getWatchlistDeals(): Promise<
 
 // ---- Want list & profile ----
 
-export async function getMyWantList(): Promise<(CardWithSet & { want_id: string; priority: number })[]> {
+export type WantListItem = CardWithSet & {
+  want_id: string;
+  priority: number;
+  target_cents: number | null;
+  current_cents: number | null;
+};
+export async function getMyWantList(): Promise<WantListItem[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("want_list")
-    .select("id, priority, cards(*, sets(*))")
+    .select("id, priority, max_price_cents, cards(*, sets(*))")
     .order("priority");
-  type Row = { id: string; priority: number; cards: CardWithSet };
-  return ((data as unknown as Row[]) ?? []).map((r) => ({
+  type Row = { id: string; priority: number; max_price_cents: number | null; cards: CardWithSet };
+  const rows = (data as unknown as Row[]) ?? [];
+  // Current value: raw eBay median where we have it, else the seeded catalog value.
+  const priceMap = await getPriceMap(rows.map((r) => r.cards.id));
+  return rows.map((r) => ({
     ...r.cards,
     want_id: r.id,
     priority: r.priority,
+    target_cents: r.max_price_cents,
+    current_cents: priceMap.get(`${r.cards.id}|raw`) ?? r.cards.catalog_value_cents ?? null,
   }));
 }
 
