@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Download } from "lucide-react";
 import { CardThumb } from "@/components/card-thumb";
+import { toCsv } from "@/lib/csv";
 import { cn, formatUsd, TIER_COLORS } from "@/lib/utils";
 import type { CardWithSet } from "@/lib/types";
 
-export type CollectionCard = CardWithSet & { copies: number; marketValueCents: number };
+export type CollectionCard = CardWithSet & { copies: number; marketValueCents: number; forTrade: boolean };
 type TierMeta = { id: number; name: string };
 type SortKey = "tier" | "value" | "copies" | "year" | "name";
 
@@ -19,11 +20,26 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "name", label: "Name" },
 ];
 
+const selectCls =
+  "h-9 rounded-full border border-border/60 bg-foreground/[0.03] px-3 text-sm text-foreground transition-colors hover:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
 export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tiers: TierMeta[] }) {
   const [q, setQ] = useState("");
   const [tierFilter, setTierFilter] = useState<Set<number>>(new Set());
+  const [setName, setSetName] = useState("");
+  const [year, setYear] = useState("");
+  const [tradeOnly, setTradeOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey>("tier");
   const [view, setView] = useState<"grid" | "list">("grid");
+
+  const setOptions = useMemo(
+    () => [...new Set(cards.map((c) => c.sets?.name).filter((v): v is string => !!v))].sort(),
+    [cards]
+  );
+  const yearOptions = useMemo(
+    () => [...new Set(cards.map((c) => c.year).filter((v): v is number => v != null))].sort((a, b) => b - a),
+    [cards]
+  );
 
   // Persist the grid/list preference (synced after mount to avoid a hydration mismatch).
   useEffect(() => {
@@ -40,6 +56,9 @@ export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tier
     const out = cards.filter((c) => {
       if (needle && !`${c.name} ${c.sets?.name ?? ""}`.toLowerCase().includes(needle)) return false;
       if (tierFilter.size && !tierFilter.has(c.tier_id)) return false;
+      if (setName && c.sets?.name !== setName) return false;
+      if (year && String(c.year) !== year) return false;
+      if (tradeOnly && !c.forTrade) return false;
       return true;
     });
     const cmp: Record<SortKey, (a: CollectionCard, b: CollectionCard) => number> = {
@@ -50,7 +69,7 @@ export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tier
       name: (a, b) => a.name.localeCompare(b.name),
     };
     return out.sort(cmp[sortBy]);
-  }, [cards, q, tierFilter, sortBy]);
+  }, [cards, q, tierFilter, setName, year, tradeOnly, sortBy]);
 
   // Group into tier sections only when sorting by tier; otherwise one flat list.
   const groups = useMemo(() => {
@@ -76,8 +95,31 @@ export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tier
   function resetFilters() {
     setQ("");
     setTierFilter(new Set());
+    setSetName("");
+    setYear("");
+    setTradeOnly(false);
   }
-  const hasFilters = q !== "" || tierFilter.size > 0;
+  const hasFilters = q !== "" || tierFilter.size > 0 || setName !== "" || year !== "" || tradeOnly;
+
+  const tierName = (id: number) => tiers.find((t) => t.id === id)?.name ?? `Tier ${id}`;
+  function exportCsv() {
+    const rows = filtered.map((c) => [
+      c.name,
+      c.sets?.name ?? "",
+      c.year ?? "",
+      tierName(c.tier_id),
+      c.copies,
+      (c.marketValueCents / 100).toFixed(2),
+      c.forTrade ? "yes" : "no",
+    ]);
+    const csv = toCsv(["Name", "Set", "Year", "Tier", "Copies", "Market Value USD", "For Trade"], rows);
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "mj-collection.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="mt-8">
@@ -94,15 +136,31 @@ export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tier
             />
           </div>
 
+          <select value={setName} onChange={(e) => setSetName(e.target.value)} className={selectCls} aria-label="Set">
+            <option value="">All sets</option>
+            {setOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={year} onChange={(e) => setYear(e.target.value)} className={selectCls} aria-label="Year">
+            <option value="">All years</option>
+            {yearOptions.map((y) => <option key={y} value={String(y)}>{y}</option>)}
+          </select>
+
           <div className="ml-auto flex items-center gap-2 text-sm">
             <span className="text-muted">Sort</span>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} className="h-9 rounded-full border border-border/60 bg-foreground/[0.03] px-3 text-sm text-foreground transition-colors hover:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} className={selectCls}>
               {SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
             </select>
             <div className="flex items-center gap-0.5 rounded-full border border-border/60 bg-foreground/[0.03] p-0.5">
               <button onClick={() => setView("grid")} className={cn("rounded-full px-3 py-1 text-xs font-medium transition-colors", view === "grid" ? "bg-accent/15 text-accent" : "text-muted hover:text-foreground")}>Grid</button>
               <button onClick={() => setView("list")} className={cn("rounded-full px-3 py-1 text-xs font-medium transition-colors", view === "list" ? "bg-accent/15 text-accent" : "text-muted hover:text-foreground")}>List</button>
             </div>
+            <button
+              onClick={exportCsv}
+              title="Export the current view to CSV"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border/60 bg-foreground/[0.03] px-3 text-xs font-medium text-muted transition-colors hover:border-border hover:text-foreground"
+            >
+              <Download size={14} /> CSV
+            </button>
           </div>
         </div>
 
@@ -124,6 +182,15 @@ export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tier
               </button>
             );
           })}
+          <button
+            onClick={() => setTradeOnly((v) => !v)}
+            className={cn(
+              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+              tradeOnly ? "border-accent bg-accent/12 text-accent" : "border-border/55 text-muted hover:border-border hover:text-foreground"
+            )}
+          >
+            For trade
+          </button>
           {hasFilters && (
             <button onClick={resetFilters} className="font-sans text-[9px] uppercase text-muted underline hover:text-foreground">Clear</button>
           )}
@@ -149,6 +216,9 @@ export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tier
                       {card.copies > 1 && (
                         <span className="pointer-events-none absolute right-1 top-1 rounded-full bg-[var(--gold)] px-1.5 text-[9px] font-semibold text-black">×{card.copies}</span>
                       )}
+                      {card.forTrade && (
+                        <span className="pointer-events-none absolute left-1 top-1 rounded-full bg-accent px-1.5 text-[9px] font-bold uppercase text-black">T</span>
+                      )}
                     </Link>
                   ))}
                 </div>
@@ -169,6 +239,7 @@ export function CollectionGrid({ cards, tiers }: { cards: CollectionCard[]; tier
                           {[card.sets?.name, card.year].filter(Boolean).join(" · ")}
                         </div>
                       </div>
+                      {card.forTrade && <span className="rounded-full bg-accent px-1.5 text-[9px] font-bold uppercase leading-4 text-black">T</span>}
                       {card.copies > 1 && <span className="font-data text-xs text-muted">×{card.copies}</span>}
                       <span className="font-num text-sm text-muted">{formatUsd(card.marketValueCents)}</span>
                     </Link>
