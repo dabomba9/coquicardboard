@@ -84,6 +84,32 @@ export const getVaultCatalog = unstable_cache(
   { revalidate: 3600, tags: ["vault-catalog"] }
 );
 
+// Slim slug list for the sitemap (id+slug only). The full getVaultCatalog (~6.5MB
+// with attributes) exceeds unstable_cache's 2MB ceiling, so the sitemap uses this
+// lightweight cacheable list instead.
+export const getVaultSlugs = unstable_cache(
+  async (): Promise<string[]> => {
+    const db = createAdminClient();
+    const out: string[] = [];
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await db
+        .from("cards")
+        .select("slug")
+        .eq("catalog", "mj-vault")
+        .order("rarity_rank")
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      const rows = (data as { slug: string }[]) ?? [];
+      out.push(...rows.map((r) => r.slug));
+      if (rows.length < PAGE) break;
+    }
+    return out;
+  },
+  ["vault-slugs"],
+  { revalidate: 86400, tags: ["vault-catalog"] }
+);
+
 export const getCardBySlugCached = unstable_cache(
   async (slug: string): Promise<CardWithSet | null> => {
     const { data } = await createAdminClient().from("cards").select("*, sets(*)").eq("slug", slug).maybeSingle();

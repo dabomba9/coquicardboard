@@ -10,7 +10,19 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const g = getGuide(slug);
-  return g ? { title: g.title, description: g.excerpt } : {};
+  if (!g) return {};
+  return {
+    title: g.title,
+    description: g.excerpt,
+    alternates: { canonical: `/guides/${slug}` },
+    openGraph: {
+      title: `${g.title} · Coqui Cardboard`,
+      description: g.excerpt,
+      url: `/guides/${slug}`,
+      type: "article",
+      publishedTime: g.date,
+    },
+  };
 }
 
 export default async function GuidePage({ params }: { params: Promise<{ slug: string }> }) {

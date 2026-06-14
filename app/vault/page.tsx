@@ -11,7 +11,14 @@ import {
 
 export const metadata: Metadata = {
   title: "Jordan Vault — every Michael Jordan card",
-  description: "Browse 12,000+ Michael Jordan cards — search, filter, and track what you own.",
+  description: "Browse 12,000+ Michael Jordan cards — search, filter, follow market value, and track what you own.",
+  alternates: { canonical: "/vault" },
+  openGraph: {
+    title: "Jordan Vault — every Michael Jordan card · Coqui Cardboard",
+    description: "Browse 12,000+ Michael Jordan cards — search, filter, follow market value, and track what you own.",
+    url: "/vault",
+    type: "website",
+  },
 };
 
 export default async function VaultPage({

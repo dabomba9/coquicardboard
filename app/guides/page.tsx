@@ -6,6 +6,13 @@ import { Panel } from "@/components/ui/primitives";
 export const metadata: Metadata = {
   title: "Guides",
   description: "Collecting guides from Coqui Cardboard — tiers, grading, and value.",
+  alternates: { canonical: "/guides" },
+  openGraph: {
+    title: "Guides · Coqui Cardboard",
+    description: "Collecting guides from Coqui Cardboard — tiers, grading, and value.",
+    url: "/guides",
+    type: "website",
+  },
 };
 
 export default function GuidesPage() {

@@ -1,7 +1,27 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCardBySlugCached, getCardPricesCached, getMyWantCardIds, getPriceHistoryCached, getCardOwnerCount, getRelatedCardsCached, getRelatedVaultCardsCached, getMyHoldingsForCard } from "@/lib/queries";
 import { priceStats } from "@/lib/card-stats";
+import { ebaySearchUrl, outboundRel } from "@/lib/affiliate";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const card = await getCardBySlugCached(slug);
+  if (!card) return {};
+  const a = (card.attributes ?? {}) as Record<string, unknown>;
+  const manu = (typeof a.manufacturer === "string" ? a.manufacturer : null) ?? card.sets?.manufacturer ?? null;
+  const bits = [card.year ? String(card.year) : null, card.sets?.name ?? manu, card.card_number ? `#${card.card_number}` : null].filter(Boolean);
+  const description = `${card.name}${bits.length ? ` — ${bits.join(" · ")}` : ""}. Track market value, grade your copies, and add it to your collection or want list on Coqui Cardboard.`;
+  const images = card.image_url ? [card.image_url] : undefined;
+  return {
+    title: card.name,
+    description,
+    alternates: { canonical: `/cards/${slug}` },
+    openGraph: { title: `${card.name} · Coqui Cardboard`, description, url: `/cards/${slug}`, images, type: "website" },
+    twitter: { card: images ? "summary_large_image" : "summary", title: card.name, description, images },
+  };
+}
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/admin";
 import { CardThumb } from "@/components/card-thumb";
@@ -85,7 +105,7 @@ export default async function CardDetailPage({
   };
 
   const q = encodeURIComponent(`${card.name} Michael Jordan`);
-  const ebayUrl = `https://www.ebay.com/sch/i.html?_nkw=${q}`;
+  const ebayUrl = ebaySearchUrl(`${card.name} Michael Jordan`, card.slug);
   const googleUrl = `https://www.google.com/search?tbm=isch&q=${q}`;
 
   // Holographic foil scales with rarity. Vault cards have no tier → no foil.
@@ -182,7 +202,7 @@ export default async function CardDetailPage({
 
           <p className="mt-5 text-xs text-muted">
             Find this card:{" "}
-            <a href={ebayUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">eBay</a>
+            <a href={ebayUrl} target="_blank" rel={outboundRel} className="text-accent hover:underline">eBay</a>
             {" · "}
             <a href={googleUrl} target="_blank" rel="noreferrer" className="text-accent hover:underline">Google Images</a>
             {psaPopReport && (
