@@ -40,7 +40,8 @@ export default async function CollectionPage() {
               (c.catalog_value_cents ?? 0);
             return sum + unit * Math.max(h.quantity, 1);
           }, 0);
-        return { ...c, copies: copiesByCard.get(c.id) ?? 1, marketValueCents };
+        const forTrade = holdings.some((h) => h.card_id === c.id && h.for_trade);
+        return { ...c, copies: copiesByCard.get(c.id) ?? 1, marketValueCents, forTrade };
       })
   );
   // Owned Jordan Vault cards (no tier → shown in their own section, not the tier grid).
