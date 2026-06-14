@@ -1,20 +1,19 @@
-import { getTiers, getAllCards, getMyHoldings, getCatalogValueMap } from "@/lib/queries";
+import { getTiersCached, getHierarchyCatalog, getMyHoldings, getCatalogValueMapCached } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { HierarchyExplorer, type ExplorerCard } from "@/components/hierarchy-explorer";
 import { Coqui } from "@/components/mascot/coqui";
-
-export const dynamic = "force-dynamic";
 
 export default async function HierarchyPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [tiers, cards, holdings, valueMap] = await Promise.all([
-    getTiers(),
-    getAllCards(),
+  const [tiers, cards, holdings, valueEntries] = await Promise.all([
+    getTiersCached(),
+    getHierarchyCatalog(),
     user ? getMyHoldings() : Promise.resolve([]),
-    getCatalogValueMap(),
+    getCatalogValueMapCached(),
   ]);
+  const valueMap = new Map(valueEntries);
 
   const ownedIds = new Set(holdings.map((h) => h.card_id));
   const tradeIds = new Set(holdings.filter((h) => h.for_trade).map((h) => h.card_id));

@@ -30,8 +30,8 @@ export default function OpengraphImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0c1026",
-          color: "#eef0ff",
+          background: "#0b1712",
+          color: "#e9f1ea",
           // Faux pixel grid backdrop.
           backgroundImage:
             "linear-gradient(rgba(95,211,95,0.06) 2px, transparent 2px), linear-gradient(90deg, rgba(95,211,95,0.06) 2px, transparent 2px)",
@@ -43,7 +43,7 @@ export default function OpengraphImage() {
           <span style={{ color: "#5fd35f" }}>COQUI</span>
           <span>CARDBOARD</span>
         </div>
-        <div style={{ marginTop: 8, fontSize: 30, color: "#9aa1d4" }}>
+        <div style={{ marginTop: 8, fontSize: 30, color: "#8ba596" }}>
           Collecting tools and guides, built for the hobby
         </div>
       </div>

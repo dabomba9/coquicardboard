@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { revalidateTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ebayConfigured, searchEbayListings, searchEbaySoldItems, EbayInsightsNoAccessError } from "@/lib/ebay";
 import { buildQuery } from "@/lib/image-search";
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
   const today = new Date().toISOString().slice(0, 10);
 
   const seen = new Set<string>();
-  const targets: { id: string; name: string; tier: number }[] = [];
+  const targets: { id: string; name: string; tier: number; isNew: boolean }[] = [];
 
   // Half the batch goes to NEW coverage — cards with no price row yet (newest
   // first, which surfaces the 12k Jordan Vault cards) — so they enter the
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
   for (const c of (unpriced as { id: string; name: string; tier_id: number | null }[]) ?? []) {
     if (seen.has(c.id)) continue;
     seen.add(c.id);
-    targets.push({ id: c.id, name: c.name, tier: c.tier_id ?? 4 });
+    targets.push({ id: c.id, name: c.name, tier: c.tier_id ?? 4, isNew: true });
   }
 
   // Fill the rest with the stalest-priced distinct cards (rotating refresh).
@@ -58,13 +59,14 @@ export async function GET(request: NextRequest) {
     const cardObj = Array.isArray(r.cards) ? r.cards[0] : r.cards;
     if (seen.has(r.card_id) || !cardObj) continue;
     seen.add(r.card_id);
-    targets.push({ id: r.card_id, name: cardObj.name, tier: cardObj.tier_id ?? 4 });
+    targets.push({ id: r.card_id, name: cardObj.name, tier: cardObj.tier_id ?? 4, isNew: false });
   }
 
   let updated = 0, soldRows = 0;
   let soldAccessible = true; // flips off after the first no-access, to stop retrying
   for (const card of targets) {
     const base = buildQuery(card.name);
+    let wroteReal = false;
     for (const g of grades(card.tier)) {
       const query = g.suffix ? `${base} ${g.suffix}` : base;
       try {
@@ -96,9 +98,30 @@ export async function GET(request: NextRequest) {
           { card_id: card.id, grade_key: g.key, value_cents: median, recorded_on: today, source: histSource }
         );
         updated++;
+        wroteReal = true;
         if (source === "ebay (sold)") soldRows++;
       } catch { /* skip grade on error */ }
     }
+    // No real comp this run. Advance the rotation without ever nulling a real price:
+    //  • new card (no rows yet) → insert a sentinel raw row (null median, source
+    //    'none') so it leaves the "unpriced" pool; null medians never display a value
+    //    (real-only) and it's revisited later when a comp may have appeared.
+    //  • already-priced card → just bump as_of (last-checked) so it rotates to the
+    //    back of the stale queue, preserving its existing medians.
+    if (!wroteReal) {
+      const now = new Date().toISOString();
+      if (card.isNew) {
+        await admin.from("card_prices").insert(
+          { card_id: card.id, grade_key: "raw", median_cents: null, last_sale_cents: null,
+            currency: "USD", sample_size: 0, source: "none", as_of: now }
+        );
+      } else {
+        await admin.from("card_prices").update({ as_of: now }).eq("card_id", card.id);
+      }
+    }
   }
+  // Mark cached catalog/price reads stale (stale-while-revalidate) so fresh prices
+  // surface without waiting out the revalidate window. "max" is the recommended profile.
+  if (updated > 0) { revalidateTag("prices", "max"); revalidateTag("vault-catalog", "max"); }
   return NextResponse.json({ refreshed: targets.length, gradeRows: updated, soldRows });
 }

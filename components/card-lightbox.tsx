@@ -14,6 +14,7 @@ export function CardLightbox({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -22,7 +23,9 @@ export function CardLightbox({
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  if (!imageUrl) return <>{children}</>;
+  // No URL, or the image 404s — just render the thumbnail (which has its own
+  // placeholder fallback); never open a broken full-size view.
+  if (!imageUrl || failed) return <>{children}</>;
 
   return (
     <>
@@ -40,7 +43,7 @@ export function CardLightbox({
           onClick={() => setOpen(false)}
         >
           <div className="relative h-[85vh] w-[85vw]">
-            <Image src={imageUrl} alt={alt} fill className="object-contain" unoptimized />
+            <Image src={imageUrl} alt={alt} fill className="object-contain" unoptimized onError={() => { setFailed(true); setOpen(false); }} />
           </div>
         </div>
       )}
