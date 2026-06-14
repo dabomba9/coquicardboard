@@ -132,3 +132,39 @@ export async function removeFromWantList(cardId: string) {
   await supabase.from("want_list").delete().eq("card_id", cardId);
   revalidatePath("/want-list");
 }
+
+// Edit a want-list item's priority (1=High..3=Low) and/or target price.
+// maxPriceCents: a number sets the target, null clears it. RLS scopes the row to
+// the signed-in owner, so we just match on card_id.
+export async function updateWantItem(
+  cardId: string,
+  patch: { priority?: number; maxPriceCents?: number | null }
+): Promise<ActionState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  const update: { priority?: number; max_price_cents?: number | null } = {};
+  if (patch.priority != null) {
+    const p = Math.round(patch.priority);
+    if (p < 1 || p > 3) return { error: "Invalid priority" };
+    update.priority = p;
+  }
+  if ("maxPriceCents" in patch) {
+    const c = patch.maxPriceCents;
+    if (c != null && (!Number.isFinite(c) || c < 0)) return { error: "Invalid target price" };
+    update.max_price_cents = c == null ? null : Math.round(c);
+  }
+  if (Object.keys(update).length === 0) return { ok: true };
+
+  const { error } = await supabase
+    .from("want_list")
+    .update(update)
+    .eq("user_id", user.id)
+    .eq("card_id", cardId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/want-list");
+  revalidatePath("/analytics");
+  return { ok: true };
+}
