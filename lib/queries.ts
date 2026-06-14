@@ -57,32 +57,41 @@ export const getCatalogValueMapCached = unstable_cache(
   { revalidate: 3600, tags: ["catalog", "prices"] }
 );
 
-// Full Jordan Vault catalog (slim fields), cached. The cookieless admin client +
-// PostgREST 1000-row paging through the ~12k rows. The vault page filters/sorts/
-// paginates this in-memory server-side (lib/vault-filter.ts) — the browser only
-// ever receives one 48-card page.
-export const getVaultCatalog = unstable_cache(
-  async (): Promise<VaultRow[]> => {
-    const db = createAdminClient();
-    const out: VaultRow[] = [];
-    const PAGE = 1000;
-    for (let from = 0; ; from += PAGE) {
-      const { data, error } = await db
-        .from("cards")
-        .select("id, slug, name, card_number, year, image_url, attributes")
-        .eq("catalog", "mj-vault")
-        .order("rarity_rank")
-        .range(from, from + PAGE - 1);
-      if (error) throw error;
-      const rows = (data as VaultRow[]) ?? [];
-      out.push(...rows);
-      if (rows.length < PAGE) break;
-    }
-    return out;
-  },
-  ["vault-catalog"],
-  { revalidate: 3600, tags: ["vault-catalog"] }
-);
+// Full Jordan Vault catalog (slim fields). The vault page filters/sorts/paginates
+// this in-memory server-side (lib/vault-filter.ts) — the browser only ever receives
+// one 48-card page.
+//
+// NOT wrapped in unstable_cache: the ~12k rows (with the `attributes` blob) are
+// ~6.5MB, far over unstable_cache's 2MB entry limit, which made the cache write
+// reject and surface as an unhandledRejection on /vault. Instead we memoize in
+// process with a TTL — no 2MB cap, and warm server instances skip the re-query.
+// Per-instance on serverless; the catalog only changes on re-seed/reconcile, so
+// brief staleness is fine.
+let vaultCatalogCache: { at: number; rows: VaultRow[] } | null = null;
+const VAULT_CATALOG_TTL_MS = 60 * 60 * 1000; // 1h
+
+export async function getVaultCatalog(): Promise<VaultRow[]> {
+  if (vaultCatalogCache && Date.now() - vaultCatalogCache.at < VAULT_CATALOG_TTL_MS) {
+    return vaultCatalogCache.rows;
+  }
+  const db = createAdminClient();
+  const out: VaultRow[] = [];
+  const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await db
+      .from("cards")
+      .select("id, slug, name, card_number, year, image_url, attributes")
+      .eq("catalog", "mj-vault")
+      .order("rarity_rank")
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    const rows = (data as VaultRow[]) ?? [];
+    out.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  vaultCatalogCache = { at: Date.now(), rows: out };
+  return out;
+}
 
 // Slim slug list for the sitemap (id+slug only). The full getVaultCatalog (~6.5MB
 // with attributes) exceeds unstable_cache's 2MB ceiling, so the sitemap uses this
