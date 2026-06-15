@@ -71,7 +71,7 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
             type="button"
             aria-label="Search cards (⌘K)"
             onClick={openSearch}
-            className="hidden h-9 w-44 items-center gap-2 rounded-full border border-border/60 bg-foreground/[0.03] px-3.5 text-sm text-muted transition-colors hover:border-border hover:bg-foreground/5 hover:text-foreground md:inline-flex lg:w-56"
+            className="hidden h-9 w-44 items-center gap-2 rounded-full border border-border/60 bg-foreground/[0.03] px-3.5 text-sm text-muted transition-colors hover:border-border hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:inline-flex lg:w-56"
           >
             <Search size={15} />
             <span>Search cards…</span>
@@ -144,7 +144,7 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
             key={href}
             href={href}
             className={cn(
-              "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors",
+              "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
               pathname === href ? "text-accent" : "text-muted"
             )}
           >
@@ -153,7 +153,7 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
         ))}
         <button
           onClick={openSearch}
-          className="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium text-muted"
+          className="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           aria-label="Search"
         >
           <Search size={18} />Search
