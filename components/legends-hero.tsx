@@ -102,6 +102,25 @@ export function LegendsHero() {
       <div className="pointer-events-none absolute inset-x-0 bottom-20 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--hero-floor), transparent)" }} />
       <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(120% 90% at 50% 40%, transparent 55%, var(--hero-vignette) 100%)" }} />
 
+      {/* Coquí — the stage host, perched bottom-left watching the lineup. Purely
+          decorative; desktop-only so it never crowds the centered content. */}
+      <div className="pointer-events-none absolute bottom-4 left-4 z-10 hidden lg:block xl:bottom-6 xl:left-8" aria-hidden="true">
+        <div className="relative">
+          <div
+            className="absolute -inset-8 rounded-full"
+            style={{ background: "radial-gradient(closest-side, rgba(95,211,95,0.20), transparent 70%)" }}
+          />
+          <Image
+            src="/coqui-mascot.png"
+            alt=""
+            width={176}
+            height={176}
+            className="float-idle relative h-40 w-40 object-contain drop-shadow-[0_12px_14px_rgba(0,0,0,0.5)] xl:h-44 xl:w-44"
+            style={{ animationDelay: "0.3s" }}
+          />
+        </div>
+      </div>
+
       {/* --- content --- */}
       <div className="relative z-10 mx-auto max-w-6xl px-4 text-center">
         <p className="font-display text-[10px] uppercase tracking-[0.4em] text-[#b8791b] dark:text-[#ffd84a]/90 sm:text-xs">
