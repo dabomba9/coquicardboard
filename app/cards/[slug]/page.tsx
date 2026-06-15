@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getCardBySlugCached, getCardPricesCached, getMyWantCardIds, getPriceHistoryCached, getCardOwnerCount, getRelatedCardsCached, getRelatedVaultCardsCached, getMyHoldingsForCard } from "@/lib/queries";
 import { priceStats } from "@/lib/card-stats";
 import { ebaySearchUrl, outboundRel } from "@/lib/affiliate";
+import { isRealPriceSource } from "@/lib/prices";
 import { JsonLd } from "@/components/json-ld";
 import { productJsonLd, breadcrumbJsonLd } from "@/lib/structured-data";
 
@@ -64,9 +65,9 @@ export default async function CardDetailPage({
       : (card.set_id ? getRelatedCardsCached(card.set_id, card.id) : Promise.resolve([])),
     user ? getMyHoldingsForCard(card.id) : Promise.resolve([]),
   ]);
-  // Drop "no-comp" sentinel rows (median_cents=null, source='none') the cron writes
-  // to advance coverage — they must never render as a $0 value.
-  const prices = allPrices.filter((p) => p.median_cents != null);
+  // Only show REAL marketplace prices (eBay). Drops sentinel 'none' rows and any
+  // fabricated/estimated rows, so values are always trustworthy.
+  const prices = allPrices.filter((p) => p.median_cents != null && isRealPriceSource(p.source));
 
   const backImage = attr("backImage");
   const psaPopReport = attr("psaPopReport");
@@ -119,9 +120,8 @@ export default async function CardDetailPage({
   // schema.org structured data (Product + breadcrumbs) for search rich results.
   const ldBits = [card.year ? String(card.year) : null, card.sets?.name ?? manufacturer, card.card_number ? `#${card.card_number}` : null].filter(Boolean);
   const ldDescription = `${card.name}${ldBits.length ? ` — ${ldBits.join(" · ")}` : ""}. Michael Jordan trading card — track market value, grade your copies, and build your collection on Coqui Cardboard.`;
-  // Only model REAL marketplace (eBay) prices as offers — never the estimated/seed
-  // fallbacks (which can be absurd) — so the AggregateOffer is honest.
-  const pricesUsd = prices.filter((p) => p.source?.startsWith("ebay")).map((p) => (p.median_cents ?? 0) / 100);
+  // `prices` is already real-marketplace-only, so these feed an honest AggregateOffer.
+  const pricesUsd = prices.map((p) => (p.median_cents ?? 0) / 100);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">

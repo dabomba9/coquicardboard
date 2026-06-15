@@ -1,5 +1,5 @@
 /**
- * Seeds the shared catalog (tiers, sets, cards, a few sample prices) using the
+ * Seeds the shared catalog (tiers, sets, cards) using the
  * Supabase service-role key, which bypasses RLS. Idempotent: re-running upserts.
  *
  *   npm run seed
@@ -90,19 +90,8 @@ async function main() {
     console.log(`✓ cards: ${cardRows.length}`);
   }
 
-  // 4. A few sample prices for the grails so collection value works in dev.
-  const { data: grails } = await db
-    .from("cards").select("id, slug")
-    .in("slug", cardRows.filter((c) => c.tier_id === 1).slice(0, 5).map((c) => c.slug));
-  if (grails?.length) {
-    const priceRows = grails.flatMap((g) => [
-      { card_id: g.id, grade_key: "raw", median_cents: 5_000_00, source: "manual" },
-      { card_id: g.id, grade_key: "PSA10", median_cents: 250_000_00, source: "manual" },
-    ]);
-    const { error } = await db.from("card_prices").upsert(priceRows, { onConflict: "card_id,grade_key" });
-    if (error) throw error;
-    console.log(`✓ sample prices: ${priceRows.length}`);
-  }
+  // Prices come ONLY from real eBay data (admin/fetch-ebay-*.ts + the nightly cron) —
+  // the catalog seed never writes fabricated prices.
 
   console.log("Seed complete.");
 }

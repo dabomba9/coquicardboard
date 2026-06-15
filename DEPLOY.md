@@ -19,14 +19,16 @@ The codebase is production-ready; this runbook covers the account/DNS steps.
 ## 2. Seed the cloud data
 Point a local shell at the cloud project (e.g. a temporary `.env.local` with the cloud URL + keys), then:
 ```bash
-npm run seed             # 378-card catalog + tiers + sets + sample prices
+npm run seed             # 378-card catalog + tiers + sets
 npm run prices:ebay      # eBay asking prices (needs EBAY_CLIENT_ID/SECRET)
-npm run prices:fill      # estimated values for any card/grade still unpriced (never overwrites real prices)
-npm run prices:sold      # eBay SOLD comps — needs Marketplace Insights access (see below); overwrites asking/estimated
+npm run prices:sold      # eBay SOLD comps — needs Marketplace Insights access (see below)
+npm run prices:purge-fake # safety net: removes any non-eBay (fabricated) price rows
 ```
-**Price source precedence:** `ebay (sold)` > `ebay (asking)` > `estimated`. Sold comps require eBay's
-**Marketplace Insights API** — apply on your Production keyset at developer.ebay.com. Until approved,
-`prices:sold` exits cleanly without writing. The nightly cron prefers sold → asking automatically.
+**Pricing is REAL eBay data only** — no estimated/placeholder values. The app surfaces a price only when it has an
+`ebay (sold)`/`ebay (asking)` row; otherwise it shows "No recent sales yet." Source precedence: `ebay (sold)` >
+`ebay (asking)`. Sold comps require eBay's **Marketplace Insights API** — apply on your Production keyset at
+developer.ebay.com; until approved the cron uses asking prices. The nightly cron grows coverage automatically
+(raise `PRICE_REFRESH_BATCH` on Vercel Pro).
 Images — choose one:
 - **Preserve current images (recommended):** keep your *local* Supabase running and run
   ```bash
@@ -80,7 +82,7 @@ partial image set is fine. (Locally,
 3. Wait for DNS + automatic SSL. Done — the site is live, with the MJ Hierarchy at `/mj-hierarchy`.
 
 ## Notes
-- Market values are **estimated** + **eBay asking** (not sold comps) — labeled in-app.
+- Market values are **real eBay** prices only (asking until Marketplace Insights/sold is approved); cards without a comp show "No recent sales yet."
 - Card images are self-hosted in the `card-images` Storage bucket; provenance is in `image_source`.
 - Jordan Vault (`/vault`) images are self-hosted in the `vault-images` Storage bucket (built from `NEXT_PUBLIC_SUPABASE_URL` at runtime); `public/vault/` is a local staging cache only and is not deployed.
 - `npm run test:rls` can be pointed at the cloud project to re-verify the security boundary post-deploy.

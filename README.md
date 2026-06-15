@@ -97,18 +97,22 @@ per-user holdings are isolated, and `get_public_collection` only exposes public
 profiles. CI (`.github/workflows/ci.yml`) runs lint + typecheck + unit tests on push/PR
 (the RLS test needs a live DB, so it stays local).
 
-## Market values (estimated)
+## Market values (real eBay only)
 
-Per-card prices (`card_prices`, by grade) and a monthly history (`price_history`)
-power the card-detail sparkline and the collection's value-over-time + cost-basis /
-gain-loss. **These are estimated/seeded, clearly labeled, and not investment advice** —
-there's no legal, scalable live sold-comp feed (see _Data & rights_). Seed them with:
+Per-card prices (`card_prices`, by grade) and history (`price_history`) power the
+card-detail value + chart and the collection's value-over-time / gain-loss. **Prices
+are real eBay data only** — sold comps where available, otherwise asking prices — and
+nothing is shown for a card until a real comp exists ("No recent sales yet"). There are
+no estimated/placeholder values. Pull them with:
 
 ```bash
-npm run seed:prices         # estimated card_prices + ~36-month price_history
+npm run prices:ebay         # eBay asking prices
+npm run prices:sold         # eBay SOLD comps (needs Marketplace Insights access)
+npm run prices:purge-fake   # safety net: delete any non-eBay rows
 ```
 
-Real signal comes from **your own purchase prices** (cost basis) entered per holding.
+The nightly cron (`/api/cron/refresh-prices`) keeps them fresh. Real signal also comes
+from **your own purchase prices** (cost basis) entered per holding.
 
 **eBay asking prices** (if you have eBay API keys): set `EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET`, then:
 ```bash

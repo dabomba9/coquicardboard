@@ -47,7 +47,7 @@ export const getCatalogValueMapCached = unstable_cache(
     for (const c of (cards as { id: string; catalog_value_cents: number | null }[]) ?? []) {
       if (c.catalog_value_cents != null) map.set(c.id, c.catalog_value_cents);
     }
-    const { data: prices } = await db.from("card_prices").select("card_id, median_cents").eq("grade_key", "raw");
+    const { data: prices } = await db.from("card_prices").select("card_id, median_cents").eq("grade_key", "raw").like("source", "ebay%");
     for (const p of (prices as { card_id: string; median_cents: number | null }[]) ?? []) {
       if (p.median_cents != null) map.set(p.card_id, p.median_cents);
     }
@@ -143,6 +143,7 @@ export const getPriceHistoryCached = unstable_cache(
       .from("price_history")
       .select("grade_key, value_cents, recorded_on")
       .eq("card_id", cardId)
+      .like("source", "ebay%")
       .order("recorded_on");
     const map = new Map<string, { date: string; value: number }[]>();
     for (const r of (data as { grade_key: string; value_cents: number; recorded_on: string }[]) ?? []) {
@@ -243,7 +244,8 @@ export async function getCatalogValueMap(): Promise<Map<string, number>> {
   const { data: prices } = await supabase
     .from("card_prices")
     .select("card_id, median_cents")
-    .eq("grade_key", "raw");
+    .eq("grade_key", "raw")
+    .like("source", "ebay%"); // real marketplace prices only
   for (const p of (prices as { card_id: string; median_cents: number | null }[]) ?? []) {
     if (p.median_cents != null) map.set(p.card_id, p.median_cents);
   }
@@ -258,6 +260,7 @@ export async function getPriceHistory(cardId: string): Promise<PriceSeries[]> {
     .from("price_history")
     .select("grade_key, value_cents, recorded_on")
     .eq("card_id", cardId)
+    .like("source", "ebay%")
     .order("recorded_on");
   const map = new Map<string, { date: string; value: number }[]>();
   for (const r of (data as { grade_key: string; value_cents: number; recorded_on: string }[]) ?? []) {
@@ -280,7 +283,8 @@ export async function getPortfolioSeries(holdings: Holding[]): Promise<{ date: s
   const { data } = await supabase
     .from("price_history")
     .select("card_id, grade_key, value_cents, recorded_on")
-    .in("card_id", cardIds);
+    .in("card_id", cardIds)
+    .like("source", "ebay%");
   return valuePortfolioSeries(holdings, (data as PriceHistoryRow[]) ?? []);
 }
 
@@ -399,7 +403,8 @@ export async function getPriceMap(cardIds: string[]): Promise<Map<string, number
   const { data } = await supabase
     .from("card_prices")
     .select("card_id, grade_key, median_cents")
-    .in("card_id", cardIds);
+    .in("card_id", cardIds)
+    .like("source", "ebay%"); // real marketplace prices only
   for (const row of (data as { card_id: string; grade_key: string; median_cents: number | null }[]) ?? []) {
     if (row.median_cents != null) map.set(`${row.card_id}|${row.grade_key}`, row.median_cents);
   }
@@ -436,7 +441,8 @@ export async function getPriceHistoryForCards(cardIds: string[]): Promise<Analyt
   const { data } = await supabase
     .from("price_history")
     .select("card_id, grade_key, value_cents, recorded_on")
-    .in("card_id", cardIds);
+    .in("card_id", cardIds)
+    .like("source", "ebay%");
   return (data as AnalyticsHistoryRow[]) ?? [];
 }
 
