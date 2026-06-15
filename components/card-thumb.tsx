@@ -14,6 +14,7 @@ type ThumbCard = Pick<CardWithSet, "name" | "card_number" | "year" | "tier_id"> 
 // tier-colored placeholder (year/set/number) if absent or if the URL fails.
 export function CardThumb({ card, className }: { card: ThumbCard; className?: string }) {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const c = TIER_COLORS[card.tier_id] ?? TIER_COLORS[4];
   const showImage = card.image_url && !failed;
 
@@ -27,15 +28,23 @@ export function CardThumb({ card, className }: { card: ThumbCard; className?: st
       )}
     >
       {showImage ? (
-        <Image
-          src={card.image_url!}
-          alt={card.name}
-          fill
-          sizes="(max-width: 768px) 25vw, 12vw"
-          className="object-cover transition-transform duration-300 group-hover:scale-[1.05]"
-          unoptimized
-          onError={() => setFailed(true)}
-        />
+        <>
+          {/* shimmer until the image decodes, then fade it in (no pop-in) */}
+          {!loaded && <span className="skeleton absolute inset-0" aria-hidden="true" />}
+          <Image
+            src={card.image_url!}
+            alt={card.name}
+            fill
+            sizes="(max-width: 768px) 25vw, 12vw"
+            className={cn(
+              "object-cover transition-[transform,opacity] duration-300 group-hover:scale-[1.05]",
+              loaded ? "opacity-100" : "opacity-0"
+            )}
+            unoptimized
+            onLoad={() => setLoaded(true)}
+            onError={() => setFailed(true)}
+          />
+        </>
       ) : (
         <>
           <div className={cn("font-sans text-[9px] uppercase tracking-wide", c.text)}>
