@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { GUIDES, getGuide } from "@/data/guides";
+import { JsonLd } from "@/components/json-ld";
+import { articleJsonLd } from "@/lib/structured-data";
 
 export function generateStaticParams() {
   return GUIDES.map((g) => ({ slug: g.slug }));
@@ -32,6 +34,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
 
   return (
     <article className="mx-auto max-w-2xl px-4 py-10">
+      <JsonLd data={articleJsonLd({ title: guide.title, description: guide.excerpt, slug: guide.slug, date: guide.date })} />
       <Link href="/guides" className="text-sm text-muted hover:text-foreground">← Guides</Link>
       <h1 className="mt-4 font-display text-2xl tracking-tight">{guide.title}</h1>
       <div className="mt-1 text-sm text-muted">

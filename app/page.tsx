@@ -6,6 +6,8 @@ import { CardThumb } from "@/components/card-thumb";
 import { Panel, Button } from "@/components/ui/primitives";
 import { LegendsHero } from "@/components/legends-hero";
 import { Reveal } from "@/components/reveal";
+import { JsonLd } from "@/components/json-ld";
+import { websiteJsonLd, organizationJsonLd } from "@/lib/structured-data";
 import type { CardWithSet, Tier } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +43,8 @@ export default async function Home() {
 
   return (
     <div className="-mt-[5.5rem]">
+      <JsonLd data={websiteJsonLd()} />
+      <JsonLd data={organizationJsonLd()} />
       <LegendsHero />
 
       {/* Stats band */}

@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { getCardBySlugCached, getCardPricesCached, getMyWantCardIds, getPriceHistoryCached, getCardOwnerCount, getRelatedCardsCached, getRelatedVaultCardsCached, getMyHoldingsForCard } from "@/lib/queries";
 import { priceStats } from "@/lib/card-stats";
 import { ebaySearchUrl, outboundRel } from "@/lib/affiliate";
+import { JsonLd } from "@/components/json-ld";
+import { productJsonLd, breadcrumbJsonLd } from "@/lib/structured-data";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -114,8 +116,17 @@ export default async function CardDetailPage({
   const tierStyle = (isVault ? {} : { ["--border" as string]: `var(--tier-${card.tier_id})` }) as React.CSSProperties;
   const tierName = card.tier_id ? (["Legendary", "Epic", "Rare", "Common"][card.tier_id - 1] ?? "Common") : "";
 
+  // schema.org structured data (Product + breadcrumbs) for search rich results.
+  const ldBits = [card.year ? String(card.year) : null, card.sets?.name ?? manufacturer, card.card_number ? `#${card.card_number}` : null].filter(Boolean);
+  const ldDescription = `${card.name}${ldBits.length ? ` — ${ldBits.join(" · ")}` : ""}. Michael Jordan trading card — track market value, grade your copies, and build your collection on Coqui Cardboard.`;
+  // Only model REAL marketplace (eBay) prices as offers — never the estimated/seed
+  // fallbacks (which can be absurd) — so the AggregateOffer is honest.
+  const pricesUsd = prices.filter((p) => p.source?.startsWith("ebay")).map((p) => (p.median_cents ?? 0) / 100);
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
+      <JsonLd data={productJsonLd({ name: card.name, slug: card.slug, description: ldDescription, image: card.image_url, brand: manufacturer ?? card.sets?.name ?? null, pricesUsd, offerUrl: ebayUrl })} />
+      <JsonLd data={breadcrumbJsonLd({ name: card.name, slug: card.slug, isVault })} />
       <Link href={isVault ? "/vault" : "/mj-hierarchy"} className="text-[11px] uppercase tracking-wide text-muted hover:text-foreground">← {isVault ? "Jordan Vault" : "Hierarchy"}</Link>
 
       <div className="mt-4 grid gap-8 sm:grid-cols-[280px_1fr]">
