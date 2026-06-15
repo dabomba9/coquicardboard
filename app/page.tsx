@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Layers, Library, Award, TrendingUp, Heart, Share2, ArrowRight } from "lucide-react";
 import { getTiers, getAllCards } from "@/lib/queries";
 import { CardThumb } from "@/components/card-thumb";
@@ -130,6 +131,13 @@ export default async function Home() {
       <Reveal>
         <section className="mx-auto max-w-4xl px-4 pb-20 pt-4 text-center">
           <div className="rounded-3xl border border-border/50 bg-card px-6 py-12">
+            <Image
+              src="/coqui-mascot.png"
+              alt="Coquí — Coqui Cardboard mascot"
+              width={144}
+              height={144}
+              className="float-idle mx-auto mb-5 h-32 w-32 sm:h-36 sm:w-36"
+            />
             <h2 className="font-display text-2xl uppercase tracking-tight sm:text-3xl">Start your collection</h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-muted">
               Free to browse. Sign in to track what you own, follow value, and build your want list.
