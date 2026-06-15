@@ -3,6 +3,7 @@ import { Jersey_25, VT323 } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { SiteNav } from "@/components/site-nav";
+import { SiteFooter } from "@/components/site-footer";
 import { CommandPalette } from "@/components/command-palette";
 import { Toaster } from "sonner";
 import type { Viewport } from "next";
@@ -52,11 +53,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <Providers>
           <SiteNav />
           <CommandPalette />
-          <main className="flex-1 pb-16 pt-[5.5rem] md:pb-0">{children}</main>
-          <footer className="border-t border-border/50 py-6 text-center text-xs text-muted">
-            <span className="font-data text-sm">©</span> Coqui Cardboard · an independent collector tool.
-            MJ Hierarchy tier concept credited to Cajun Cardboard.
-          </footer>
+          <main className="flex-1 pt-[5.5rem]">{children}</main>
+          <SiteFooter />
           <Toaster
             theme="system"
             position="bottom-right"
