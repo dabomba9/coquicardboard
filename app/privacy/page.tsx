@@ -39,7 +39,15 @@ export default function PrivacyPage() {
       <p>
         We use a cookie to keep you signed in (set by our authentication provider). We also store small preferences in
         your browser&rsquo;s local storage — such as your light/dark theme and sound setting — which never leave your
-        device. We do not use third-party advertising trackers.
+        device.
+      </p>
+      <p>
+        We use <strong>Google Analytics</strong> to understand aggregate usage (such as page views, approximate
+        location, and device type). Google may set analytics cookies for this purpose; see{" "}
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google&rsquo;s Privacy Policy</a>.
+        You can opt out through your browser settings or Google&rsquo;s{" "}
+        <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noreferrer">opt-out browser add-on</a>.
+        We do not use third-party advertising trackers.
       </p>
 
       <h2>5. Service providers</h2>
@@ -50,7 +58,7 @@ export default function PrivacyPage() {
       <ul>
         <li><strong>Supabase</strong> — database, authentication, and image storage;</li>
         <li><strong>Vercel</strong> — website hosting and delivery;</li>
-        <li><strong>Google</strong> — optional sign-in;</li>
+        <li><strong>Google</strong> — optional sign-in and Google Analytics (anonymous usage measurement);</li>
         <li><strong>eBay</strong> — public marketplace pricing data and affiliate links.</li>
       </ul>
       <p>Your use of these providers is also subject to their own privacy policies.</p>

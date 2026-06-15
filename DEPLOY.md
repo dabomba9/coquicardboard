@@ -68,6 +68,9 @@ partial image set is fine. (Locally,
    | `EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET` | your eBay prod keys |
    | `CRON_SECRET` | a long random string |
    | `PRICE_REFRESH_BATCH` | `10` (raise on Pro) |
+   | `NEXT_PUBLIC_EBAY_CAMPID` | eBay Partner Network campaign id (affiliate; optional) |
+   | `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | Search Console HTML-tag token (optional) |
+   | `NEXT_PUBLIC_GA_ID` | Google Analytics 4 id `G-XXXXXXXXXX` (optional; GA loads only when set) |
 3. Deploy. The nightly price-refresh cron (`vercel.json` → `/api/cron/refresh-prices`, 08:00 UTC) is picked up automatically; Vercel sends `Authorization: Bearer $CRON_SECRET`.
    > Note: cron functions hit the plan timeout (Hobby ≈10s). Keep `PRICE_REFRESH_BATCH` small on Hobby, or upgrade to Pro (`maxDuration=60` is already set).
 

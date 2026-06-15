@@ -5,6 +5,7 @@ import { Providers } from "@/components/providers";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { CommandPalette } from "@/components/command-palette";
+import { Analytics } from "@/components/analytics";
 import { Toaster } from "sonner";
 import type { Viewport } from "next";
 
@@ -33,6 +34,9 @@ export const metadata: Metadata = {
   },
   description:
     "Coqui Cardboard: tools and guides for sports-card collectors. Track the Michael Jordan card hierarchy — grade your copies, follow market value, build a want list, and share your collection.",
+  // Google Search Console (HTML-tag method). Set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+  // to the token from the property; omitted when unset.
+  verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION },
 };
 
 export const viewport: Viewport = {
@@ -64,6 +68,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           {/* Global CRT / scanline overlay — sits above content, never blocks clicks. */}
           <div className="crt-overlay" aria-hidden="true" />
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
