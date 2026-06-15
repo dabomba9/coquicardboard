@@ -1,5 +1,6 @@
 import { getMyProfile } from "@/lib/queries";
 import { SettingsForm } from "@/components/settings-form";
+import { AccountActions } from "@/components/account-actions";
 import { Panel } from "@/components/ui/primitives";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,11 @@ export default async function SettingsPage() {
       <Panel className="mt-6 p-6">
         {profile ? <SettingsForm profile={profile} /> : <p className="text-sm text-muted">No profile found.</p>}
       </Panel>
+      {profile && (
+        <Panel className="mt-4 p-6">
+          <AccountActions username={profile.username} />
+        </Panel>
+      )}
     </div>
   );
 }
