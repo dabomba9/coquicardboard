@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCardBySlugCached, getCardPricesCached, getMyWantCardIds, getPriceHistoryCached, getCardOwnerCount, getRelatedCardsCached, getRelatedVaultCardsCached, getMyHoldingsForCard } from "@/lib/queries";
 import { priceStats } from "@/lib/card-stats";
-import { ebaySearchUrl, outboundRel } from "@/lib/affiliate";
+import { ebaySearchUrl, ebaySoldUrl, outboundRel } from "@/lib/affiliate";
 import { isRealPriceSource } from "@/lib/prices";
 import { JsonLd } from "@/components/json-ld";
 import { productJsonLd, breadcrumbJsonLd } from "@/lib/structured-data";
@@ -109,6 +109,7 @@ export default async function CardDetailPage({
 
   const q = encodeURIComponent(`${card.name} Michael Jordan`);
   const ebayUrl = ebaySearchUrl(`${card.name} Michael Jordan`, card.slug);
+  const ebaySold = ebaySoldUrl(`${card.name} Michael Jordan`, card.slug);
   const googleUrl = `https://www.google.com/search?tbm=isch&q=${q}`;
 
   // Holographic foil scales with rarity. Vault cards have no tier → no foil.
@@ -212,6 +213,13 @@ export default async function CardDetailPage({
           </dl>
 
           <p className="mt-5 text-xs text-muted">
+            Recent sales:{" "}
+            <a href={ebaySold} target="_blank" rel={outboundRel} className="text-accent hover:underline">eBay sold</a>
+            {" · "}
+            <a href="https://130point.com/sales/" target="_blank" rel="noreferrer" className="text-accent hover:underline">130point</a>{" "}
+            <span className="text-muted">(eBay, Fanatics, Goldin &amp; more)</span>
+          </p>
+          <p className="mt-1.5 text-xs text-muted">
             Find this card:{" "}
             <a href={ebayUrl} target="_blank" rel={outboundRel} className="text-accent hover:underline">eBay</a>
             {" · "}

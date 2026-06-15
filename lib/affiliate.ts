@@ -9,12 +9,8 @@
 const CAMPID = process.env.NEXT_PUBLIC_EBAY_CAMPID;
 const MKRID = process.env.NEXT_PUBLIC_EBAY_MKRID ?? "711-53200-19255-0"; // US default
 
-/**
- * eBay search URL for a card. Adds EPN affiliate params when NEXT_PUBLIC_EBAY_CAMPID
- * is set; `customId` (e.g. the card slug) flows through to EPN reporting.
- */
-export function ebaySearchUrl(query: string, customId?: string): string {
-  const params = new URLSearchParams({ _nkw: query });
+function ebayUrl(query: string, customId: string | undefined, extra?: Record<string, string>): string {
+  const params = new URLSearchParams({ _nkw: query, ...(extra ?? {}) });
   if (CAMPID) {
     params.set("mkcid", "1");
     params.set("mkrid", MKRID);
@@ -25,6 +21,20 @@ export function ebaySearchUrl(query: string, customId?: string): string {
     if (customId) params.set("customid", customId);
   }
   return `https://www.ebay.com/sch/i.html?${params.toString()}`;
+}
+
+/**
+ * eBay search URL for a card (active listings). Adds EPN affiliate params when
+ * NEXT_PUBLIC_EBAY_CAMPID is set; `customId` (e.g. the card slug) flows through to
+ * EPN reporting.
+ */
+export function ebaySearchUrl(query: string, customId?: string): string {
+  return ebayUrl(query, customId);
+}
+
+/** eBay SOLD/completed listings — real recent comps for the card. */
+export function ebaySoldUrl(query: string, customId?: string): string {
+  return ebayUrl(query, customId, { LH_Sold: "1", LH_Complete: "1" });
 }
 
 /** True when affiliate tracking is active — use to pick rel="sponsored" vs "noreferrer". */
