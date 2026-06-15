@@ -52,25 +52,18 @@ export function SiteFooter() {
         </div>
 
         {/* Legal */}
-        <div className="mt-8 space-y-2 border-t border-border/40 pt-6 text-[11px] leading-relaxed text-muted">
+        <div className="mt-8 border-t border-border/40 pt-6 text-[11px] leading-relaxed text-muted">
           <p>
-            Coqui Cardboard is an independent, fan-made tool. It is not affiliated with, endorsed by, or sponsored by
-            the NBA, NBA Players Inc., Michael Jordan, Fanatics, Topps, Panini, Upper Deck, PSA, eBay, or any league,
-            player, or card manufacturer.
+            Independent, fan-made tool — not affiliated with the NBA, Michael Jordan, or any card manufacturer. Card
+            values are estimates, not financial advice. As an eBay Partner Network member, we may earn from qualifying
+            purchases. Trademarks &amp; card images belong to their respective owners.
           </p>
-          <p>
-            All player and team names, logos, trademarks, and card images are the property of their respective owners
-            and are used for identification and reference only. MJ Hierarchy tier concept credited to Cajun Cardboard.
-          </p>
-          <p>
-            Market values are estimates aggregated from public marketplace listings, for informational purposes only —
-            not financial or investment advice.
-          </p>
-          <p>
-            As an eBay Partner Network member, Coqui Cardboard may earn a commission from qualifying purchases made
-            through outbound links.
-          </p>
-          <p className="pt-1">© {year} Coqui Cardboard.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span>© {year} Coqui Cardboard.</span>
+            <Link href="/terms" className={linkCls}>Terms</Link>
+            <Link href="/privacy" className={linkCls}>Privacy</Link>
+            <Link href="/guides" className={linkCls}>Guides</Link>
+          </div>
         </div>
       </div>
     </footer>

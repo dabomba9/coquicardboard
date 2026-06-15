@@ -29,6 +29,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/mj-hierarchy`, changeFrequency: "weekly", priority: 0.9 },
     { url: `${base}/vault`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/guides`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${base}/terms`, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${base}/privacy`, changeFrequency: "yearly", priority: 0.2 },
   ];
 
   const guidePages: MetadataRoute.Sitemap = GUIDES.map((g) => ({
