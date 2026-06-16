@@ -356,7 +356,7 @@ export function HierarchyExplorer({
                         className={cn(
                           "transition-transform group-hover:-translate-y-1",
                           owned && "border-[var(--gold)]",
-                          card.tier_id === 1 && "foil foil--soft"
+                          "foil foil--soft" // holographic shimmer on all four tiers
                         )}
                       />
                     </Link>

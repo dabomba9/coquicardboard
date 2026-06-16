@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { playSelect } from "@/lib/sfx";
 import { cn, TIER_COLORS } from "@/lib/utils";
 import type { CardWithSet } from "@/lib/types";
 
@@ -20,6 +21,7 @@ export function CardThumb({ card, className }: { card: ThumbCard; className?: st
 
   return (
     <div
+      onMouseEnter={() => playSelect()}
       className={cn(
         "relative flex aspect-[5/7] flex-col justify-between overflow-hidden rounded-md border border-border/50",
         !showImage && "p-3",

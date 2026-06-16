@@ -49,9 +49,14 @@ function blip(freq: number, dur: number, when = 0, gain = 0.06) {
   osc.stop(t + dur + 0.02);
 }
 
-/** Menu move/select — a single short blip. */
+/** Menu move/select — a single short blip. Throttled so sweeping a dense card
+ *  grid blips pleasantly instead of machine-gunning. */
+let lastSelectAt = 0;
 export function playSelect() {
   if (isMuted()) return;
+  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+  if (now - lastSelectAt < 60) return;
+  lastSelectAt = now;
   blip(660, 0.08);
 }
 
