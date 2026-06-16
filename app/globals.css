@@ -35,7 +35,7 @@
 
   /* Holographic foil sweep */
   --foil-gradient: linear-gradient(
-    115deg,
+    var(--foil-angle, 115deg),
     transparent 18%,
     rgba(255, 0, 128, 0.35) 32%,
     rgba(0, 200, 255, 0.35) 45%,
@@ -68,7 +68,7 @@
   --tier-4: #5fd06a; --tier-4-bg: color-mix(in oklab, #5fd06a 16%, transparent);
 
   --foil-gradient: linear-gradient(
-    115deg,
+    var(--foil-angle, 115deg),
     transparent 14%,
     rgba(255, 0, 140, 0.5) 30%,
     rgba(0, 224, 255, 0.5) 44%,
@@ -390,7 +390,10 @@ body {
   mix-blend-mode: color-dodge;
   opacity: 0.55;
   pointer-events: none;
-  animation: foil-shimmer 5s linear infinite;
+  /* per-card variation (vars seeded in CardThumb; fall back to the uniform look) */
+  filter: hue-rotate(var(--foil-hue, 0deg));
+  animation: foil-shimmer var(--foil-dur, 5s) linear infinite;
+  animation-delay: var(--foil-delay, 0s);
 }
 .foil--strong::after { opacity: 0.85; }
 .foil--soft::after { opacity: 0.35; }

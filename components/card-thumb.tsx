@@ -11,6 +11,21 @@ type ThumbCard = Pick<CardWithSet, "name" | "card_number" | "year" | "tier_id"> 
   sets?: { name: string } | null;
 };
 
+// Deterministic per-card foil variation (CSS vars consumed by .foil when present),
+// so every card's holographic sweep differs in phase/speed/angle/tint instead of
+// shimmering in lockstep. Seeded from the card → SSR-stable, no hydration mismatch.
+function foilVars(seed: string): React.CSSProperties {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const r = (shift: number) => ((h >>> shift) & 0xff) / 255; // 0..1 from a byte slice
+  return {
+    ["--foil-delay" as string]: `-${(r(0) * 6).toFixed(2)}s`,
+    ["--foil-dur" as string]: `${(4.5 + r(8) * 3).toFixed(2)}s`,
+    ["--foil-angle" as string]: `${Math.round(95 + r(16) * 55)}deg`,
+    ["--foil-hue" as string]: `${Math.round(r(24) * 70)}deg`,
+  } as React.CSSProperties;
+}
+
 // Renders the card's external image when available; falls back to a styled,
 // tier-colored placeholder (year/set/number) if absent or if the URL fails.
 export function CardThumb({ card, className }: { card: ThumbCard; className?: string }) {
@@ -22,6 +37,7 @@ export function CardThumb({ card, className }: { card: ThumbCard; className?: st
   return (
     <div
       onMouseEnter={() => playSelect()}
+      style={foilVars(`${card.name}${card.card_number ?? ""}`)}
       className={cn(
         "relative flex aspect-[5/7] flex-col justify-between overflow-hidden rounded-md border border-border/50",
         !showImage && "p-3",
