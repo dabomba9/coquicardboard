@@ -37,6 +37,16 @@ export function ebaySoldUrl(query: string, customId?: string): string {
   return ebayUrl(query, customId, { LH_Sold: "1", LH_Complete: "1" });
 }
 
+/**
+ * SportsCardsPro price-guide search for a card. A plain reference link (no
+ * affiliate program, no tracking): their ToS lets us cite/link their prices
+ * with attribution, but not import or display their data — so we only deep-link.
+ */
+export function sportsCardsProUrl(query: string): string {
+  const params = new URLSearchParams({ q: query, type: "prices" });
+  return `https://www.sportscardspro.com/search-products?${params.toString()}`;
+}
+
 /** True when affiliate tracking is active — use to pick rel="sponsored" vs "noreferrer". */
 export const affiliateEnabled = Boolean(CAMPID);
 
