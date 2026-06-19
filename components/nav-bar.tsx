@@ -36,7 +36,7 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
   const linkCls = (l: Item) => {
     const active = pathname === l.href;
     return cn(
-      "rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
+      "rounded-full px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
       l.accent
         ? "text-[var(--gold)] hover:bg-[var(--gold)]/10"
         : active

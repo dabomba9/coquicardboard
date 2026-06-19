@@ -55,12 +55,12 @@ async function main() {
     const cands: { url: string; title: string; source: string }[] = [];
     for (const q of queries) {
       try { for (const r of await searchEbayAll(q)) {
-        if (!seen.has(r.imageUrl) && !BACK_RE.test(r.title)) { seen.add(r.imageUrl); cands.push({ ...r, source: "ebay" }); }
+        if (!seen.has(r.imageUrl) && !BACK_RE.test(r.title)) { seen.add(r.imageUrl); cands.push({ url: r.imageUrl, title: r.title, source: "ebay" }); }
       } } catch { /* eBay optional */ }
     }
     for (const q of queries) {
       for (const r of await searchDuckDuckGoAll(q)) {
-        if (!seen.has(r.imageUrl) && !BACK_RE.test(r.title)) { seen.add(r.imageUrl); cands.push({ imageUrl: r.imageUrl, title: r.title, source: "ddg" } as never); }
+        if (!seen.has(r.imageUrl) && !BACK_RE.test(r.title)) { seen.add(r.imageUrl); cands.push({ url: r.imageUrl, title: r.title, source: "ddg" }); }
       }
       if (cands.length >= N * 2) break;
     }
@@ -71,9 +71,8 @@ async function main() {
     let i = 0;
     for (const c of cands) {
       if (saved.length >= N) break;
-      const url = (c as { url?: string; imageUrl?: string }).url ?? (c as { imageUrl?: string }).imageUrl!;
-      const local = await dl(url, path.join(dir, String(i)));
-      if (local) { saved.push({ idx: i, url, title: c.title, source: c.source, localPath: local }); i++; }
+      const local = await dl(c.url, path.join(dir, String(i)));
+      if (local) { saved.push({ idx: i, url: c.url, title: c.title, source: c.source, localPath: local }); i++; }
     }
     writeFileSync(path.join(dir, "meta.json"), JSON.stringify({
       id: card.id, slug, name: card.name, brand: card.brand, baseNumber: card.baseNumber, type: card.type, candidates: saved,
