@@ -10,6 +10,7 @@
     "seed": "tsx admin/seed-catalog.ts mj-hierarchy",
     "seed:kobe": "tsx admin/seed-catalog.ts kobe-hierarchy",
     "fetch:images": "tsx admin/fetch-images.ts",
+    "fetch:images:kobe": "tsx admin/fetch-images.ts --catalog kobe-hierarchy",
     "prices:ebay": "tsx admin/fetch-ebay-prices.ts",
     "prices:sold": "tsx admin/fetch-ebay-sold.ts",
     "prices:purge-fake": "tsx admin/purge-fake-prices.ts",

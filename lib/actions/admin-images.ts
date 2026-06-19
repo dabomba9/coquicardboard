@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdmin } from "@/lib/admin";
-import { searchImageCandidates, activeProvider } from "@/lib/image-search";
+import { searchImageCandidates, activeProvider, playerForCatalog } from "@/lib/image-search";
 import { downloadAndStore } from "@/lib/image-store";
 
 export type ImageActionState = { error?: string; ok?: boolean; cardId?: string; imageUrl?: string | null } | null;
@@ -43,11 +43,11 @@ export async function fetchCardImage(cardId: string): Promise<ImageActionState> 
 
   const admin = createAdminClient();
   const { data: card, error: cErr } = await admin
-    .from("cards").select("name").eq("id", cardId).single();
+    .from("cards").select("name, catalog").eq("id", cardId).single();
   if (cErr || !card) return { error: cErr?.message ?? "Card not found." };
 
   try {
-    const candidates = await searchImageCandidates(card.name);
+    const candidates = await searchImageCandidates(card.name, playerForCatalog(card.catalog));
     if (candidates.length === 0) return { error: "No image match found." };
 
     let stored: string | null = null;

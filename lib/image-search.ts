@@ -11,15 +11,20 @@ export function activeProvider(): string {
   return (process.env.IMAGE_SEARCH_PROVIDER ?? "duckduckgo").toLowerCase();
 }
 
+// Maps a catalog to the player whose name should prefix image/price searches.
+export function playerForCatalog(catalog: string | null | undefined): string {
+  return catalog === "kobe-hierarchy" ? "Kobe Bryant" : "Michael Jordan";
+}
+
 // Build a clean search query from a card name: drop trailing serial (/NN) and
-// parentheticals, prefix the player.
-export function buildQuery(cardName: string): string {
+// parentheticals, prefix the player (defaults to Jordan for the original catalogs).
+export function buildQuery(cardName: string, player = "Michael Jordan"): string {
   const cleaned = cardName
     .replace(/\([^)]*\)/g, " ")
     .replace(/\/\d+\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  return `Michael Jordan ${cleaned}`.trim();
+  return `${player} ${cleaned}`.trim();
 }
 
 export async function searchCardImage(query: string): Promise<ImageResult> {
@@ -34,8 +39,8 @@ export async function searchCardImage(query: string): Promise<ImageResult> {
 
 // Higher-level: prefer a PSA-graded scan (clean, consistent), fall back to a
 // plain search if there's no PSA match.
-export async function searchBestImage(name: string): Promise<ImageResult> {
-  const base = buildQuery(name);
+export async function searchBestImage(name: string, player = "Michael Jordan"): Promise<ImageResult> {
+  const base = buildQuery(name, player);
   for (const q of [`${base} PSA`, base]) {
     const r = await searchCardImage(q);
     if (r) return r;
@@ -57,8 +62,8 @@ export function isBackTitle(title: string): boolean {
 // Ordered, de-duplicated candidate image URLs for a card. Prefers PSA-graded
 // FRONT scans, then PSA, then a plain search; drops back/reverse results. The
 // caller tries each until one downloads.
-export async function searchImageCandidates(name: string): Promise<NonNullable<ImageResult>[]> {
-  const base = buildQuery(name);
+export async function searchImageCandidates(name: string, player = "Michael Jordan"): Promise<NonNullable<ImageResult>[]> {
+  const base = buildQuery(name, player);
   const seen = new Set<string>();
   const out: NonNullable<ImageResult>[] = [];
   for (const q of [`${base} PSA front`, `${base} PSA`, base]) {
