@@ -20,6 +20,7 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
 
   const links: Item[] = [
     { href: "/mj-hierarchy", label: "MJ Hierarchy" },
+    { href: "/kobe-hierarchy", label: "Mamba Origins" },
     { href: "/vault", label: "Jordan Vault" },
     { href: "/guides", label: "Guides" },
     ...(authed

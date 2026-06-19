@@ -37,15 +37,21 @@ describe("productJsonLd", () => {
 
 describe("breadcrumbJsonLd", () => {
   it("uses the Jordan Vault path for vault cards", () => {
-    const d = breadcrumbJsonLd({ name: "Card", slug: "v1-card", isVault: true });
+    const d = breadcrumbJsonLd({ name: "Card", slug: "v1-card", catalog: "mj-vault" });
     const items = d.itemListElement as { name: string; item: string }[];
     expect(items).toHaveLength(3);
     expect(items[1].name).toBe("Jordan Vault");
     expect(items[1].item).toContain("/vault");
     expect(items[2].name).toBe("Card");
   });
+  it("uses the Mamba Origins path for Kobe cards", () => {
+    const d = breadcrumbJsonLd({ name: "Card", slug: "kobe-c", catalog: "kobe-hierarchy" });
+    const items = d.itemListElement as { name: string; item: string }[];
+    expect(items[1].name).toBe("Mamba Origins");
+    expect(items[1].item).toContain("/kobe-hierarchy");
+  });
   it("uses the MJ Hierarchy path otherwise", () => {
-    const d = breadcrumbJsonLd({ name: "Card", slug: "c", isVault: false });
+    const d = breadcrumbJsonLd({ name: "Card", slug: "c", catalog: "mj-hierarchy" });
     const items = d.itemListElement as { name: string; item: string }[];
     expect(items[1].name).toBe("MJ Hierarchy");
     expect(items[1].item).toContain("/mj-hierarchy");

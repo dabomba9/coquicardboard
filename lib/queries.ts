@@ -23,39 +23,46 @@ export const getTiersCached = unstable_cache(
   { revalidate: 86400, tags: ["catalog"] }
 );
 
-export const getHierarchyCatalog = unstable_cache(
-  async (): Promise<CardWithSet[]> => {
-    const { data, error } = await createAdminClient()
-      .from("cards")
-      .select("*, sets(*)")
-      .eq("catalog", "mj-hierarchy")
-      .order("tier_id")
-      .order("rarity_rank");
-    if (error) throw error;
-    return (data as CardWithSet[]) ?? [];
-  },
-  ["hierarchy-catalog"],
-  { revalidate: 3600, tags: ["catalog"] }
-);
+// Hierarchy catalog (cards + their set), parameterized by catalog so the MJ and Kobe
+// hierarchies share one definition. The `catalog` is part of the unstable_cache key —
+// without it the second catalog would serve the first's cached payload.
+export function getHierarchyCatalog(catalog = "mj-hierarchy"): Promise<CardWithSet[]> {
+  return unstable_cache(
+    async (): Promise<CardWithSet[]> => {
+      const { data, error } = await createAdminClient()
+        .from("cards")
+        .select("*, sets(*)")
+        .eq("catalog", catalog)
+        .order("tier_id")
+        .order("rarity_rank");
+      if (error) throw error;
+      return (data as CardWithSet[]) ?? [];
+    },
+    ["hierarchy-catalog", catalog],
+    { revalidate: 3600, tags: ["catalog", `catalog:${catalog}`] }
+  )();
+}
 
-export const getCatalogValueMapCached = unstable_cache(
-  async (): Promise<[string, number][]> => {
-    // Returned as entries (Map isn't serializable in the cache). Caller rebuilds the Map.
-    const db = createAdminClient();
-    const map = new Map<string, number>();
-    const { data: cards } = await db.from("cards").select("id, catalog_value_cents").eq("catalog", "mj-hierarchy");
-    for (const c of (cards as { id: string; catalog_value_cents: number | null }[]) ?? []) {
-      if (c.catalog_value_cents != null) map.set(c.id, c.catalog_value_cents);
-    }
-    const { data: prices } = await db.from("card_prices").select("card_id, median_cents").eq("grade_key", "raw").like("source", "ebay%");
-    for (const p of (prices as { card_id: string; median_cents: number | null }[]) ?? []) {
-      if (p.median_cents != null) map.set(p.card_id, p.median_cents);
-    }
-    return [...map.entries()];
-  },
-  ["catalog-value-map"],
-  { revalidate: 3600, tags: ["catalog", "prices"] }
-);
+export function getCatalogValueMapCached(catalog = "mj-hierarchy"): Promise<[string, number][]> {
+  return unstable_cache(
+    async (): Promise<[string, number][]> => {
+      // Returned as entries (Map isn't serializable in the cache). Caller rebuilds the Map.
+      const db = createAdminClient();
+      const map = new Map<string, number>();
+      const { data: cards } = await db.from("cards").select("id, catalog_value_cents").eq("catalog", catalog);
+      for (const c of (cards as { id: string; catalog_value_cents: number | null }[]) ?? []) {
+        if (c.catalog_value_cents != null) map.set(c.id, c.catalog_value_cents);
+      }
+      const { data: prices } = await db.from("card_prices").select("card_id, median_cents").eq("grade_key", "raw").like("source", "ebay%");
+      for (const p of (prices as { card_id: string; median_cents: number | null }[]) ?? []) {
+        if (p.median_cents != null) map.set(p.card_id, p.median_cents);
+      }
+      return [...map.entries()];
+    },
+    ["catalog-value-map", catalog],
+    { revalidate: 3600, tags: ["catalog", "prices", `catalog:${catalog}`] }
+  )();
+}
 
 // Full Jordan Vault catalog (slim fields). The vault page filters/sorts/paginates
 // this in-memory server-side (lib/vault-filter.ts) — the browser only ever receives

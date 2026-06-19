@@ -55,7 +55,8 @@ const BRANDS: [string, string][] = [
 ];
 
 // Minimal RFC-4180-ish CSV parser (handles quotes, escaped quotes, commas in fields).
-function parseCsv(text: string): string[][] {
+// Exported so sibling loaders (e.g. the Kobe checklist) can reuse it.
+export function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
   let field = "";
   let row: string[] = [];

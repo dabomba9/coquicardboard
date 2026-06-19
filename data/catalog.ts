@@ -122,10 +122,14 @@ function slugify(input: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-export function cardSlug(c: { name: string; card_number?: string; tier_id: number }, index: number): string {
+export function cardSlug(
+  c: { name: string; card_number?: string; tier_id: number },
+  index: number,
+  prefix = "" // namespace per catalog (e.g. "kobe") so slugs never collide across players
+): string {
   const base = slugify(c.name) || `card-${c.tier_id}`;
   const num = c.card_number ? `-${slugify(c.card_number)}` : "";
-  return `${base}${num}-${index}`;
+  return `${prefix ? `${prefix}-` : ""}${base}${num}-${index}`;
 }
 
 // Pads each tier with clearly-labeled placeholder cards up to its target count.

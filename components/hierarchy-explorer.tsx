@@ -58,11 +58,18 @@ export function HierarchyExplorer({
   cards,
   tiers,
   signedIn,
+  defaultGroupBy = "tier",
+  storageKey = "mj.hierarchy.view",
 }: {
   cards: ExplorerCard[];
   tiers: TierMeta[];
   signedIn: boolean;
+  defaultGroupBy?: GroupKey;
+  storageKey?: string;
 }) {
+  // Catalogs without rarity tiers (e.g. Kobe's brand-grouped Mamba Origins) pass an
+  // empty `tiers` array — hide the tier chips/column/option so the UI reads cleanly.
+  const hasTiers = tiers.length > 0;
   const [q, setQ] = useState("");
   const [tierFilter, setTierFilter] = useState<Set<number>>(new Set());
   const [setFilter, setSetFilter] = useState("");
@@ -70,7 +77,7 @@ export function HierarchyExplorer({
   const [forTradeOnly, setForTradeOnly] = useState(false);
   const [attrs, setAttrs] = useState<Set<Attr>>(new Set());
   const [sortBy, setSortBy] = useState<SortKey>("rarity");
-  const [groupBy, setGroupBy] = useState<GroupKey>("tier");
+  const [groupBy, setGroupBy] = useState<GroupKey>(defaultGroupBy);
   const [view, setView] = useState<"grid" | "list">("grid");
   const [ownedLocal, setOwnedLocal] = useState<Set<string>>(new Set());
   const [celebrating, setCelebrating] = useState(false);
@@ -104,15 +111,15 @@ export function HierarchyExplorer({
 
   // Persist the grid/list preference.
   useEffect(() => {
-    const saved = localStorage.getItem("mj.hierarchy.view");
+    const saved = localStorage.getItem(storageKey);
     // Sync the persisted preference after mount (kept out of initial state to
     // avoid an SSR/client hydration mismatch).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (saved === "grid" || saved === "list") setView(saved);
-  }, []);
+  }, [storageKey]);
   useEffect(() => {
-    localStorage.setItem("mj.hierarchy.view", view);
-  }, [view]);
+    localStorage.setItem(storageKey, view);
+  }, [view, storageKey]);
 
   const setNames = useMemo(
     () => [...new Set(cards.map((c) => c.set_name).filter(Boolean))].sort() as string[],
@@ -267,7 +274,7 @@ export function HierarchyExplorer({
             </select>
             <span className="text-muted">Group</span>
             <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupKey)} className="h-9 rounded-full border border-border/60 bg-foreground/[0.03] px-3 text-sm text-foreground transition-colors hover:border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              <option value="tier">Tier</option>
+              {hasTiers && <option value="tier">Tier</option>}
               <option value="set">Set</option>
             </select>
             <div className="flex items-center gap-0.5 rounded-full border border-border/60 bg-foreground/[0.03] p-0.5">
@@ -295,7 +302,7 @@ export function HierarchyExplorer({
               </button>
             );
           })}
-          <span className="mx-1 h-5 w-0.5 bg-border" />
+          {hasTiers && <span className="mx-1 h-5 w-0.5 bg-border" />}
           {ATTRS.map((a) => {
             const active = attrs.has(a.key);
             return (
@@ -389,7 +396,7 @@ export function HierarchyExplorer({
                     <th className="py-2 pr-2">Set</th>
                     <th className="py-2 pr-2">Year</th>
                     <th className="py-2 pr-2">#</th>
-                    <th className="py-2 pr-2">Tier</th>
+                    {hasTiers && <th className="py-2 pr-2">Tier</th>}
                     <th className="py-2 pr-2 text-right">Value</th>
                     {signedIn && <th className="py-2 pr-2 text-center">Owned</th>}
                   </tr>
@@ -403,7 +410,7 @@ export function HierarchyExplorer({
                       <td className="py-2 pr-2 text-muted">{card.set_name}</td>
                       <td className="py-2 pr-2 font-data text-base text-muted">{card.year}</td>
                       <td className="py-2 pr-2 font-data text-base text-muted">{card.card_number ? `#${card.card_number}` : ""}</td>
-                      <td className="py-2 pr-2 font-data text-base text-muted">{card.tier_id}</td>
+                      {hasTiers && <td className="py-2 pr-2 font-data text-base text-muted">{card.tier_id}</td>}
                       <td className="py-2 pr-2 text-right font-num text-base">{card.value_cents ? formatUsd(card.value_cents) : "—"}</td>
                       {signedIn && <td className="py-2 pr-2 text-center text-[var(--gold)]">{isOwned(card) ? "✓" : ""}</td>}
                     </tr>

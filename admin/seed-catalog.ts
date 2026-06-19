@@ -12,8 +12,15 @@ import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import { TIERS, cardSlug, type SeedCard } from "../data/catalog";
 import { loadChecklist } from "../data/checklist";
+import { loadKobeChecklist } from "../data/kobe-checklist";
 
 config({ path: ".env.local" });
+
+// Which catalog to seed: `mj-hierarchy` (default) or `kobe-hierarchy`.
+//   npm run seed         → MJ
+//   npm run seed:kobe    → Kobe (Mamba Origins)
+const CATALOG = process.argv[2] ?? process.env.SEED_CATALOG ?? "mj-hierarchy";
+const isKobe = CATALOG === "kobe-hierarchy";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -30,13 +37,18 @@ function slugify(s: string): string {
 }
 
 async function main() {
+  console.log(`Seeding catalog: ${CATALOG}`);
+  const cards = isKobe ? loadKobeChecklist() : loadChecklist();
+
   // 1. Tiers ---------------------------------------------------------------
-  const cards = loadChecklist();
-  const tierRows = TIERS.map((t) => ({
-    id: t.id, name: t.name, slug: t.slug, rank: t.rank,
-    description: t.description, card_count: cards.filter((c) => c.tier_id === t.id).length,
-  }));
-  {
+  // Kobe groups by brand, not by the 4 rarity tiers; its derived tier_id is purely
+  // cosmetic. Skip the tiers upsert in Kobe mode so it never clobbers MJ's tier
+  // `card_count` denormalization (the tiers rows already exist from the MJ seed).
+  if (!isKobe) {
+    const tierRows = TIERS.map((t) => ({
+      id: t.id, name: t.name, slug: t.slug, rank: t.rank,
+      description: t.description, card_count: cards.filter((c) => c.tier_id === t.id).length,
+    }));
     const { error } = await db.from("tiers").upsert(tierRows, { onConflict: "id" });
     if (error) throw error;
     console.log(`✓ tiers: ${tierRows.length}`);
@@ -63,6 +75,7 @@ async function main() {
 
   // 3. Cards ---------------------------------------------------------------
   const cardRows = cards.map((c: SeedCard, i: number) => ({
+    catalog: CATALOG,
     tier_id: c.tier_id,
     set_id: setIdBySlug.get(slugify(c.setName)) ?? null,
     name: c.name,
@@ -79,7 +92,7 @@ async function main() {
     attributes: { ...(c.attributes ?? {}), placeholder: c.is_placeholder ?? false },
     image_url: c.image_url ?? null,
     image_source: c.image_source ?? null,
-    slug: cardSlug(c, i),
+    slug: cardSlug(c, i, isKobe ? "kobe" : ""),
   }));
   {
     // chunk to keep payloads reasonable

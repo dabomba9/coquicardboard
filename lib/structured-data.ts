@@ -42,9 +42,13 @@ export function productJsonLd(p: {
   return data;
 }
 
-export function breadcrumbJsonLd(p: { name: string; slug: string; isVault: boolean }): JsonLdObject {
-  const catName = p.isVault ? "Jordan Vault" : "MJ Hierarchy";
-  const catUrl = p.isVault ? `${BASE}/vault` : `${BASE}/mj-hierarchy`;
+export function breadcrumbJsonLd(p: { name: string; slug: string; catalog: string }): JsonLdObject {
+  const cat =
+    p.catalog === "mj-vault" ? { name: "Jordan Vault", url: `${BASE}/vault` }
+    : p.catalog === "kobe-hierarchy" ? { name: "Mamba Origins", url: `${BASE}/kobe-hierarchy` }
+    : { name: "MJ Hierarchy", url: `${BASE}/mj-hierarchy` };
+  const catName = cat.name;
+  const catUrl = cat.url;
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",

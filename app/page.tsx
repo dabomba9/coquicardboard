@@ -65,8 +65,8 @@ export default async function Home() {
       <Reveal>
         <section className="mx-auto max-w-6xl px-4 py-12">
           <h2 className="font-display text-lg uppercase tracking-tight">Explore the catalogs</h2>
-          <p className="mt-1 text-sm text-muted">Two curated worlds of Michael Jordan cardboard.</p>
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <p className="mt-1 text-sm text-muted">Three curated worlds of basketball cardboard.</p>
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
             {/* MJ Hierarchy */}
             <Link href="/mj-hierarchy" className="group">
               <Panel className="h-full overflow-hidden p-6 transition-transform group-hover:-translate-y-1">
@@ -86,6 +86,23 @@ export default async function Home() {
                   </div>
                 )}
                 <span className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-accent group-hover:gap-2">Open the hierarchy <ArrowRight size={15} /></span>
+              </Panel>
+            </Link>
+
+            {/* Kobe — Mamba Origins */}
+            <Link href="/kobe-hierarchy" className="group">
+              <Panel className="h-full overflow-hidden p-6 transition-transform group-hover:-translate-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/12 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-accent">
+                    <span className="h-1.5 w-1.5 rounded-full bg-accent" /> Live
+                  </span>
+                </div>
+                <h3 className="mt-3 font-display text-xl uppercase tracking-tight">Mamba Origins</h3>
+                <p className="mt-1 text-sm text-muted">
+                  <span className="font-data text-base text-foreground">143</span> Kobe Bryant 1996-97 rookie cards across{" "}
+                  <span className="font-data text-base text-foreground">25</span> brands — the complete rookie class.
+                </p>
+                <span className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-accent group-hover:gap-2">Chase the Mamba <ArrowRight size={15} /></span>
               </Panel>
             </Link>
 
