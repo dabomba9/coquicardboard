@@ -9,7 +9,9 @@
  * Idempotent. Re-run after uploading more images (upload-images.ts) to "light up"
  * the newly-available ones.
  *
- *   npx tsx admin/reconcile-vault-images.ts
+ *   npx tsx admin/reconcile-vault-images.ts                       # Jordan vault
+ *   npx tsx admin/reconcile-vault-images.ts kobe-vault tcdb       # Kobe vault
+ *   (args: [catalog=mj-vault] [imageSource=jordan-vault])
  *
  * Add --cloud to reconcile the cloud DB (uses CLOUD_* env vars if present).
  */
@@ -19,6 +21,9 @@ import { createClient } from "@supabase/supabase-js";
 config({ path: ".env.local" });
 
 const cloud = process.argv.includes("--cloud");
+const positional = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+const CATALOG = positional[0] ?? "mj-vault";
+const IMAGE_SOURCE = positional[1] ?? "jordan-vault";
 const url = (cloud && process.env.CLOUD_SUPABASE_URL) || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = (cloud && process.env.CLOUD_SERVICE_ROLE_KEY) || process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !serviceKey) {
@@ -59,7 +64,7 @@ type Row = {
 };
 
 async function main() {
-  console.log(`Reconciling vault images against the '${BUCKET}' bucket${cloud ? " (cloud)" : ""}…`);
+  console.log(`Reconciling ${CATALOG} images against the '${BUCKET}' bucket${cloud ? " (cloud)" : ""}…`);
   const { fronts, backs } = await loadPresentIds();
   console.log(`Bucket has ${fronts.size} front + ${backs.size} back images.`);
 
@@ -71,7 +76,7 @@ async function main() {
     const { data, error } = await db
       .from("cards")
       .select("id, image_url, image_source, attributes")
-      .eq("catalog", "mj-vault")
+      .eq("catalog", CATALOG)
       .order("id")
       .range(from, from + PAGE - 1);
     if (error) throw error;
@@ -86,7 +91,7 @@ async function main() {
       if (hasFront) withFront++;
 
       const nextImageUrl = hasFront ? `${STORAGE_BASE}/${vaultId}-front.jpg` : null;
-      const nextImageSource = hasFront ? "jordan-vault" : null;
+      const nextImageSource = hasFront ? IMAGE_SOURCE : null;
       const nextBack = hasBack ? `${STORAGE_BASE}/${vaultId}-back.jpg` : null;
       const prevBack = (attrs.backImage ?? null) as string | null;
 
