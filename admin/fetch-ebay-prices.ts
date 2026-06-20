@@ -12,7 +12,7 @@
 import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import { searchEbayListings, ebayConfigured } from "../lib/ebay";
-import { buildQuery } from "../lib/image-search";
+import { buildQuery, playerForCatalog } from "../lib/image-search";
 import { priceFromListings } from "../lib/ebay-match";
 
 config({ path: ".env.local" });
@@ -26,6 +26,8 @@ const limitArg = process.argv.indexOf("--limit");
 const limit = limitArg !== -1 ? parseInt(process.argv[limitArg + 1], 10) : undefined;
 const tierArg = process.argv.indexOf("--tier");
 const tier = tierArg !== -1 ? parseInt(process.argv[tierArg + 1], 10) : undefined;
+const catalogArg = process.argv.indexOf("--catalog");
+const catalog = catalogArg !== -1 ? process.argv[catalogArg + 1] : undefined;
 
 const db = createClient(url, serviceKey, { auth: { persistSession: false } });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -40,16 +42,17 @@ const GRADES = (t: number): { key: string; suffix: string }[] => [
 ];
 
 async function main() {
-  let q = db.from("cards").select("id, name, tier_id").order("tier_id").order("rarity_rank");
+  let q = db.from("cards").select("id, name, tier_id, catalog").order("tier_id").order("rarity_rank");
+  if (catalog) q = q.eq("catalog", catalog);
   if (tier) q = q.eq("tier_id", tier);
   const { data: cards, error } = await q;
   if (error) throw error;
   const todo = (limit ? cards!.slice(0, limit) : cards!) ?? [];
-  console.log(`eBay asking-price refresh for ${todo.length} card(s)…`);
+  console.log(`eBay asking-price refresh for ${todo.length} card(s)${catalog ? ` · catalog: ${catalog}` : ""}…`);
 
   let priced = 0, grades = 0, skipped = 0;
   for (const card of todo) {
-    const base = buildQuery(card.name);
+    const base = buildQuery(card.name, playerForCatalog(card.catalog));
     let any = false;
     for (const g of GRADES(card.tier_id)) {
       try {

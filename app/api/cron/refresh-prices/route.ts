@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { revalidateTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ebayConfigured, searchEbayListings, searchEbaySoldItems, EbayInsightsNoAccessError } from "@/lib/ebay";
-import { buildQuery } from "@/lib/image-search";
+import { buildQuery, playerForCatalog } from "@/lib/image-search";
 import { priceFromListings } from "@/lib/ebay-match";
 
 export const maxDuration = 60; // Vercel: needs Pro for >10s; tune BATCH for Hobby.
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   const today = new Date().toISOString().slice(0, 10);
 
   const seen = new Set<string>();
-  const targets: { id: string; name: string; tier: number; isNew: boolean }[] = [];
+  const targets: { id: string; name: string; tier: number; catalog: string; isNew: boolean }[] = [];
 
   // Half the batch goes to NEW coverage — cards with no price row yet (newest
   // first, which surfaces the 12k Jordan Vault cards) — so they enter the
@@ -37,35 +37,36 @@ export async function GET(request: NextRequest) {
   const NEW = Math.ceil(BATCH / 2);
   const { data: unpriced } = await admin
     .from("cards")
-    .select("id, name, tier_id, card_prices!left(card_id)")
+    .select("id, name, tier_id, catalog, card_prices!left(card_id)")
     .is("card_prices", null)
     .order("created_at", { ascending: false })
     .limit(NEW);
-  for (const c of (unpriced as { id: string; name: string; tier_id: number | null }[]) ?? []) {
+  for (const c of (unpriced as { id: string; name: string; tier_id: number | null; catalog: string }[]) ?? []) {
     if (seen.has(c.id)) continue;
     seen.add(c.id);
-    targets.push({ id: c.id, name: c.name, tier: c.tier_id ?? 4, isNew: true });
+    targets.push({ id: c.id, name: c.name, tier: c.tier_id ?? 4, catalog: c.catalog, isNew: true });
   }
 
   // Fill the rest with the stalest-priced distinct cards (rotating refresh).
   const { data: rows } = await admin
     .from("card_prices")
-    .select("card_id, as_of, cards(name, tier_id)")
+    .select("card_id, as_of, cards(name, tier_id, catalog)")
     .order("as_of", { ascending: true })
     .limit(BATCH * 6);
-  type Row = { card_id: string; cards: { name: string; tier_id: number | null }[] | { name: string; tier_id: number | null } | null };
+  type CardRel = { name: string; tier_id: number | null; catalog: string };
+  type Row = { card_id: string; cards: CardRel[] | CardRel | null };
   for (const r of (rows as Row[]) ?? []) {
     if (targets.length >= BATCH) break;
     const cardObj = Array.isArray(r.cards) ? r.cards[0] : r.cards;
     if (seen.has(r.card_id) || !cardObj) continue;
     seen.add(r.card_id);
-    targets.push({ id: r.card_id, name: cardObj.name, tier: cardObj.tier_id ?? 4, isNew: false });
+    targets.push({ id: r.card_id, name: cardObj.name, tier: cardObj.tier_id ?? 4, catalog: cardObj.catalog, isNew: false });
   }
 
   let updated = 0, soldRows = 0;
   let soldAccessible = true; // flips off after the first no-access, to stop retrying
   for (const card of targets) {
-    const base = buildQuery(card.name);
+    const base = buildQuery(card.name, playerForCatalog(card.catalog));
     let wroteReal = false;
     for (const g of grades(card.tier)) {
       const query = g.suffix ? `${base} ${g.suffix}` : base;

@@ -4,6 +4,7 @@
 const STOPWORDS = new Set([
   "the", "and", "of", "a", "michael", "jordan", "mj", "card", "qty", "ser", "h", "r",
   "row", "legacy", "collection", "edition", "nba", "basketball", "chicago", "bulls",
+  "kobe", "bryant", "lakers", "los", "angeles",
 ]);
 
 // Abbreviation → acceptable title substrings (any present = group satisfied).
