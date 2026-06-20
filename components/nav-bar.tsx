@@ -92,6 +92,13 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
+  // The compact (grouped) nav fits tablets for visitors, so reveal it at `md`;
+  // signed-in users have extra app links, so keep their full bar at `lg`. (Literal
+  // class strings so Tailwind generates both breakpoints.)
+  const showFlex = authed ? "lg:flex" : "md:flex";
+  const showInline = authed ? "lg:inline-flex" : "md:inline-flex";
+  const hideAbove = authed ? "lg:hidden" : "md:hidden";
+
   const authedLinks: Item[] = authed
     ? [
         { href: "/collection", label: "My Collection" },
@@ -112,7 +119,7 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
         </Link>
 
         {/* Desktop nav — grouped dropdowns + a couple standalone links */}
-        <div className="ml-3 hidden items-center gap-1 lg:flex">
+        <div className={cn("ml-3 hidden items-center gap-1", showFlex)}>
           {GROUPS.map((g) => <NavMenu key={g.label} group={g} pathname={pathname} />)}
           <Link href="/guides" className={linkCls(pathname === "/guides")}>Guides</Link>
           {(authedLinks.length > 0 || adminLinks.length > 0) && <span className="mx-1 h-5 w-px bg-border/40" aria-hidden="true" />}
@@ -128,7 +135,7 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
             type="button"
             aria-label="Search cards (⌘K)"
             onClick={openSearch}
-            className="hidden h-9 w-44 items-center gap-2 rounded-full border border-border/60 bg-foreground/[0.03] px-3.5 text-sm text-muted transition-colors hover:border-border hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:inline-flex lg:w-56"
+            className={cn("hidden h-9 w-44 items-center gap-2 rounded-full border border-border/60 bg-foreground/[0.03] px-3.5 text-sm text-muted transition-colors hover:border-border hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:w-56", showInline)}
           >
             <Search size={15} />
             <span>Search cards…</span>
@@ -138,7 +145,7 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
           <SoundToggle />
           <ThemeToggle />
 
-          <div className="hidden items-center gap-2 lg:flex">
+          <div className={cn("hidden items-center gap-2", showFlex)}>
             {authed ? (
               <>
                 <Link href="/settings" className="rounded-full px-3 py-1.5 text-sm font-medium whitespace-nowrap text-muted transition-colors hover:bg-foreground/5 hover:text-foreground">Settings</Link>
@@ -157,7 +164,7 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
             aria-label="Menu"
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-foreground/5 hover:text-foreground lg:hidden"
+            className={cn("inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-foreground/5 hover:text-foreground", hideAbove)}
           >
             {open ? <X size={18} /> : <Menu size={18} />}
           </button>
@@ -166,7 +173,7 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
 
       {/* Mobile drawer — grouped vertically */}
       {open && (
-        <div className="mx-auto mt-2 max-w-5xl rounded-2xl border border-border/40 bg-background/90 px-4 py-3 shadow-[0_10px_34px_-12px_rgba(0,0,0,0.40)] backdrop-blur-xl lg:hidden">
+        <div className={cn("mx-auto mt-2 max-w-5xl rounded-2xl border border-border/40 bg-background/90 px-4 py-3 shadow-[0_10px_34px_-12px_rgba(0,0,0,0.40)] backdrop-blur-xl", hideAbove)}>
           <div className="flex flex-col gap-1">
             {GROUPS.map((g) => (
               <div key={g.label} className="mb-1">
@@ -197,7 +204,7 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
       )}
 
       {/* Mobile bottom nav (glassy) */}
-      <div className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border/40 bg-background/80 backdrop-blur-xl lg:hidden">
+      <div className={cn("fixed inset-x-0 bottom-0 z-30 flex border-t border-border/40 bg-background/80 backdrop-blur-xl", hideAbove)}>
         {[
           { href: "/mj-hierarchy", label: "Cards", Icon: Layers, show: true },
           { href: "/vault", label: "Vault", Icon: Library, show: true },
