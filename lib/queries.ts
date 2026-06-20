@@ -74,13 +74,12 @@ export function getCatalogValueMapCached(catalog = "mj-hierarchy"): Promise<[str
 // process with a TTL — no 2MB cap, and warm server instances skip the re-query.
 // Per-instance on serverless; the catalog only changes on re-seed/reconcile, so
 // brief staleness is fine.
-let vaultCatalogCache: { at: number; rows: VaultRow[] } | null = null;
+const vaultCatalogCache = new Map<string, { at: number; rows: VaultRow[] }>();
 const VAULT_CATALOG_TTL_MS = 60 * 60 * 1000; // 1h
 
-export async function getVaultCatalog(): Promise<VaultRow[]> {
-  if (vaultCatalogCache && Date.now() - vaultCatalogCache.at < VAULT_CATALOG_TTL_MS) {
-    return vaultCatalogCache.rows;
-  }
+export async function getVaultCatalog(catalog = "mj-vault"): Promise<VaultRow[]> {
+  const cached = vaultCatalogCache.get(catalog);
+  if (cached && Date.now() - cached.at < VAULT_CATALOG_TTL_MS) return cached.rows;
   const db = createAdminClient();
   const out: VaultRow[] = [];
   const PAGE = 1000;
@@ -88,7 +87,7 @@ export async function getVaultCatalog(): Promise<VaultRow[]> {
     const { data, error } = await db
       .from("cards")
       .select("id, slug, name, card_number, year, image_url, attributes")
-      .eq("catalog", "mj-vault")
+      .eq("catalog", catalog)
       .order("rarity_rank")
       .range(from, from + PAGE - 1);
     if (error) throw error;
@@ -96,35 +95,37 @@ export async function getVaultCatalog(): Promise<VaultRow[]> {
     out.push(...rows);
     if (rows.length < PAGE) break;
   }
-  vaultCatalogCache = { at: Date.now(), rows: out };
+  vaultCatalogCache.set(catalog, { at: Date.now(), rows: out });
   return out;
 }
 
 // Slim slug list for the sitemap (id+slug only). The full getVaultCatalog (~6.5MB
 // with attributes) exceeds unstable_cache's 2MB ceiling, so the sitemap uses this
 // lightweight cacheable list instead.
-export const getVaultSlugs = unstable_cache(
-  async (): Promise<string[]> => {
-    const db = createAdminClient();
-    const out: string[] = [];
-    const PAGE = 1000;
-    for (let from = 0; ; from += PAGE) {
-      const { data, error } = await db
-        .from("cards")
-        .select("slug")
-        .eq("catalog", "mj-vault")
-        .order("rarity_rank")
-        .range(from, from + PAGE - 1);
-      if (error) throw error;
-      const rows = (data as { slug: string }[]) ?? [];
-      out.push(...rows.map((r) => r.slug));
-      if (rows.length < PAGE) break;
-    }
-    return out;
-  },
-  ["vault-slugs"],
-  { revalidate: 86400, tags: ["vault-catalog"] }
-);
+export function getVaultSlugs(catalog = "mj-vault"): Promise<string[]> {
+  return unstable_cache(
+    async (): Promise<string[]> => {
+      const db = createAdminClient();
+      const out: string[] = [];
+      const PAGE = 1000;
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await db
+          .from("cards")
+          .select("slug")
+          .eq("catalog", catalog)
+          .order("rarity_rank")
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const rows = (data as { slug: string }[]) ?? [];
+        out.push(...rows.map((r) => r.slug));
+        if (rows.length < PAGE) break;
+      }
+      return out;
+    },
+    ["vault-slugs", catalog],
+    { revalidate: 86400, tags: ["vault-catalog"] }
+  )();
+}
 
 export const getCardBySlugCached = unstable_cache(
   async (slug: string): Promise<CardWithSet | null> => {
@@ -183,25 +184,29 @@ export const getRelatedCardsCached = unstable_cache(
 
 // Related Jordan Vault cards: same manufacturer (vault cards have no set_id), with
 // the closest years surfaced first so a card's "siblings" feel coherent.
-export const getRelatedVaultCardsCached = unstable_cache(
-  async (manufacturer: string, year: number | null, excludeId: string, limit = 12): Promise<CardWithSet[]> => {
-    const { data } = await createAdminClient()
-      .from("cards")
-      .select("*, sets(*)")
-      .eq("catalog", "mj-vault")
-      .eq("attributes->>manufacturer", manufacturer)
-      .neq("id", excludeId)
-      .order("rarity_rank")
-      .limit(60);
-    const rows = (data as CardWithSet[]) ?? [];
-    if (year != null) {
-      rows.sort((a, b) => Math.abs((a.year ?? 9999) - year) - Math.abs((b.year ?? 9999) - year));
-    }
-    return rows.slice(0, limit);
-  },
-  ["related-vault-cards"],
-  { revalidate: 3600, tags: ["catalog"] }
-);
+export function getRelatedVaultCardsCached(
+  manufacturer: string, year: number | null, excludeId: string, catalog = "mj-vault", limit = 12
+): Promise<CardWithSet[]> {
+  return unstable_cache(
+    async (): Promise<CardWithSet[]> => {
+      const { data } = await createAdminClient()
+        .from("cards")
+        .select("*, sets(*)")
+        .eq("catalog", catalog)
+        .eq("attributes->>manufacturer", manufacturer)
+        .neq("id", excludeId)
+        .order("rarity_rank")
+        .limit(60);
+      const rows = (data as CardWithSet[]) ?? [];
+      if (year != null) {
+        rows.sort((a, b) => Math.abs((a.year ?? 9999) - year) - Math.abs((b.year ?? 9999) - year));
+      }
+      return rows.slice(0, limit);
+    },
+    ["related-vault-cards", catalog],
+    { revalidate: 3600, tags: ["catalog"] }
+  )();
+}
 
 // ---- Catalog (public, read-only) ----
 

@@ -45,6 +45,7 @@ export function productJsonLd(p: {
 export function breadcrumbJsonLd(p: { name: string; slug: string; catalog: string }): JsonLdObject {
   const cat =
     p.catalog === "mj-vault" ? { name: "Jordan Vault", url: `${BASE}/vault` }
+    : p.catalog === "kobe-vault" ? { name: "Kobe Vault", url: `${BASE}/kobe-vault` }
     : p.catalog === "kobe-hierarchy" ? { name: "Mamba Origins", url: `${BASE}/kobe-hierarchy` }
     : { name: "MJ Hierarchy", url: `${BASE}/mj-hierarchy` };
   const catName = cat.name;

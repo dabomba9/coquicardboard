@@ -102,7 +102,10 @@ export function CommandPalette() {
               >
                 <span className="truncate">{i.name}</span>
                 <span className={cn("shrink-0 text-xs", idx === active ? "text-accent" : "text-muted")}>
-                  {i.catalog === "mj-vault" ? "Vault" : i.tier_id ? `Tier ${i.tier_id}` : ""}
+                  {i.catalog === "mj-vault" ? "Vault"
+                    : i.catalog === "kobe-vault" ? "Kobe Vault"
+                    : i.catalog === "kobe-hierarchy" ? "Mamba"
+                    : i.tier_id ? `Tier ${i.tier_id}` : ""}
                 </span>
               </button>
             </li>

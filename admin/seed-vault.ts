@@ -1,13 +1,15 @@
 /**
- * Seed the 12k Jordan Vault cards into the shared `cards` table (catalog='vault',
- * no tier) so they reuse the holdings / want_list / card_prices / detail
- * machinery. Idempotent: upserts on slug. Run AFTER migration 0006.
+ * Seed a vault catalog (no tier) into the shared `cards` table so the cards reuse
+ * the holdings / want_list / card_prices / detail machinery. Idempotent: upserts
+ * on slug. Run AFTER migration 0006.
  *
- *   npx tsx admin/seed-vault.ts
+ *   npx tsx admin/seed-vault.ts mj-vault                       # Jordan (data/vault.json)
+ *   npx tsx admin/seed-vault.ts kobe-vault data/kobe-vault.json kv
+ *   (args: <catalog> [inputFile] [slugPrefix])
  *
- * Reads data/vault.json (the generated app dataset). Image links are populated
- * separately by admin/reconcile-vault-images.ts (from what's actually uploaded to
- * the vault-images bucket), not here, so the seed never creates broken 404 links.
+ * Reads the app dataset JSON. Image links are populated separately by
+ * admin/reconcile-vault-images.ts (from what's actually uploaded to the
+ * vault-images bucket), not here, so the seed never creates broken 404 links.
  */
 import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
@@ -15,6 +17,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 config({ path: ".env.local" });
+
+const CATALOG = process.argv[2] ?? "mj-vault";
+const INPUT = process.argv[3] ?? (CATALOG === "mj-vault" ? "data/vault.json" : `data/${CATALOG}.json`);
+// Slug prefix keeps vaults from colliding with each other / the hierarchy (MJ='v', Kobe='kv').
+const SLUG_PREFIX = process.argv[4] ?? (CATALOG === "mj-vault" ? "v" : "kv");
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -33,14 +40,14 @@ type RawVaultCard = {
 
 async function main() {
   const cards: RawVaultCard[] = JSON.parse(
-    readFileSync(join(process.cwd(), "data/vault.json"), "utf8")
+    readFileSync(join(process.cwd(), INPUT), "utf8")
   );
-  console.log(`Seeding ${cards.length} vault cards into cards (catalog='vault')…`);
+  console.log(`Seeding ${cards.length} vault cards into cards (catalog='${CATALOG}', from ${INPUT})…`);
 
   const rows = cards.map((c, i) => ({
-    // catalog='vault', no tier; slug prefixed with the vault id so it never
-    // collides with the 378 hierarchy slugs.
-    catalog: "mj-vault",
+    // Vault catalog, no tier; slug prefixed so it never collides with other
+    // catalogs (MJ vault 'v', Kobe vault 'kv', hierarchies are unprefixed/'kobe').
+    catalog: CATALOG,
     tier_id: null,
     set_id: null,
     name: c.name ?? `Vault card ${c.id}`,
@@ -64,7 +71,7 @@ async function main() {
       psaPopReport: c.psaPopReport ?? null,
       vault_id: c.id,
     },
-    slug: `v${c.id}-${c.slug ?? "card"}`,
+    slug: `${SLUG_PREFIX}${c.id}-${c.slug ?? "card"}`,
   }));
 
   let done = 0;
