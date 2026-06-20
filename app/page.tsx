@@ -65,8 +65,8 @@ export default async function Home() {
       <Reveal>
         <section className="mx-auto max-w-6xl px-4 py-12">
           <h2 className="font-display text-lg uppercase tracking-tight">Explore the catalogs</h2>
-          <p className="mt-1 text-sm text-muted">Three curated worlds of basketball cardboard.</p>
-          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <p className="mt-1 text-sm text-muted">Four curated worlds of basketball cardboard.</p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {/* MJ Hierarchy */}
             <Link href="/mj-hierarchy" className="group">
               <Panel className="h-full overflow-hidden p-6 transition-transform group-hover:-translate-y-1">
@@ -124,6 +124,22 @@ export default async function Home() {
                   </div>
                 )}
                 <span className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-[var(--gold)] group-hover:gap-2">Browse the vault <ArrowRight size={15} /></span>
+              </Panel>
+            </Link>
+
+            {/* Kobe Vault */}
+            <Link href="/kobe-vault" className="group">
+              <Panel className="h-full overflow-hidden p-6 transition-transform group-hover:-translate-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--gold)]/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--gold)]">
+                    <Library size={12} /> Vault
+                  </span>
+                </div>
+                <h3 className="mt-3 font-display text-xl uppercase tracking-tight">The Kobe Vault</h3>
+                <p className="mt-1 text-sm text-muted">
+                  <span className="font-data text-base text-foreground">11,800+</span> cards — every Kobe Bryant issue from 1996 to today. Search, filter, and track the ones you own.
+                </p>
+                <span className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-[var(--gold)] group-hover:gap-2">Browse the Kobe Vault <ArrowRight size={15} /></span>
               </Panel>
             </Link>
           </div>
