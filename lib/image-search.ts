@@ -13,7 +13,8 @@ export function activeProvider(): string {
 
 // Maps a catalog to the player whose name should prefix image/price searches.
 export function playerForCatalog(catalog: string | null | undefined): string {
-  return catalog === "kobe-hierarchy" ? "Kobe Bryant" : "Michael Jordan";
+  // Every Kobe catalog (rookies, vault, hierarchy) searches as Kobe Bryant.
+  return catalog?.startsWith("kobe") || catalog === "mamba-hierarchy" ? "Kobe Bryant" : "Michael Jordan";
 }
 
 // Build a clean search query from a card name: drop trailing serial (/NN) and

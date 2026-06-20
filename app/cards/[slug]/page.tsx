@@ -7,6 +7,7 @@ import { ebaySearchUrl, ebaySoldUrl, sportsCardsProUrl, outboundRel } from "@/li
 import { isRealPriceSource } from "@/lib/prices";
 import { JsonLd } from "@/components/json-ld";
 import { productJsonLd, breadcrumbJsonLd } from "@/lib/structured-data";
+import { MAMBA_TIERS } from "@/data/mamba-hierarchy";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -53,6 +54,7 @@ export default async function CardDetailPage({
   const isVault = card.catalog === "mj-vault" || card.catalog === "kobe-vault";
   const isKobeVault = card.catalog === "kobe-vault";
   const isKobe = card.catalog === "kobe-hierarchy";
+  const isMamba = card.catalog === "mamba-hierarchy";
   const attrs = (card.attributes ?? {}) as Record<string, unknown>;
   const attr = (k: string) => (typeof attrs[k] === "string" ? (attrs[k] as string) : null);
   const manufacturer = attr("manufacturer");
@@ -109,7 +111,7 @@ export default async function CardDetailPage({
     return "estimated";
   };
 
-  const player = isKobe || isKobeVault ? "Kobe Bryant" : "Michael Jordan";
+  const player = isKobe || isKobeVault || isMamba ? "Kobe Bryant" : "Michael Jordan";
   const q = encodeURIComponent(`${card.name} ${player}`);
   const ebayUrl = ebaySearchUrl(`${card.name} ${player}`, card.slug);
   const ebaySold = ebaySoldUrl(`${card.name} ${player}`, card.slug);
@@ -120,7 +122,9 @@ export default async function CardDetailPage({
   const foilClass = isVault ? "" :
     card.tier_id === 1 ? "foil foil--strong" : card.tier_id === 2 ? "foil" : card.tier_id === 3 ? "foil foil--soft" : "";
   const tierStyle = (isVault ? {} : { ["--border" as string]: `var(--tier-${card.tier_id})` }) as React.CSSProperties;
-  const tierName = card.tier_id ? (["Legendary", "Epic", "Rare", "Common"][card.tier_id - 1] ?? "Common") : "";
+  const tierName = isMamba
+    ? (MAMBA_TIERS.find((t) => t.id === card.tier_id)?.name ?? "")
+    : card.tier_id ? (["Legendary", "Epic", "Rare", "Common"][card.tier_id - 1] ?? "Common") : "";
 
   // schema.org structured data (Product + breadcrumbs) for search rich results.
   const ldBits = [card.year ? String(card.year) : null, card.sets?.name ?? manufacturer, card.card_number ? `#${card.card_number}` : null].filter(Boolean);
@@ -132,7 +136,7 @@ export default async function CardDetailPage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <JsonLd data={productJsonLd({ name: card.name, slug: card.slug, description: ldDescription, image: card.image_url, brand: manufacturer ?? card.sets?.name ?? null, pricesUsd, offerUrl: ebayUrl })} />
       <JsonLd data={breadcrumbJsonLd({ name: card.name, slug: card.slug, catalog: card.catalog })} />
-      <Link href={isKobeVault ? "/kobe-vault" : isVault ? "/vault" : isKobe ? "/kobe-hierarchy" : "/mj-hierarchy"} className="text-[11px] uppercase tracking-wide text-muted hover:text-foreground">← {isKobeVault ? "Kobe Vault" : isVault ? "Jordan Vault" : isKobe ? "Mamba Origins" : "Hierarchy"}</Link>
+      <Link href={isKobeVault ? "/kobe-vault" : isVault ? "/vault" : isMamba ? "/mamba-hierarchy" : isKobe ? "/kobe-hierarchy" : "/mj-hierarchy"} className="text-[11px] uppercase tracking-wide text-muted hover:text-foreground">← {isKobeVault ? "Kobe Vault" : isVault ? "Jordan Vault" : isMamba ? "Mamba Hierarchy" : isKobe ? "Mamba Origins" : "Hierarchy"}</Link>
 
       <div className="mt-4 grid gap-8 sm:grid-cols-[280px_1fr]">
         <div className="space-y-3">

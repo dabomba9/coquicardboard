@@ -9,6 +9,7 @@
     "lint": "eslint",
     "seed": "tsx admin/seed-catalog.ts mj-hierarchy",
     "seed:kobe": "tsx admin/seed-catalog.ts kobe-hierarchy",
+    "seed:mamba": "tsx admin/seed-catalog.ts mamba-hierarchy",
     "seed:vault": "tsx admin/seed-vault.ts mj-vault",
     "seed:vault:kobe": "tsx admin/seed-vault.ts kobe-vault data/kobe-vault.json kv",
     "images:kobe-vault": "tsx kobe-vault/fetch-images.ts",

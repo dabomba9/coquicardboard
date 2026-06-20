@@ -38,8 +38,9 @@ export function SiteFooter() {
               <div className="font-sans text-[10px] uppercase tracking-wide text-muted">Catalogs</div>
               <ul className="mt-2 space-y-1.5">
                 <li><Link href="/mj-hierarchy" className={linkCls}>MJ Hierarchy</Link></li>
-                <li><Link href="/kobe-hierarchy" className={linkCls}>Mamba Origins</Link></li>
                 <li><Link href="/vault" className={linkCls}>Jordan Vault</Link></li>
+                <li><Link href="/mamba-hierarchy" className={linkCls}>Mamba Hierarchy</Link></li>
+                <li><Link href="/kobe-hierarchy" className={linkCls}>Mamba Origins</Link></li>
                 <li><Link href="/kobe-vault" className={linkCls}>Kobe Vault</Link></li>
               </ul>
             </div>
