@@ -243,7 +243,9 @@ body {
    pixel cards scrolling smoothly. `auto` remembers the real size after first render. */
 .cv-auto {
   content-visibility: auto;
-  contain-intrinsic-size: auto 18rem;
+  /* Explicit w/h (no `auto` keyword) so it parses on iOS Safari — otherwise the
+     declaration is dropped and off-screen cards collapse to 0 height (blank on mobile). */
+  contain-intrinsic-size: 14rem 20rem;
 }
 
 /* Staggered "deal" entrance for hero cards (wrapper layer). */

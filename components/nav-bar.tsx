@@ -23,7 +23,6 @@ const GROUPS: Group[] = [
   ] },
   { label: "Kobe", items: [
     { href: "/mamba-hierarchy", label: "Mamba Hierarchy" },
-    { href: "/kobe-hierarchy", label: "Mamba Origins" },
     { href: "/kobe-vault", label: "Kobe Vault" },
   ] },
 ];
@@ -67,9 +66,12 @@ function NavMenu({ group, pathname }: { group: Group; pathname: string }) {
         <ChevronDown size={14} className={cn("transition-transform", open && "rotate-180")} aria-hidden="true" />
       </button>
       {open && (
+        // pt-1.5 (not mt) keeps a visual gap that's still inside the hover area, so
+        // moving from the trigger to a link doesn't fire onMouseLeave + close first.
+        <div className="absolute left-0 top-full z-20 pt-1.5">
         <div
           role="menu"
-          className="absolute left-0 top-full z-20 mt-1.5 min-w-44 rounded-2xl border border-border/45 bg-background/95 p-1.5 shadow-[0_12px_34px_-12px_rgba(0,0,0,0.40)] backdrop-blur-xl"
+          className="min-w-44 rounded-2xl border border-border/45 bg-background/95 p-1.5 shadow-[0_12px_34px_-12px_rgba(0,0,0,0.40)] backdrop-blur-xl"
         >
           {group.items.map((i) => (
             <Link
@@ -82,6 +84,7 @@ function NavMenu({ group, pathname }: { group: Group; pathname: string }) {
               {i.label}
             </Link>
           ))}
+        </div>
         </div>
       )}
     </div>

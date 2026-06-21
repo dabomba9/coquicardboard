@@ -40,7 +40,6 @@ export function SiteFooter() {
                 <li><Link href="/mj-hierarchy" className={linkCls}>MJ Hierarchy</Link></li>
                 <li><Link href="/vault" className={linkCls}>Jordan Vault</Link></li>
                 <li><Link href="/mamba-hierarchy" className={linkCls}>Mamba Hierarchy</Link></li>
-                <li><Link href="/kobe-hierarchy" className={linkCls}>Mamba Origins</Link></li>
                 <li><Link href="/kobe-vault" className={linkCls}>Kobe Vault</Link></li>
               </ul>
             </div>
