@@ -106,7 +106,6 @@ const CARDS: Row[] = [
   { name: "2015-16 Panini Prizm #156 Kobe Bryant", year: 2015, set: "2015-16 Panini Prizm", mfr: "Panini", num: "156", tier: 3 },
   { name: "2018-19 Panini Donruss Optic #16 Kobe Bryant", year: 2018, set: "2018-19 Panini Donruss Optic", mfr: "Panini", num: "16", tier: 3 },
   { name: "2019-20 Panini Donruss #16 Kobe Bryant", year: 2019, set: "2019-20 Panini Donruss", mfr: "Panini", num: "16", tier: 3 },
-  { name: "2020-21 Panini Prizm Tribute #5 Kobe Bryant", year: 2020, set: "2020-21 Panini Prizm", mfr: "Panini", num: "5", tier: 3, insert: true },
 ];
 
 export function loadMambaHierarchy(): SeedCard[] {
