@@ -3,7 +3,8 @@
  * cache (kobe-vault/.cache/p*.html) — no network. Writes kobe-vault/data/image-urls.json
  * ([{cid, url}]) for kobe-vault/fetch-images.ts to download.
  *
- * Thumbnail filenames embed the card id: /Images/Thumbs/Basketball/{sid}/{sid}_{cid}Thumb4.jpg
+ * Thumbnail filenames embed the card id: /Images/Thumbs/Basketball/{sid}/{sid}_{cid}Thumb2.jpg
+ * Each scanned card has a Thumb2 (FRONT) and a Thumb4 (back); we want the front.
  * "RepThumb" entries are generic placeholders (not the actual card) and are skipped.
  *
  *   npx tsx kobe-vault/extract-image-urls.ts
@@ -20,7 +21,7 @@ function main() {
   mkdirSync(DATA_DIR, { recursive: true });
   const files = readdirSync(CACHE_DIR).filter((f) => /^p\d+\.html$/.test(f));
   const byCid = new Map<number, string>();
-  const re = /\/Images\/Thumbs\/Basketball\/(\d+)\/\1_(\d+)Thumb4\.jpg/g;
+  const re = /\/Images\/Thumbs\/Basketball\/(\d+)\/\1_(\d+)Thumb2\.jpg/g;
   for (const f of files) {
     const html = readFileSync(join(CACHE_DIR, f), "utf8");
     for (const m of html.matchAll(re)) {

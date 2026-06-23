@@ -25,6 +25,9 @@ const CDP_URL = process.env.CDP_URL ?? "http://localhost:9222";
 const BUCKET = "vault-images";
 const limitArg = process.argv.indexOf("--limit");
 const limit = limitArg !== -1 ? parseInt(process.argv[limitArg + 1], 10) : Infinity;
+// --force re-fetches cids already in the bucket (upsert overwrites). Needed to
+// replace the old Thumb4 backs with the new Thumb2 fronts at the same object key.
+const force = process.argv.includes("--force");
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -66,8 +69,9 @@ async function main() {
 
   const done = await presentFronts();
   const kobeDoneBefore = all.filter((x) => done.has(x.cid)).length; // Kobe cids already uploaded
-  const todo = all.filter((x) => !done.has(x.cid)).slice(0, Number.isFinite(limit) ? limit : undefined);
-  console.log(`Kobe thumbnails: ${kobeDoneBefore}/${all.length} already in bucket. Fetching ${todo.length}…`);
+  const pending = force ? all : all.filter((x) => !done.has(x.cid));
+  const todo = pending.slice(0, Number.isFinite(limit) ? limit : undefined);
+  console.log(`Kobe thumbnails: ${kobeDoneBefore}/${all.length} already in bucket.${force ? " --force: re-fetching all." : ""} Fetching ${todo.length}…`);
 
   let ok = 0, fail = 0, streak = 0, blocked = false;
   for (let i = 0; i < todo.length; i++) {
