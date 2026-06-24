@@ -65,7 +65,7 @@ export default async function Home() {
       <Reveal>
         <section className="mx-auto max-w-6xl px-4 py-12">
           <h2 className="font-display text-lg uppercase tracking-tight">Explore the catalogs</h2>
-          <p className="mt-1 text-sm text-muted">Four curated worlds of basketball cardboard.</p>
+          <p className="mt-1 text-sm text-muted">Curated worlds of vintage and modern cardboard.</p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {/* MJ Hierarchy */}
             <Link href="/mj-hierarchy" className="group">

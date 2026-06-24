@@ -46,6 +46,8 @@ export function breadcrumbJsonLd(p: { name: string; slug: string; catalog: strin
   const cat =
     p.catalog === "mj-vault" ? { name: "Jordan Vault", url: `${BASE}/vault` }
     : p.catalog === "kobe-vault" ? { name: "Kobe Vault", url: `${BASE}/kobe-vault` }
+    : p.catalog === "clemente-vault" ? { name: "Clemente Vault", url: `${BASE}/clemente-vault` }
+    : p.catalog === "killebrew-vault" ? { name: "Killebrew Vault", url: `${BASE}/killebrew-vault` }
     : p.catalog === "mamba-hierarchy" ? { name: "Mamba Hierarchy", url: `${BASE}/mamba-hierarchy` }
     : { name: "MJ Hierarchy", url: `${BASE}/mj-hierarchy` };
   const catName = cat.name;

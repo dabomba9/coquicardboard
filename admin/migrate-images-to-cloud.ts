@@ -27,7 +27,8 @@ const BUCKET = "card-images";
 
 // Supabase caps a single select at 1000 rows — page through with .range() so we
 // get ALL cards (the catalogs are 24k+ rows now, not the original <1000).
-async function fetchAll<T>(client: ReturnType<typeof createClient>, build: (q: any) => any): Promise<T[]> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchAll<T>(client: { from: (t: string) => any }, build: (q: any) => any): Promise<T[]> {
   const out: T[] = [];
   for (let from = 0; ; from += 1000) {
     const { data, error } = await build(client.from("cards")).range(from, from + 999);

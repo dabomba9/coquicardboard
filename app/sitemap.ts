@@ -18,13 +18,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // static + guide URLs rather than 500 the whole sitemap.
   let cardSlugs: string[] = [];
   try {
-    const [hierarchy, mamba, vaultSlugs, kobeVaultSlugs] = await Promise.all([
+    const [hierarchy, mamba, vaultSlugs, kobeVaultSlugs, clementeSlugs, killebrewSlugs] = await Promise.all([
       getHierarchyCatalog(),
       getHierarchyCatalog("mamba-hierarchy"),
       getVaultSlugs(),
       getVaultSlugs("kobe-vault"),
+      getVaultSlugs("clemente-vault"),
+      getVaultSlugs("killebrew-vault"),
     ]);
-    cardSlugs = [...hierarchy.map((c) => c.slug), ...mamba.map((c) => c.slug), ...vaultSlugs, ...kobeVaultSlugs];
+    cardSlugs = [...hierarchy.map((c) => c.slug), ...mamba.map((c) => c.slug), ...vaultSlugs, ...kobeVaultSlugs, ...clementeSlugs, ...killebrewSlugs];
   } catch {
     cardSlugs = [];
   }
@@ -35,6 +37,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/mamba-hierarchy`, changeFrequency: "weekly", priority: 0.88 },
     { url: `${base}/vault`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/kobe-vault`, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${base}/clemente-vault`, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${base}/killebrew-vault`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/guides`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${base}/terms`, changeFrequency: "yearly", priority: 0.2 },
     { url: `${base}/privacy`, changeFrequency: "yearly", priority: 0.2 },

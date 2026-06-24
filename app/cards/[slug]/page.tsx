@@ -51,8 +51,10 @@ export default async function CardDetailPage({
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const isVault = card.catalog === "mj-vault" || card.catalog === "kobe-vault";
+  const isVault = card.catalog === "mj-vault" || card.catalog === "kobe-vault" || card.catalog === "clemente-vault" || card.catalog === "killebrew-vault";
   const isKobeVault = card.catalog === "kobe-vault";
+  const isClementeVault = card.catalog === "clemente-vault";
+  const isKillebrewVault = card.catalog === "killebrew-vault";
   const isMamba = card.catalog === "mamba-hierarchy";
   const attrs = (card.attributes ?? {}) as Record<string, unknown>;
   const attr = (k: string) => (typeof attrs[k] === "string" ? (attrs[k] as string) : null);
@@ -110,7 +112,7 @@ export default async function CardDetailPage({
     return "estimated";
   };
 
-  const player = isKobeVault || isMamba ? "Kobe Bryant" : "Michael Jordan";
+  const player = isKobeVault || isMamba ? "Kobe Bryant" : isClementeVault ? "Roberto Clemente" : isKillebrewVault ? "Harmon Killebrew" : "Michael Jordan";
   const q = encodeURIComponent(`${card.name} ${player}`);
   const ebayUrl = ebaySearchUrl(`${card.name} ${player}`, card.slug);
   const ebaySold = ebaySoldUrl(`${card.name} ${player}`, card.slug);
@@ -135,7 +137,7 @@ export default async function CardDetailPage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <JsonLd data={productJsonLd({ name: card.name, slug: card.slug, description: ldDescription, image: card.image_url, brand: manufacturer ?? card.sets?.name ?? null, pricesUsd, offerUrl: ebayUrl })} />
       <JsonLd data={breadcrumbJsonLd({ name: card.name, slug: card.slug, catalog: card.catalog })} />
-      <Link href={isKobeVault ? "/kobe-vault" : isVault ? "/vault" : isMamba ? "/mamba-hierarchy" : "/mj-hierarchy"} className="text-[11px] uppercase tracking-wide text-muted hover:text-foreground">← {isKobeVault ? "Kobe Vault" : isVault ? "Jordan Vault" : isMamba ? "Mamba Hierarchy" : "Hierarchy"}</Link>
+      <Link href={isKobeVault ? "/kobe-vault" : isClementeVault ? "/clemente-vault" : isKillebrewVault ? "/killebrew-vault" : isVault ? "/vault" : isMamba ? "/mamba-hierarchy" : "/mj-hierarchy"} className="text-[11px] uppercase tracking-wide text-muted hover:text-foreground">← {isKobeVault ? "Kobe Vault" : isClementeVault ? "Clemente Vault" : isKillebrewVault ? "Killebrew Vault" : isVault ? "Jordan Vault" : isMamba ? "Mamba Hierarchy" : "Hierarchy"}</Link>
 
       <div className="mt-4 grid gap-8 sm:grid-cols-[280px_1fr]">
         <div className="space-y-3">
@@ -166,7 +168,7 @@ export default async function CardDetailPage({
               className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium", isVault ? "bg-accent/12 text-accent" : cn(c.bg, c.text))}
               style={tierStyle}
             >
-              {isKobeVault ? "Kobe Vault" : isVault ? "Jordan Vault" : `Tier ${card.tier_id} · ${tierName}`}
+              {isKobeVault ? "Kobe Vault" : isClementeVault ? "Clemente Vault" : isKillebrewVault ? "Killebrew Vault" : isVault ? "Jordan Vault" : `Tier ${card.tier_id} · ${tierName}`}
             </span>
             {card.is_rookie && <Badge className={c.text}>Rookie</Badge>}
             {card.is_insert && <Badge className={c.text}>Insert</Badge>}

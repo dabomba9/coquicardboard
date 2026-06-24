@@ -104,6 +104,8 @@ export function CommandPalette() {
                 <span className={cn("shrink-0 text-xs", idx === active ? "text-accent" : "text-muted")}>
                   {i.catalog === "mj-vault" ? "Vault"
                     : i.catalog === "kobe-vault" ? "Kobe Vault"
+                    : i.catalog === "clemente-vault" ? "Clemente"
+                    : i.catalog === "killebrew-vault" ? "Killebrew"
                     : i.catalog === "mamba-hierarchy" ? `Mamba T${i.tier_id}`
                     : i.tier_id ? `Tier ${i.tier_id}` : ""}
                 </span>
