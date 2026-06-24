@@ -25,11 +25,25 @@ const local = createClient(LOCAL_URL, LOCAL_KEY, { auth: { persistSession: false
 const cloud = createClient(CLOUD_URL, CLOUD_KEY, { auth: { persistSession: false } });
 const BUCKET = "card-images";
 
+// Supabase caps a single select at 1000 rows — page through with .range() so we
+// get ALL cards (the catalogs are 24k+ rows now, not the original <1000).
+async function fetchAll<T>(client: ReturnType<typeof createClient>, build: (q: any) => any): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await build(client.from("cards")).range(from, from + 999);
+    if (error) throw new Error(error.message);
+    out.push(...((data as T[]) ?? []));
+    if (!data || data.length < 1000) break;
+  }
+  return out;
+}
+
 async function main() {
-  const { data: localCards } = await local
-    .from("cards").select("slug, image_url, image_source").not("image_url", "is", null);
-  const { data: cloudCards } = await cloud.from("cards").select("id, slug");
-  const cloudIdBySlug = new Map((cloudCards ?? []).map((c) => [c.slug, c.id]));
+  const localCards = await fetchAll<{ slug: string; image_url: string; image_source: string | null }>(
+    local, (q) => q.select("slug, image_url, image_source").not("image_url", "is", null));
+  const cloudCards = await fetchAll<{ id: string; slug: string }>(cloud, (q) => q.select("id, slug"));
+  console.log(`local images: ${localCards.length} · cloud cards: ${cloudCards.length}`);
+  const cloudIdBySlug = new Map(cloudCards.map((c) => [c.slug, c.id]));
 
   let ok = 0, miss = 0, fail = 0;
   for (const c of (localCards as { slug: string; image_url: string; image_source: string | null }[]) ?? []) {
