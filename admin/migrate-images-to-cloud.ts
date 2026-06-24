@@ -40,8 +40,15 @@ async function fetchAll<T>(client: { from: (t: string) => any }, build: (q: any)
 }
 
 async function main() {
+  // Optional: MIGRATE_CATALOGS=clemente-vault,killebrew-vault limits the copy to
+  // specific catalogs (avoids re-uploading catalogs already on cloud).
+  const only = (process.env.MIGRATE_CATALOGS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  if (only.length) console.log(`MIGRATE_CATALOGS: ${only.join(", ")}`);
   const localCards = await fetchAll<{ slug: string; image_url: string; image_source: string | null }>(
-    local, (q) => q.select("slug, image_url, image_source").not("image_url", "is", null));
+    local, (q) => {
+      const base = q.select("slug, image_url, image_source").not("image_url", "is", null);
+      return only.length ? base.in("catalog", only) : base;
+    });
   const cloudCards = await fetchAll<{ id: string; slug: string }>(cloud, (q) => q.select("id, slug"));
   console.log(`local images: ${localCards.length} · cloud cards: ${cloudCards.length}`);
   const cloudIdBySlug = new Map(cloudCards.map((c) => [c.slug, c.id]));
