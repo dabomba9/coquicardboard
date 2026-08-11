@@ -26,6 +26,10 @@ const GROUPS: Group[] = [
     { href: "/kobe-hierarchy", label: "Mamba Origins" },
     { href: "/kobe-vault", label: "Kobe Vault" },
   ] },
+  { label: "Baseball", items: [
+    { href: "/clemente-vault", label: "Clemente Vault" },
+    { href: "/killebrew-vault", label: "Killebrew Vault" },
+  ] },
 ];
 
 const linkCls = (active: boolean, accent?: boolean) =>
@@ -97,11 +101,14 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
   const pathname = usePathname();
 
   // The compact (grouped) nav fits tablets for visitors, so reveal it at `md`;
-  // signed-in users have extra app links, so keep their full bar at `lg`. (Literal
-  // class strings so Tailwind generates both breakpoints.)
-  const showFlex = authed ? "lg:flex" : "md:flex";
-  const showInline = authed ? "lg:inline-flex" : "md:inline-flex";
-  const hideAbove = authed ? "lg:hidden" : "md:hidden";
+  // Each tier of extra links needs one more breakpoint of room: visitors get the
+  // inline bar at lg, signed-in (3 app links) at xl, admins (+ Admin) at 2xl. All
+  // three moved up one step when the Baseball group landed — at the old `md` the
+  // visitor bar already overflowed, 851px of content in a 734px pill. (Literal
+  // class strings so Tailwind generates every breakpoint.)
+  const showFlex = admin ? "2xl:flex" : authed ? "xl:flex" : "lg:flex";
+  const showInline = admin ? "2xl:inline-flex" : authed ? "xl:inline-flex" : "lg:inline-flex";
+  const hideAbove = admin ? "2xl:hidden" : authed ? "xl:hidden" : "lg:hidden";
 
   const authedLinks: Item[] = authed
     ? [
@@ -114,10 +121,14 @@ export function NavBar({ authed, admin }: { authed: boolean; admin: boolean }) {
 
   return (
     <header className="font-modern fixed inset-x-0 top-0 z-30 px-3 pt-3 sm:px-4">
-      <nav className="mx-auto flex h-16 max-w-5xl items-center gap-3 rounded-full border border-border/45 bg-background/65 px-3 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.30)] backdrop-blur-xl sm:px-5">
+      {/* max-w-7xl (not 5xl): the third catalog dropdown pushed the inline nav past
+          1024px, which wrapped the brand and the Sign in button. */}
+      <nav className="mx-auto flex h-16 max-w-7xl items-center gap-3 rounded-full border border-border/45 bg-background/65 px-3 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.30)] backdrop-blur-xl sm:px-5 2xl:max-w-[1400px]">
 
         {/* Brand */}
-        <Link href="/" className="flex items-center gap-2 text-[15px] font-semibold tracking-tight" onClick={() => setOpen(false)}>
+        {/* shrink-0/nowrap: the brand is the first thing flexbox squeezes, and it
+            wrapped to two lines before the bar overflowed visibly. */}
+        <Link href="/" className="flex shrink-0 items-center gap-2 whitespace-nowrap text-[15px] font-semibold tracking-tight" onClick={() => setOpen(false)}>
           <CoquiGlyph size={22} className="text-accent" aria-label="" />
           <span><span className="text-accent">Coqui</span> Cardboard</span>
         </Link>

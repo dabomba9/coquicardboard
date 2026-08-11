@@ -69,7 +69,13 @@ async function main() {
   }
   const setRows = [...setByName.values()];
   {
-    const { error } = await db.from("sets").upsert(setRows, { onConflict: "slug" });
+    // `sets.slug` isn't catalog-scoped, so the 1996 sets are SHARED — Kobe's "1996
+    // Topps Chrome" is MJ's row. Kobe/Mamba derive `manufacturer` from the checklist's
+    // brand column ("Topps Chrome"), which would overwrite MJ's correct "Topps". Same
+    // rule as the tiers guard above: only the MJ hierarchy owns the shared tables, so
+    // the others insert brands that are missing and leave existing rows alone.
+    const insertOnly = isKobe || isMamba;
+    const { error } = await db.from("sets").upsert(setRows, { onConflict: "slug", ignoreDuplicates: insertOnly });
     if (error) throw error;
   }
   const { data: setData, error: setErr } = await db.from("sets").select("id, slug");
