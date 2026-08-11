@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     // Search BOTH catalogs and merge so vault matches always surface (hierarchy
     // rows are physically first, so a single capped scan would hide the vault).
     const [hier, vault] = await Promise.all([
-      supabase.from("cards").select(cols).in("catalog", ["mj-hierarchy", "mamba-hierarchy"]).ilike("name", `%${q}%`).order("name").limit(10),
+      supabase.from("cards").select(cols).in("catalog", ["mj-hierarchy", "kobe-hierarchy", "mamba-hierarchy"]).ilike("name", `%${q}%`).order("name").limit(10),
       supabase.from("cards").select(cols).in("catalog", ["mj-vault", "kobe-vault", "clemente-vault", "killebrew-vault"]).ilike("name", `%${q}%`).order("name").limit(20),
     ]);
     error = hier.error || vault.error;

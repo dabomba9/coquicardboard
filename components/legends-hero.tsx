@@ -18,7 +18,7 @@ type Legend = {
 
 const LEGENDS: Legend[] = [
   { name: "Jordan", number: "23", team: "Bulls", img: "/legends/jordan.png", href: "/mj-hierarchy", live: true, accent: "#e23b3b" },
-  { name: "Kobe", number: "8", team: "Lakers", img: "/legends/bryant.png", href: "/mamba-hierarchy", live: true, accent: "#f5c542" },
+  { name: "Kobe", number: "8", team: "Lakers", img: "/legends/bryant.png", href: "/kobe-hierarchy", live: true, accent: "#f5c542" },
   { name: "Clemente", number: "21", team: "Pirates", img: "/legends/clemente.png", href: "/clemente-vault", live: true, accent: "#e8b23a" },
   { name: "Killebrew", number: "3", team: "Twins", img: "/legends/killebrew.png", href: "/killebrew-vault", live: true, accent: "#5aa6f5" },
 ];

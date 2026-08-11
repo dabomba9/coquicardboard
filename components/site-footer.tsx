@@ -40,6 +40,7 @@ export function SiteFooter() {
                 <li><Link href="/mj-hierarchy" className={linkCls}>MJ Hierarchy</Link></li>
                 <li><Link href="/vault" className={linkCls}>Jordan Vault</Link></li>
                 <li><Link href="/mamba-hierarchy" className={linkCls}>Mamba Hierarchy</Link></li>
+                <li><Link href="/kobe-hierarchy" className={linkCls}>Mamba Origins</Link></li>
                 <li><Link href="/kobe-vault" className={linkCls}>Kobe Vault</Link></li>
                 <li><Link href="/clemente-vault" className={linkCls}>Clemente Vault</Link></li>
                 <li><Link href="/killebrew-vault" className={linkCls}>Killebrew Vault</Link></li>
@@ -60,7 +61,10 @@ export function SiteFooter() {
           <p>
             Independent, fan-made tool — not affiliated with the NBA, Michael Jordan, or any card manufacturer. Card
             values are estimates, not financial advice. As an eBay Partner Network member, we may earn from qualifying
-            purchases. Trademarks &amp; card images belong to their respective owners.
+            purchases. Trademarks &amp; card images belong to their respective owners. Checklist data for the MJ
+            Hierarchy and Mamba Origins is credited to Bryan Denison /{" "}
+            {/* underlined: an inline link inside the muted legal paragraph is otherwise invisible */}
+            <a href="https://cajuncardboard.com/" target="_blank" rel="noreferrer" className={`${linkCls} underline underline-offset-2`}>Cajun Cardboard</a>.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
             <span>© {year} Coqui Cardboard.</span>

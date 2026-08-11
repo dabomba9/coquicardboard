@@ -106,6 +106,7 @@ export function CommandPalette() {
                     : i.catalog === "kobe-vault" ? "Kobe Vault"
                     : i.catalog === "clemente-vault" ? "Clemente"
                     : i.catalog === "killebrew-vault" ? "Killebrew"
+                    : i.catalog === "kobe-hierarchy" ? "Mamba"
                     : i.catalog === "mamba-hierarchy" ? `Mamba T${i.tier_id}`
                     : i.tier_id ? `Tier ${i.tier_id}` : ""}
                 </span>

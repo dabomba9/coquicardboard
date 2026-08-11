@@ -9,7 +9,7 @@ import path from "node:path";
 import type { SeedCard } from "./catalog";
 import { parseCsv } from "./checklist";
 
-const CSV_PATH = path.join(process.cwd(), "data", "mamba-origins-checklist-2026-06-19.csv");
+const CSV_PATH = path.join(process.cwd(), "data", "mamba-origins-checklist-2026-08-10.csv");
 
 // Mamba Origins groups by BRAND, not rarity tier. We still assign a 1–4 tier purely
 // as a COSMETIC rarity (drives the card placeholder color + within-section sort) — it
@@ -44,7 +44,10 @@ export function loadKobeChecklist(): SeedCard[] {
 
       const year = 1996; // the entire set is the 1996-97 rookie class
 
-      const numMatch = name.match(/#([A-Za-z0-9-]+)/);
+      // The optional ` \d+` tail catches numbers written with a space ("#NB 13",
+      // "#PM 3") without swallowing descriptive suffixes — requiring digits keeps
+      // "#TW3 w/ Alex English" → TW3 and "#31 Row 2" → 31.
+      const numMatch = name.match(/#([A-Za-z0-9-]+(?: \d+)?)/);
       const card_number = numMatch ? numMatch[1] : undefined;
 
       const runMatch = serial.match(/\/(\d+)/);

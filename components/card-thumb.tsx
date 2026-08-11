@@ -28,7 +28,17 @@ function foilVars(seed: string): React.CSSProperties {
 
 // Renders the card's external image when available; falls back to a styled,
 // tier-colored placeholder (year/set/number) if absent or if the URL fails.
-export function CardThumb({ card, className }: { card: ThumbCard; className?: string }) {
+// `placeholderArt` (a local asset path) puts legend art behind that placeholder —
+// used where a card has no verified image and a wrong one would be worse than none.
+export function CardThumb({
+  card,
+  className,
+  placeholderArt,
+}: {
+  card: ThumbCard;
+  className?: string;
+  placeholderArt?: string | null;
+}) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const c = TIER_COLORS[card.tier_id] ?? TIER_COLORS[4];
@@ -65,13 +75,39 @@ export function CardThumb({ card, className }: { card: ThumbCard; className?: st
         </>
       ) : (
         <>
-          <div className={cn("font-sans text-[9px] uppercase tracking-wide", c.text)}>
+          {placeholderArt && (
+            <>
+              <Image
+                src={placeholderArt}
+                alt=""
+                fill
+                sizes="(max-width: 768px) 25vw, 12vw"
+                className="pointer-events-none object-contain object-center p-4 opacity-70 mix-blend-luminosity"
+                aria-hidden="true"
+                unoptimized
+              />
+              {/* scrim so the card name stays readable over the art */}
+              <span
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/70 to-transparent"
+                aria-hidden="true"
+              />
+            </>
+          )}
+          <div className={cn("relative font-sans text-[9px] uppercase tracking-wide", c.text)}>
             {card.year ?? ""}
           </div>
-          <div className="space-y-0.5">
-            <div className="line-clamp-3 text-xs font-medium leading-tight">{card.name}</div>
-            {card.sets?.name && <div className="text-[10px] text-muted">{card.sets.name}</div>}
-            {card.card_number && <div className="font-data text-xs text-muted">#{card.card_number}</div>}
+          <div className="relative space-y-0.5">
+            <div className={cn("line-clamp-3 text-xs font-medium leading-tight", placeholderArt && "text-white")}>
+              {card.name}
+            </div>
+            {card.sets?.name && (
+              <div className={cn("text-[10px]", placeholderArt ? "text-white/70" : "text-muted")}>{card.sets.name}</div>
+            )}
+            {card.card_number && (
+              <div className={cn("font-data text-xs", placeholderArt ? "text-white/70" : "text-muted")}>
+                #{card.card_number}
+              </div>
+            )}
           </div>
         </>
       )}

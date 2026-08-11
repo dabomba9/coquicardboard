@@ -60,12 +60,15 @@ export function HierarchyExplorer({
   signedIn,
   defaultGroupBy = "tier",
   storageKey = "mj.hierarchy.view",
+  placeholderArt,
 }: {
   cards: ExplorerCard[];
   tiers: TierMeta[];
   signedIn: boolean;
   defaultGroupBy?: GroupKey;
   storageKey?: string;
+  // Legend art shown behind the placeholder for cards with no verified image.
+  placeholderArt?: string;
 }) {
   // Catalogs without rarity tiers (e.g. Kobe's brand-grouped Mamba Origins) pass an
   // empty `tiers` array — hide the tier chips/column/option so the UI reads cleanly.
@@ -360,6 +363,7 @@ export function HierarchyExplorer({
                           image_url: card.image_url,
                           sets: card.set_name ? { name: card.set_name } : null,
                         }}
+                        placeholderArt={placeholderArt}
                         className={cn(
                           "transition-transform group-hover:-translate-y-1",
                           owned && "border-[var(--gold)]",

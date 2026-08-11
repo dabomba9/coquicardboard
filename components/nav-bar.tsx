@@ -23,6 +23,7 @@ const GROUPS: Group[] = [
   ] },
   { label: "Kobe", items: [
     { href: "/mamba-hierarchy", label: "Mamba Hierarchy" },
+    { href: "/kobe-hierarchy", label: "Mamba Origins" },
     { href: "/kobe-vault", label: "Kobe Vault" },
   ] },
 ];
