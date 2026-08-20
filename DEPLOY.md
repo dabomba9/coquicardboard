@@ -100,6 +100,35 @@ Then publish to cloud with the `migrate-images-to-cloud.ts` step above — optio
 2. At your registrar, set the records Vercel shows (apex `A 76.76.21.21` + `www` CNAME `cname.vercel-dns.com`), or switch to Vercel nameservers.
 3. Wait for DNS + automatic SSL. Done — the site is live, with the MJ Hierarchy at `/mj-hierarchy`.
 
+**The apex is canonical.** `www` exists only as a redirect source: `next.config.ts` 308s
+`www.<host>` → apex for every path, derived from `NEXT_PUBLIC_SITE_URL`. Before that rule both
+hostnames served 200 with identical content, so search engines crawled the site twice. Nothing else
+should ever link to `www`.
+
+## 6. Google Search Console
+**Verification is already done, via a DNS TXT record — not the meta tag.** `dig +short
+coquicardboard.com TXT` shows a `google-site-verification=…` entry. That's the **Domain property**
+method, which covers the apex, `www`, every subdomain, and both http and https. Don't look for a
+`<meta name="google-site-verification">` in the HTML and conclude verification is broken; there
+isn't one and there doesn't need to be.
+
+1. Confirm at [search.google.com/search-console](https://search.google.com/search-console) — a
+   **Domain** property for `coquicardboard.com`. If it's missing, re-add it with the DNS TXT method;
+   the record is already in place at the registrar, so it verifies immediately.
+2. **Submit the sitemap.** Under **Sitemaps**, enter `sitemap.xml`. This is a separate step from
+   verification — verifying proves ownership, it does not tell Google where the sitemap is.
+   `robots.txt` advertises it as a passive hint, but submission is what produces the coverage report.
+3. What to watch afterwards:
+   - **Sitemaps** should report roughly **6,000** discovered URLs, not ~25,000. The sitemap only
+     lists cards with an image or a real price (`getIndexableCardSlugs` in `lib/queries.ts`); the
+     other ~19,000 render a name over a placeholder and carry `robots: noindex, follow`.
+   - **Pages** → "Crawled – currently not indexed" should fall as those thin URLs leave the index.
+
+`NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` is an optional *second* method (an HTML-tag property), wired
+in `app/layout.tsx` via `metadata.verification.google`. It's unset and that's fine while the DNS
+record stands. If you ever do set it: **`NEXT_PUBLIC_*` values are inlined at build time, so setting
+it in Vercel does nothing until you redeploy.** That's the trap most likely to cost you an hour.
+
 ## Notes
 - Market values are **real eBay** prices only (asking until Marketplace Insights/sold is approved); cards without a comp show "No recent sales yet."
 - Card images are self-hosted in the `card-images` Storage bucket; provenance is in `image_source`.
