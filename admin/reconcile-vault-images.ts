@@ -34,9 +34,9 @@ const force = process.argv.includes("--force");
 const positional = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const CATALOG = positional[0] ?? "mj-vault";
 const IMAGE_SOURCE = positional[1] ?? "jordan-vault";
-let url: string, serviceKey: string, host: string;
+let url: string, serviceKey: string, host: string, isLocal: boolean;
 try {
-  ({ url, serviceKey, host } = resolveTarget({ cloud }));
+  ({ url, serviceKey, host, isLocal } = resolveTarget({ cloud }));
 } catch (e) {
   console.error((e as Error).message);
   process.exit(1);
@@ -75,7 +75,7 @@ type Row = {
 };
 
 async function main() {
-  console.log(`Reconciling ${CATALOG} images against the '${BUCKET}' bucket — target: ${host}${cloud ? " (CLOUD)" : " (local)"}`);
+  console.log(`Reconciling ${CATALOG} images against the '${BUCKET}' bucket — target: ${host}${isLocal ? " (local)" : " (REMOTE)"}`);
   const { fronts, backs } = await loadPresentIds();
   console.log(`Bucket has ${fronts.size} front + ${backs.size} back images.`);
 

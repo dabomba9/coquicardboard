@@ -7,7 +7,10 @@
  * are unit-tested rather than re-derived in each script.
  */
 
-export type Target = { url: string; serviceKey: string; host: string };
+// `isLocal` is derived from the resolved HOST, not from the --cloud flag: these
+// scripts can also be pointed at production by env-prefixing the command, and a
+// banner that reads "(local)" while writing to prod is worse than no banner.
+export type Target = { url: string; serviceKey: string; host: string; isLocal: boolean };
 
 /**
  * Pick the Supabase target for an admin script.
@@ -31,7 +34,8 @@ export function resolveTarget(
   if (!url || !serviceKey) {
     throw new Error("Missing Supabase URL or service-role key in .env.local");
   }
-  return { url, serviceKey, host: new URL(url).host };
+  const host = new URL(url).host;
+  return { url, serviceKey, host, isLocal: /^(127\.0\.0\.1|localhost|\[::1\])(:|$)/.test(host) };
 }
 
 /** Fraction of existing image links a reconcile may clear before it looks like a mistake. */

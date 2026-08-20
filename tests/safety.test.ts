@@ -33,6 +33,17 @@ describe("resolveTarget", () => {
       .toThrow(/Refusing to fall back to local/);
   });
 
+  // The banner these scripts print is driven by this flag, not by --cloud: they can
+  // also be aimed at prod by env-prefixing, and "(local)" over a prod write is worse
+  // than no banner at all.
+  it("marks the target local or remote from the resolved host", () => {
+    expect(resolveTarget({ cloud: false }, BOTH).isLocal).toBe(true);
+    expect(resolveTarget({ cloud: true }, BOTH).isLocal).toBe(false);
+    // env-prefixed at a cloud host without --cloud must still read as remote
+    const prefixed = { ...BOTH, NEXT_PUBLIC_SUPABASE_URL: "https://abc123.supabase.co" };
+    expect(resolveTarget({ cloud: false }, prefixed).isLocal).toBe(false);
+  });
+
   it("errors when local config is absent too", () => {
     expect(() => resolveTarget({ cloud: false }, {})).toThrow(/Missing Supabase URL/);
   });

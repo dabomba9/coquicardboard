@@ -47,7 +47,7 @@ async function doomed(table: string, keep: string[]): Promise<number> {
 }
 
 async function main() {
-  console.log(`Purging fabricated prices — target: ${new URL(url!).host}${cloud ? " (CLOUD)" : " (local)"}`);
+  console.log(`Purging fabricated prices — target: ${new URL(url!).host}${/^(127\.0\.0\.1|localhost)/.test(new URL(url!).host) ? " (local)" : " (REMOTE)"}`);
   console.log(`  before → card_prices ${await count("card_prices")}, price_history ${await count("price_history")}`);
   console.log(`  to delete → card_prices ${await doomed("card_prices", KEEP_PRICES)}, price_history ${await doomed("price_history", KEEP_HISTORY)}`);
 
