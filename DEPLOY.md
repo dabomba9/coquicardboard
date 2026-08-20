@@ -26,9 +26,11 @@ npm run prices:purge-fake # safety net: removes any non-eBay (fabricated) price 
 ```
 **Pricing is REAL eBay data only** — no estimated/placeholder values. The app surfaces a price only when it has an
 `ebay (sold)`/`ebay (asking)` row; otherwise it shows "No recent sales yet." Source precedence: `ebay (sold)` >
-`ebay (asking)`. Sold comps require eBay's **Marketplace Insights API** — apply on your Production keyset at
-developer.ebay.com; until approved the cron uses asking prices. The nightly cron grows coverage automatically
-(raise `PRICE_REFRESH_BATCH` on Vercel Pro).
+`ebay (asking)`. Sold comps require eBay's **Marketplace Insights API**, which as of Aug 2026 is a Limited Release
+that eBay's docs describe as restricted and *not open to new users* — it is granted to major partners, and this app is
+not approved (`npm run ebay:check` reports the current status). So `prices:sold` is a no-op today and everything
+surfaces as `ebay (asking)`; the code works the moment access is ever granted. The nightly cron grows coverage
+automatically (raise `PRICE_REFRESH_BATCH` on Vercel Pro).
 Images — choose one:
 - **Preserve current images (recommended):** keep your *local* Supabase running and run
   ```bash
@@ -37,19 +39,36 @@ Images — choose one:
   (copies the vision-verified images from local Storage → cloud, matched by slug).
 - **Or re-fetch fresh on cloud:** `npm run fetch:images` (simpler; re-picks images).
 
+Re-running a seed is safe for images: `seed-catalog.ts` / `seed-vault.ts` carry existing
+`image_url`/`image_source` (and `backImage`) forward rather than nulling them, and report how many
+they kept. `fetch:images --force` likewise skips vision/manually-verified picks unless you pass
+`--include-verified`.
+
 ### Jordan Vault (the 12k-card `/vault` section)
-The 12,114 vault cards live in the shared `cards` table (`catalog='mj-vault'`, added by migration `0006`); their
-images live in the **`vault-images`** Storage bucket (migration `0005`) — **not** in the repo (`public/vault/` is
-git-ignored). With the same temporary cloud-pointing `.env.local` as above:
+The 12,114 vault cards live in the shared `cards` table (`catalog='mj-vault'`, added by migration `0006`).
+
+> **Local and cloud store vault images differently — this trips people up.**
+> **Local:** `vault-images` bucket, keyed by tcdb id — `vault-images/{vault_id}-front.jpg`.
+> **Cloud:** `card-images` bucket, keyed by card UUID — `card-images/{card_uuid}.jpg`, put there by
+> `migrate-images-to-cloud.ts`. The cloud `vault-images` bucket is **empty**.
+> So `reconcile-vault-images.ts` is a **local-only** tool: it rebuilds `image_url` from the
+> `vault-images` bucket, and against cloud it would find nothing and clear every vault link. It now
+> refuses to do that (see `admin/safety.ts`), but don't reach for it on cloud — use
+> `migrate-images-to-cloud.ts`.
+
+Work locally (`public/vault/` is git-ignored, so the jpgs are not in the repo):
 ```bash
-npx tsx admin/seed-vault.ts               # loads data/vault.json → cards (catalog='mj-vault'); image links left null
-npx tsx jordan-vault/upload-images.ts     # uploads public/vault/*.jpg → vault-images (idempotent/resumable)
-npx tsx admin/reconcile-vault-images.ts   # points image_url/backImage only at images that exist in the bucket
+npx tsx admin/seed-vault.ts               # data/vault.json → cards (catalog='mj-vault')
+npx tsx jordan-vault/upload-images.ts     # public/vault/*.jpg → vault-images (idempotent/resumable)
+npx tsx admin/reconcile-vault-images.ts   # LOCAL: links image_url/backImage to what's in the bucket
 ```
-Run `reconcile-vault-images.ts` after every upload batch — it's what populates the image links (the seed leaves them
-null so no card ever points at a missing 404 image). Cards without an uploaded image fall back to a placeholder, so a
-partial image set is fine. (Locally,
-`jordan-vault/auto-resume.sh` downloads + uploads automatically against whatever `.env.local` points at.)
+Run `reconcile-vault-images.ts` after every upload batch — it's what populates the image links (a first
+seed leaves them null so no card points at a missing 404 image). Cards without an uploaded image fall
+back to a placeholder, so a partial image set is fine. (`jordan-vault/auto-resume.sh` downloads +
+uploads automatically against whatever `.env.local` points at.)
+
+Then publish to cloud with the `migrate-images-to-cloud.ts` step above — optionally scoped, e.g.
+`MIGRATE_CATALOGS=mj-vault`.
 
 ## 3. Auth (Supabase → Authentication)
 - **URL Configuration:** Site URL `https://coquicardboard.com`; add redirect `https://coquicardboard.com/callback` (and your Vercel preview URL if used).

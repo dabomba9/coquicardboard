@@ -41,8 +41,10 @@ redirect URL to `http://localhost:3000/callback`.
 
 ### 4. Seed the catalog
 ```bash
-npm run seed     # idempotent; upserts tiers, sets, the card catalog, sample prices
+npm run seed     # idempotent; upserts tiers, sets, the card catalog
 ```
+Re-running is safe: existing `image_url`/`image_source` are carried forward, not cleared, and the
+seed writes no prices (those come from the eBay scripts only).
 
 ### 5. Run
 ```bash
@@ -73,9 +75,13 @@ listing ends. Provider is set by `IMAGE_SEARCH_PROVIDER`:
 Bulk-fill:
 ```bash
 npm run fetch:images            # cards missing an image
-npm run fetch:images -- --force # refetch all 378
+npm run fetch:images -- --force # refetch all — skips vision/manually-verified picks
+npm run fetch:images -- --force --include-verified # ...and overwrite those too (destructive)
 npm run fetch:images -- --limit 20
 ```
+`--force` re-picks images from a search guess, so it would otherwise undo the vision-audit work
+(`image_source` "verified (vision)" / "verified (manual)"); those rows are skipped and counted unless
+you opt in with `--include-verified`.
 Or use **Admin → Image Manager** (`/admin/images`): per-card **Fetch image**, or
 **Auto-fetch missing (visible)** for the filtered set. Bad matches are fixable by
 pasting a URL (the paste path stores the URL directly).

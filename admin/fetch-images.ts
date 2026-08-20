@@ -18,6 +18,7 @@ import { downloadAndStore } from "../lib/image-store";
 config({ path: ".env.local" });
 
 const force = process.argv.includes("--force");
+const includeVerified = process.argv.includes("--include-verified");
 const limitArg = process.argv.indexOf("--limit");
 const limit = limitArg !== -1 ? parseInt(process.argv[limitArg + 1], 10) : undefined;
 const catalogArg = process.argv.indexOf("--catalog");
@@ -35,14 +36,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
   console.log(`Image provider: ${activeProvider()}${catalog ? ` · catalog: ${catalog}` : ""}`);
-  let q = db.from("cards").select("id, name, image_url, catalog").order("tier_id").order("rarity_rank");
+  let q = db.from("cards").select("id, name, image_url, image_source, catalog").order("tier_id").order("rarity_rank");
   if (catalog) q = q.eq("catalog", catalog);
   if (!force) q = q.is("image_url", null);
   const { data: cards, error } = await q;
   if (error) throw error;
 
-  const todo = (limit ? cards!.slice(0, limit) : cards!) ?? [];
+  // --force refetches rows that already have an image, which would replace the
+  // hand/vision-audited picks (image_source "verified (vision)" / "verified
+  // (manual)") with a fresh search guess. Those are the expensive ones to
+  // recreate, so skip them unless explicitly included.
+  let candidates = cards ?? [];
+  let skippedVerified = 0;
+  if (force && !includeVerified) {
+    const before = candidates.length;
+    candidates = candidates.filter((c) => !(c.image_source ?? "").includes("verified"));
+    skippedVerified = before - candidates.length;
+  }
+
+  const todo = limit ? candidates.slice(0, limit) : candidates;
   console.log(`Fetching images for ${todo.length} card(s)${force ? " (force)" : " (missing only)"}…`);
+  if (skippedVerified) console.log(`  (skipping ${skippedVerified} vision/manually-verified image(s); pass --include-verified to overwrite them)`);
 
   let ok = 0, miss = 0, fail = 0;
   for (const card of todo) {

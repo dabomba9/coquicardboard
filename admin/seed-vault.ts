@@ -44,7 +44,21 @@ async function main() {
   );
   console.log(`Seeding ${cards.length} vault cards into cards (catalog='${CATALOG}', from ${INPUT})…`);
 
-  const rows = cards.map((c, i) => ({
+  // Images are never derived from the JSON (see the note below), so on a re-seed a
+  // plain upsert would null out every link reconcile/migrate had populated. Carry
+  // the stored image_url/image_source/backImage forward instead.
+  const { data: existing, error: exErr } = await db
+    .from("cards").select("slug, image_url, image_source, attributes").eq("catalog", CATALOG);
+  if (exErr) throw exErr;
+  const prevBySlug = new Map((existing ?? []).map((r) => [r.slug, r]));
+  let preserved = 0;
+
+  const rows = cards.map((c, i) => {
+  const slug = `${SLUG_PREFIX}${c.id}-${c.slug ?? "card"}`;
+  const prev = prevBySlug.get(slug);
+  const prevAttrs = (prev?.attributes ?? {}) as Record<string, unknown>;
+  if (prev?.image_url) preserved++;
+  return {
     // Vault catalog, no tier; slug prefixed so it never collides with other
     // catalogs (MJ vault 'v', Kobe vault 'kv', hierarchies are unprefixed/'kobe').
     catalog: CATALOG,
@@ -55,24 +69,26 @@ async function main() {
     year: c.year ?? null,
     rarity_rank: i,
     catalog_value_cents: null,
-    // Image links are intentionally left null at seed time: tcdb's hasFront/hasBack
-    // only mean the image *existed upstream*, not that we've fetched + uploaded it.
-    // Run upload-images.ts then admin/reconcile-vault-images.ts to populate these
-    // from what's actually in the vault-images bucket (avoids broken 404 links).
-    image_url: null,
-    image_source: null,
+    // Image links are never derived from the JSON: tcdb's hasFront/hasBack only
+    // mean the image *existed upstream*, not that we've fetched + uploaded it. A
+    // first seed leaves them null (avoids broken 404 links); run upload-images.ts
+    // then admin/reconcile-vault-images.ts to populate them from the bucket. On a
+    // RE-seed we keep whatever is already stored rather than clearing it.
+    image_url: prev?.image_url ?? null,
+    image_source: prev?.image_source ?? null,
     attributes: {
       manufacturer: c.manufacturer ?? null,
       brand: c.brand ?? null,
       cardType: c.cardType ?? null,
       page: c.page ?? null,
       row: c.row ?? null,
-      backImage: null,
+      backImage: prevAttrs.backImage ?? null,
       psaPopReport: c.psaPopReport ?? null,
       vault_id: c.id,
     },
-    slug: `${SLUG_PREFIX}${c.id}-${c.slug ?? "card"}`,
-  }));
+    slug,
+  };
+  });
 
   let done = 0;
   for (let i = 0; i < rows.length; i += 200) {
@@ -83,7 +99,7 @@ async function main() {
     process.stdout.write(`\r  ${done}/${rows.length}`);
   }
   process.stdout.write("\n");
-  console.log("Vault seed complete.");
+  console.log(`Vault seed complete.${preserved ? ` Kept ${preserved} existing image link${preserved === 1 ? "" : "s"}.` : ""}`);
 }
 
 main().catch((e) => { console.error("\nseed-vault failed:", e); process.exit(1); });

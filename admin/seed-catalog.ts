@@ -84,33 +84,50 @@ async function main() {
   console.log(`✓ sets: ${setRows.length}`);
 
   // 3. Cards ---------------------------------------------------------------
-  const cardRows = cards.map((c: SeedCard, i: number) => ({
-    catalog: CATALOG,
-    tier_id: c.tier_id,
-    set_id: setIdBySlug.get(slugify(c.setName)) ?? null,
-    name: c.name,
-    card_number: c.card_number ?? null,
-    year: c.year,
-    is_rookie: c.is_rookie ?? false,
-    is_insert: c.is_insert ?? false,
-    is_parallel: c.is_parallel ?? false,
-    print_run: c.print_run ?? null,
-    serial_numbered: c.serial_numbered ?? false,
-    pack_odds: c.pack_odds ?? null,
-    catalog_value_cents: c.catalog_value_cents ?? null,
-    rarity_rank: i,
-    attributes: { ...(c.attributes ?? {}), placeholder: c.is_placeholder ?? false },
-    image_url: c.image_url ?? null,
-    image_source: c.image_source ?? null,
-    slug: cardSlug(c, i, slugPrefix),
-  }));
+  // The checklist carries no images, so a plain upsert would write image_url=null
+  // over every link the image pipeline built — re-seeding to pick up a checklist
+  // change used to wipe the whole catalog's images. Carry the stored values
+  // forward so the seed is idempotent for images, as the docs claim.
+  const { data: existing, error: exErr } = await db
+    .from("cards").select("slug, image_url, image_source").eq("catalog", CATALOG);
+  if (exErr) throw exErr;
+  const imageBySlug = new Map((existing ?? []).map((r) => [r.slug, r]));
+  let preserved = 0;
+
+  const cardRows = cards.map((c: SeedCard, i: number) => {
+    const slug = cardSlug(c, i, slugPrefix);
+    const prev = imageBySlug.get(slug);
+    const image_url = c.image_url ?? prev?.image_url ?? null;
+    const image_source = c.image_source ?? prev?.image_source ?? null;
+    if (!c.image_url && prev?.image_url) preserved++;
+    return {
+      catalog: CATALOG,
+      tier_id: c.tier_id,
+      set_id: setIdBySlug.get(slugify(c.setName)) ?? null,
+      name: c.name,
+      card_number: c.card_number ?? null,
+      year: c.year,
+      is_rookie: c.is_rookie ?? false,
+      is_insert: c.is_insert ?? false,
+      is_parallel: c.is_parallel ?? false,
+      print_run: c.print_run ?? null,
+      serial_numbered: c.serial_numbered ?? false,
+      pack_odds: c.pack_odds ?? null,
+      catalog_value_cents: c.catalog_value_cents ?? null,
+      rarity_rank: i,
+      attributes: { ...(c.attributes ?? {}), placeholder: c.is_placeholder ?? false },
+      image_url,
+      image_source,
+      slug,
+    };
+  });
   {
     // chunk to keep payloads reasonable
     for (let i = 0; i < cardRows.length; i += 200) {
       const { error } = await db.from("cards").upsert(cardRows.slice(i, i + 200), { onConflict: "slug" });
       if (error) throw error;
     }
-    console.log(`✓ cards: ${cardRows.length}`);
+    console.log(`✓ cards: ${cardRows.length}${preserved ? ` (kept ${preserved} existing image link${preserved === 1 ? "" : "s"})` : ""}`);
   }
 
   // Prices come ONLY from real eBay data (admin/fetch-ebay-*.ts + the nightly cron) —
