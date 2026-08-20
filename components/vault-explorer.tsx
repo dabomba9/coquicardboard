@@ -33,9 +33,11 @@ type Props = {
   page: number;
   signedIn: boolean;
   ownedCount: number;
+  // Legend art shown behind the placeholder for cards with no verified image.
+  placeholderArt?: string;
 };
 
-export function VaultExplorer({ tiles, params, options, facets, total, pages, page, signedIn, ownedCount }: Props) {
+export function VaultExplorer({ tiles, params, options, facets, total, pages, page, signedIn, ownedCount, placeholderArt }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -181,6 +183,7 @@ export function VaultExplorer({ tiles, params, options, facets, total, pages, pa
                       image_url: c.frontImage,
                       sets: c.manufacturer ? { name: c.manufacturer } : null,
                     }}
+                    placeholderArt={placeholderArt}
                     className="transition-transform group-hover:-translate-y-1"
                   />
                   {owned && (

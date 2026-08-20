@@ -77,14 +77,19 @@ export function CardThumb({
         <>
           {placeholderArt && (
             <>
+              {/* No mix-blend-luminosity here: that takes its hue from the backdrop,
+                  and the vaults hardcode tier_id 4, so every sprite came out a flat
+                  green ghost against the tier-4 background. Plain opacity keeps each
+                  legend in its own team colors. Optimized (not `unoptimized` like the
+                  remote card images) since this is a local asset — Next serves it as
+                  a ~26KB webp instead of shipping Clemente's 875KB png. */}
               <Image
                 src={placeholderArt}
                 alt=""
                 fill
                 sizes="(max-width: 768px) 25vw, 12vw"
-                className="pointer-events-none object-contain object-center p-4 opacity-70 mix-blend-luminosity"
+                className="pointer-events-none object-contain object-center p-4 opacity-80"
                 aria-hidden="true"
-                unoptimized
               />
               {/* scrim so the card name stays readable over the art */}
               <span

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getHierarchyCatalog, getMyHoldings, getCatalogValueMapCached } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { HierarchyExplorer, type ExplorerCard } from "@/components/hierarchy-explorer";
+import { legendArtForCatalog } from "@/lib/legends";
 import { Coqui } from "@/components/mascot/coqui";
 import { MAMBA_TIERS } from "@/data/mamba-hierarchy";
 
@@ -80,6 +81,7 @@ export default async function MambaHierarchyPage() {
           tiers={tiers}
           signedIn={!!user}
           storageKey="mamba.hierarchy.view"
+          placeholderArt={legendArtForCatalog("mamba-hierarchy")}
         />
       </div>
     </div>

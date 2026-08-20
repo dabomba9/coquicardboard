@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTiersCached, getHierarchyCatalog, getMyHoldings, getCatalogValueMapCached } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { HierarchyExplorer, type ExplorerCard } from "@/components/hierarchy-explorer";
+import { legendArtForCatalog } from "@/lib/legends";
 import { Coqui } from "@/components/mascot/coqui";
 
 export const metadata: Metadata = {
@@ -72,6 +73,7 @@ export default async function HierarchyPage() {
           cards={explorerCards}
           tiers={tiers.map((t) => ({ id: t.id, name: t.name, card_count: t.card_count }))}
           signedIn={!!user}
+          placeholderArt={legendArtForCatalog("mj-hierarchy")}
         />
       </div>
     </div>

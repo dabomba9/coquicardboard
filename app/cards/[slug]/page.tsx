@@ -5,6 +5,7 @@ import { getCardBySlugCached, getCardPricesCached, getMyWantCardIds, getPriceHis
 import { priceStats } from "@/lib/card-stats";
 import { ebaySearchUrl, ebaySoldUrl, sportsCardsProUrl, outboundRel } from "@/lib/affiliate";
 import { isRealPriceSource } from "@/lib/prices";
+import { legendArtForCatalog } from "@/lib/legends";
 import { JsonLd } from "@/components/json-ld";
 import { productJsonLd, breadcrumbJsonLd } from "@/lib/structured-data";
 import { MAMBA_TIERS } from "@/data/mamba-hierarchy";
@@ -114,6 +115,9 @@ export default async function CardDetailPage({
   };
 
   const player = isKobeVault || isMamba || isKobe ? "Kobe Bryant" : isClementeVault ? "Roberto Clemente" : isKillebrewVault ? "Harmon Killebrew" : "Michael Jordan";
+  // Stand-in art for cards with no verified image. Related cards share this card's
+  // catalog (same set or same vault), so one lookup covers all three thumbs.
+  const legendArt = legendArtForCatalog(card.catalog);
   const q = encodeURIComponent(`${card.name} ${player}`);
   const ebayUrl = ebaySearchUrl(`${card.name} ${player}`, card.slug);
   const ebaySold = ebaySoldUrl(`${card.name} ${player}`, card.slug);
@@ -144,14 +148,14 @@ export default async function CardDetailPage({
         <div className="space-y-3">
           <div className={cn("relative overflow-hidden rounded-md border border-border/50 bg-card p-1", foilClass)} style={tierStyle}>
             <CardLightbox imageUrl={card.image_url} alt={card.name}>
-              <CardThumb card={card} className="w-full !border-0 !shadow-none" />
+              <CardThumb card={card} placeholderArt={legendArt} className="w-full !border-0 !shadow-none" />
             </CardLightbox>
           </div>
           {backImage && (
             <div>
               <div className="relative overflow-hidden rounded-md border border-border/50 bg-card p-1">
                 <CardLightbox imageUrl={backImage} alt={`${card.name} (back)`}>
-                  <CardThumb card={{ ...card, image_url: backImage }} className="w-full !border-0 !shadow-none" />
+                  <CardThumb card={{ ...card, image_url: backImage }} placeholderArt={legendArt} className="w-full !border-0 !shadow-none" />
                 </CardLightbox>
               </div>
               <p className="mt-1 text-[10px] uppercase tracking-wide text-muted">Back</p>
@@ -316,7 +320,7 @@ export default async function CardDetailPage({
           <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-6">
             {related.map((r) => (
               <Link key={r.id} href={`/cards/${r.slug}`} className="group">
-                <CardThumb card={r} className="transition-transform group-hover:-translate-y-1" />
+                <CardThumb card={r} placeholderArt={legendArt} className="transition-transform group-hover:-translate-y-1" />
               </Link>
             ))}
           </div>

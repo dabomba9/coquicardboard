@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getVaultCatalog, getMyHoldings } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { VaultExplorer, type VaultTile } from "@/components/vault-explorer";
+import { legendArtForCatalog } from "@/lib/legends";
 import {
   parseVaultParams,
   vaultFilterOptions,
@@ -70,6 +71,7 @@ export default async function KobeVaultPage({
         page={page}
         signedIn={!!user}
         ownedCount={ownedCount}
+        placeholderArt={legendArtForCatalog("kobe-vault")}
       />
     </div>
   );

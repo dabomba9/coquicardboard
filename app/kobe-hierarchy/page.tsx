@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getHierarchyCatalog, getMyHoldings, getCatalogValueMapCached } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { HierarchyExplorer, type ExplorerCard } from "@/components/hierarchy-explorer";
+import { legendArtForCatalog } from "@/lib/legends";
 import { Coqui } from "@/components/mascot/coqui";
 
 export const metadata: Metadata = {
@@ -76,7 +77,7 @@ export default async function KobeHierarchyPage() {
           storageKey="kobe.hierarchy.view"
           // Cards whose image couldn't be verified show the hero Kobe rather than a
           // wrong card — see the image audit in admin/verify-images.ts.
-          placeholderArt="/legends/bryant.png"
+          placeholderArt={legendArtForCatalog("kobe-hierarchy")}
         />
       </div>
     </div>
