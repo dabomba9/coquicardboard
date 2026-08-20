@@ -157,6 +157,24 @@ export function getIndexableCardSlugs(): Promise<IndexableCard[]> {
   )();
 }
 
+// Row counts for a catalog, for the OG share cards. Deliberately two `head: true`
+// counts rather than reusing getVaultCatalog — that pulls ~6.5MB of rows into
+// memory, which would be absurd work for a social image.
+export function getCatalogCounts(catalog: string): Promise<{ total: number; withImage: number }> {
+  return unstable_cache(
+    async (): Promise<{ total: number; withImage: number }> => {
+      const db = createAdminClient();
+      const [{ count: total }, { count: withImage }] = await Promise.all([
+        db.from("cards").select("*", { count: "exact", head: true }).eq("catalog", catalog),
+        db.from("cards").select("*", { count: "exact", head: true }).eq("catalog", catalog).not("image_url", "is", null),
+      ]);
+      return { total: total ?? 0, withImage: withImage ?? 0 };
+    },
+    ["catalog-counts", catalog],
+    { revalidate: 86400, tags: ["catalog", `catalog:${catalog}`] }
+  )();
+}
+
 export function getVaultSlugs(catalog = "mj-vault"): Promise<string[]> {
   return unstable_cache(
     async (): Promise<string[]> => {

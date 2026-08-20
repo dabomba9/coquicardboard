@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getPublicCollection } from "@/lib/queries";
@@ -5,6 +6,36 @@ import { Badge, Panel } from "@/components/ui/primitives";
 import { cn, gradeLabel, TIER_COLORS } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+// This was the only public route with no metadata at all, so a shared profile link
+// unfurled with the generic site title and had no canonical. The RPC returns null
+// for profiles that aren't public, so anything reaching here is genuinely shareable.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+  const { username } = await params;
+  const data = await getPublicCollection(username);
+  if (!data) return {};
+
+  const name = data.profile?.display_name || data.profile?.username || username;
+  const owned = data.tiers.reduce((s, t) => s + t.owned_cards, 0);
+  const total = data.tiers.reduce((s, t) => s + t.total_cards, 0);
+  const description = owned
+    ? `${name}'s card collection on Coqui Cardboard — ${owned} of ${total} hierarchy cards owned.`
+    : `${name}'s collector profile on Coqui Cardboard.`;
+
+  return {
+    title: `${name} — collection`,
+    description,
+    alternates: { canonical: `/u/${username}` },
+    // An empty profile is the same thin-content problem the placeholder card pages
+    // had; no reason to advertise it. `follow` so crawlers still traverse out.
+    ...(owned === 0 ? { robots: { index: false, follow: true } } : {}),
+    openGraph: { title: `${name} · Coqui Cardboard`, description, url: `/u/${username}`, type: "profile" },
+  };
+}
 
 export default async function PublicProfilePage({
   params,
