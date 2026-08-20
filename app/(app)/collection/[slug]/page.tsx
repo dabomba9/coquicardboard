@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCardBySlug, getMyHoldingsForCard, getCardPrices } from "@/lib/queries";
+import { isRealPriceSource } from "@/lib/prices";
 import { CardThumb } from "@/components/card-thumb";
 import { HoldingsManager } from "@/components/holdings-manager";
 import { Panel } from "@/components/ui/primitives";
@@ -17,10 +18,14 @@ export default async function ManageCardPage({
   const card = await getCardBySlug(slug);
   if (!card) notFound();
 
-  const [holdings, prices] = await Promise.all([
+  const [holdings, allPrices] = await Promise.all([
     getMyHoldingsForCard(card.id),
     getCardPrices(card.id),
   ]);
+  // Only REAL marketplace prices, same rule as the public card page. Without this
+  // the old fabricated rows rendered here as genuine figures (one card carried a
+  // "PSA10 $5,783,321.77"), and 'none' sentinels rendered as a bare "grade —".
+  const prices = allPrices.filter((p) => p.median_cents != null && isRealPriceSource(p.source));
   const c = TIER_COLORS[card.tier_id] ?? TIER_COLORS[4];
 
   return (

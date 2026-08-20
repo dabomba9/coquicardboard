@@ -138,7 +138,11 @@ export const getCardBySlugCached = unstable_cache(
 
 export const getCardPricesCached = unstable_cache(
   async (cardId: string): Promise<CardPrice[]> => {
-    const { data } = await createAdminClient().from("card_prices").select("*").eq("card_id", cardId);
+    const { data } = await createAdminClient()
+      .from("card_prices")
+      .select("*")
+      .eq("card_id", cardId)
+      .like("source", "ebay%"); // real marketplace prices only
     return (data as CardPrice[]) ?? [];
   },
   ["card-prices"],
@@ -375,7 +379,11 @@ export async function getCardBySlug(slug: string): Promise<CardWithSet | null> {
 
 export async function getCardPrices(cardId: string): Promise<CardPrice[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("card_prices").select("*").eq("card_id", cardId);
+  const { data } = await supabase
+    .from("card_prices")
+    .select("*")
+    .eq("card_id", cardId)
+    .like("source", "ebay%"); // real marketplace prices only
   return (data as CardPrice[]) ?? [];
 }
 

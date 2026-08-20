@@ -38,7 +38,11 @@ export function PriceChart({ series }: { series: PriceSeries[] }) {
         {latest && (
           <span className="ml-auto text-sm">
             <span className="font-num text-xl">{formatUsd(latest.value)}</span>
-            <span className="ml-2 text-xs text-muted">estimated · as of {fmtMonth(latest.date)}</span>
+            {/* "eBay", not "estimated": getPriceHistoryCached filters the series to
+                source LIKE 'ebay%', so every point plotted here is real marketplace
+                data ('ebay' asking or 'ebay-sold'). The old label was a leftover from
+                when fabricated history rows existed — they're gone now. */}
+            <span className="ml-2 text-xs text-muted">eBay · as of {fmtMonth(latest.date)}</span>
           </span>
         )}
       </div>
