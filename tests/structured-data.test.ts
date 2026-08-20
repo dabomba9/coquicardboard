@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { productJsonLd, breadcrumbJsonLd, websiteJsonLd, articleJsonLd } from "@/lib/structured-data";
+import { productJsonLd, breadcrumbJsonLd, websiteJsonLd, articleJsonLd, collectionJsonLd } from "@/lib/structured-data";
 
 describe("productJsonLd", () => {
   it("emits a Product with AggregateOffer when priced", () => {
@@ -75,5 +75,33 @@ describe("websiteJsonLd / articleJsonLd", () => {
     expect(d["@type"]).toBe("Article");
     expect(d.headline).toBe("T");
     expect(d.datePublished).toBe("2026-06-01");
+  });
+});
+
+describe("collectionJsonLd", () => {
+  const items = [{ name: "Card A", slug: "a" }, { name: "Card B", slug: "b" }];
+
+  it("wraps an ItemList in a CollectionPage", () => {
+    const d = collectionJsonLd({ name: "Jordan Vault", description: "D", path: "/vault", items });
+    expect(d["@type"]).toBe("CollectionPage");
+    expect(d.url).toContain("/vault");
+    const list = d.mainEntity as Record<string, unknown>;
+    expect(list["@type"]).toBe("ItemList");
+    expect(list.numberOfItems).toBe(2);
+  });
+
+  it("numbers positions from 1 and links each card", () => {
+    const d = collectionJsonLd({ name: "V", description: "D", path: "/vault", items });
+    const els = (d.mainEntity as { itemListElement: { position: number; name: string; url: string }[] }).itemListElement;
+    expect(els.map((e) => e.position)).toEqual([1, 2]);
+    expect(els[0].name).toBe("Card A");
+    expect(els[1].url).toContain("/cards/b");
+  });
+
+  it("handles an empty page without inventing entries", () => {
+    const d = collectionJsonLd({ name: "V", description: "D", path: "/vault", items: [] });
+    const list = d.mainEntity as { numberOfItems: number; itemListElement: unknown[] };
+    expect(list.numberOfItems).toBe(0);
+    expect(list.itemListElement).toEqual([]);
   });
 });

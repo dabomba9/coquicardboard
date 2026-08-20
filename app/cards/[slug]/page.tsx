@@ -19,10 +19,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const bits = [card.year ? String(card.year) : null, card.sets?.name ?? manu, card.card_number ? `#${card.card_number}` : null].filter(Boolean);
   const description = `${card.name}${bits.length ? ` — ${bits.join(" · ")}` : ""}. Track market value, grade your copies, and add it to your collection or want list on Coqui Cardboard.`;
   const images = card.image_url ? [card.image_url] : undefined;
+  // A card with neither an image nor a real price shows only its name/year/number
+  // over a placeholder — one of ~19k near-duplicates. Keep those out of the index
+  // (the sitemap already omits them, but the catalog grids still link to them), and
+  // keep `follow` so crawlers pass through to the pages that are worth ranking.
+  const prices = await getCardPricesCached(card.id);
+  const thin = !card.image_url && !prices.some((p) => p.median_cents != null);
   return {
     title: card.name,
     description,
     alternates: { canonical: `/cards/${slug}` },
+    ...(thin ? { robots: { index: false, follow: true } } : {}),
     openGraph: { title: `${card.name} · Coqui Cardboard`, description, url: `/cards/${slug}`, images, type: "website" },
     twitter: { card: images ? "summary_large_image" : "summary", title: card.name, description, images },
   };

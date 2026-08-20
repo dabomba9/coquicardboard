@@ -64,6 +64,35 @@ export function breadcrumbJsonLd(p: { name: string; slug: string; catalog: strin
   };
 }
 
+// A catalog index page as a CollectionPage whose mainEntity is the ItemList of the
+// cards on screen. These are the strongest pages on the site and carried no
+// structured data at all. `items` should be the cards actually rendered — don't
+// list 12k vault rows when the page shows 48.
+export function collectionJsonLd(p: {
+  name: string;
+  description: string;
+  path: string;
+  items: { name: string; slug: string }[];
+}): JsonLdObject {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: p.name,
+    description: p.description,
+    url: `${BASE}${p.path}`,
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: p.items.length,
+      itemListElement: p.items.map((it, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: it.name,
+        url: `${BASE}/cards/${it.slug}`,
+      })),
+    },
+  };
+}
+
 export function websiteJsonLd(): JsonLdObject {
   return {
     "@context": "https://schema.org",

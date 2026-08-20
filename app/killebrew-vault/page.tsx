@@ -3,6 +3,8 @@ import { getVaultCatalog, getMyHoldings } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { VaultExplorer, type VaultTile } from "@/components/vault-explorer";
 import { legendArtForCatalog } from "@/lib/legends";
+import { JsonLd } from "@/components/json-ld";
+import { collectionJsonLd } from "@/lib/structured-data";
 import {
   parseVaultParams,
   vaultFilterOptions,
@@ -55,6 +57,7 @@ export default async function KillebrewVaultPage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
+      <JsonLd data={collectionJsonLd({ name: "Killebrew Vault", description: metadata.description as string, path: "/killebrew-vault", items: tiles.map((t) => ({ name: t.name ?? "", slug: t.slug })) })} />
       <h1 className="font-display text-lg uppercase tracking-tight">Killebrew Vault</h1>
       <p className="mt-1 text-sm text-muted">
         <span className="font-data text-base text-foreground">{catalog.length.toLocaleString()}</span> Harmon Killebrew

@@ -102,6 +102,61 @@ export async function getVaultCatalog(catalog = "mj-vault"): Promise<VaultRow[]>
 // Slim slug list for the sitemap (id+slug only). The full getVaultCatalog (~6.5MB
 // with attributes) exceeds unstable_cache's 2MB ceiling, so the sitemap uses this
 // lightweight cacheable list instead.
+export type IndexableCard = { slug: string; lastModified: string };
+
+// Cards worth submitting to search engines: those with an image OR a real eBay
+// price. The rest render only a name/year/number over a placeholder, and there are
+// ~19k of them — submitting that many near-duplicate thin pages burns crawl budget
+// and drags on the ~6k pages that are actually worth ranking. They stay crawlable
+// (and carry noindex,follow — see app/cards/[slug] generateMetadata); they just
+// aren't advertised.
+//
+// Catalog-agnostic on purpose: the sitemap used to hand-list every catalog, so a
+// new one was silently missing until someone remembered to add it.
+export function getIndexableCardSlugs(): Promise<IndexableCard[]> {
+  return unstable_cache(
+    async (): Promise<IndexableCard[]> => {
+      const db = createAdminClient();
+      const bySlug = new Map<string, string>();
+
+      const PAGE = 1000;
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await db
+          .from("cards")
+          .select("slug, updated_at")
+          .not("image_url", "is", null)
+          .order("slug")
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const rows = (data as { slug: string; updated_at: string }[]) ?? [];
+        for (const r of rows) bySlug.set(r.slug, r.updated_at);
+        if (rows.length < PAGE) break;
+      }
+
+      // Priced-but-imageless cards still have something to say, so include them.
+      const { data: priced, error: pErr } = await db
+        .from("card_prices")
+        .select("card_id")
+        .not("median_cents", "is", null)
+        .like("source", "ebay%");
+      if (pErr) throw pErr;
+      const ids = [...new Set((priced as { card_id: string }[] ?? []).map((r) => r.card_id))];
+      for (let i = 0; i < ids.length; i += 200) {
+        const { data, error } = await db
+          .from("cards")
+          .select("slug, updated_at")
+          .in("id", ids.slice(i, i + 200));
+        if (error) throw error;
+        for (const r of (data as { slug: string; updated_at: string }[]) ?? []) bySlug.set(r.slug, r.updated_at);
+      }
+
+      return [...bySlug.entries()].map(([slug, lastModified]) => ({ slug, lastModified }));
+    },
+    ["indexable-card-slugs"],
+    { revalidate: 86400, tags: ["catalog", "prices", "vault-catalog"] }
+  )();
+}
+
 export function getVaultSlugs(catalog = "mj-vault"): Promise<string[]> {
   return unstable_cache(
     async (): Promise<string[]> => {

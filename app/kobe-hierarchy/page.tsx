@@ -3,6 +3,8 @@ import { getHierarchyCatalog, getMyHoldings, getCatalogValueMapCached } from "@/
 import { createClient } from "@/lib/supabase/server";
 import { HierarchyExplorer, type ExplorerCard } from "@/components/hierarchy-explorer";
 import { legendArtForCatalog } from "@/lib/legends";
+import { JsonLd } from "@/components/json-ld";
+import { collectionJsonLd } from "@/lib/structured-data";
 import { Coqui } from "@/components/mascot/coqui";
 
 export const metadata: Metadata = {
@@ -56,6 +58,7 @@ export default async function KobeHierarchyPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
+      <JsonLd data={collectionJsonLd({ name: "Mamba Origins", description: metadata.description as string, path: "/kobe-hierarchy", items: explorerCards.map((c) => ({ name: c.name, slug: c.slug })) })} />
       <div className="flex items-center gap-3">
         <Coqui pose="idle" size={44} aria-label="" />
         <div>

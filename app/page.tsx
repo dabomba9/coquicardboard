@@ -8,9 +8,20 @@ import { LegendsHero } from "@/components/legends-hero";
 import { Reveal } from "@/components/reveal";
 import { JsonLd } from "@/components/json-ld";
 import { websiteJsonLd, organizationJsonLd } from "@/lib/structured-data";
+import type { Metadata } from "next";
 import type { CardWithSet, Tier } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+// The most-linked page on the site was the only public route without a canonical,
+// and being force-dynamic it would happily self-index every ?utm_source= / ?fbclid=
+// variant as a separate URL.
+export const metadata: Metadata = {
+  title: "Coqui Cardboard — Michael Jordan & Kobe Bryant card catalogs",
+  description:
+    "Browse curated card hierarchies and complete player vaults for Michael Jordan, Kobe Bryant, Roberto Clemente and Harmon Killebrew — track what you own, follow market value, and build a want list.",
+  alternates: { canonical: "/" },
+};
 
 const FEATURES = [
   { Icon: Layers, title: "Track every tier", body: "Quick-add owned copies; watch each tier's completion fill in." },

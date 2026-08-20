@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getHierarchyCatalog, getVaultSlugs } from "@/lib/queries";
+import { getIndexableCardSlugs, type IndexableCard } from "@/lib/queries";
 import { GUIDES } from "@/data/guides";
 
 const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -10,26 +10,18 @@ const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 // and the underlying reads are cached.
 export const dynamic = "force-dynamic";
 
-// Full sitemap: static pages + guides + every catalog card (~378 hierarchy +
-// ~12k vault). Well under the 50k-URL single-sitemap limit. Uses the slim cached
-// slug list for the vault (the full catalog is too big for the data cache).
+// Static pages + guides + every card WORTH indexing — one with an image or a real
+// eBay price. The other ~19k render a name over a placeholder; submitting them
+// spends crawl budget on near-duplicates and drags on the pages that can rank.
+// They stay crawlable via the catalog grids and carry noindex,follow.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Resilient: if the catalog reads fail (e.g. DB unreachable), still emit the
   // static + guide URLs rather than 500 the whole sitemap.
-  let cardSlugs: string[] = [];
+  let cards: IndexableCard[] = [];
   try {
-    const [hierarchy, mamba, kobe, vaultSlugs, kobeVaultSlugs, clementeSlugs, killebrewSlugs] = await Promise.all([
-      getHierarchyCatalog(),
-      getHierarchyCatalog("mamba-hierarchy"),
-      getHierarchyCatalog("kobe-hierarchy"),
-      getVaultSlugs(),
-      getVaultSlugs("kobe-vault"),
-      getVaultSlugs("clemente-vault"),
-      getVaultSlugs("killebrew-vault"),
-    ]);
-    cardSlugs = [...hierarchy.map((c) => c.slug), ...mamba.map((c) => c.slug), ...kobe.map((c) => c.slug), ...vaultSlugs, ...kobeVaultSlugs, ...clementeSlugs, ...killebrewSlugs];
+    cards = await getIndexableCardSlugs();
   } catch {
-    cardSlugs = [];
+    cards = [];
   }
 
   const staticPages: MetadataRoute.Sitemap = [
@@ -53,8 +45,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  const cardPages: MetadataRoute.Sitemap = cardSlugs.map((slug) => ({
-    url: `${base}/cards/${slug}`,
+  // lastModified comes from cards.updated_at (trigger-maintained), so unchanged
+  // cards stop inviting a recrawl every week.
+  const cardPages: MetadataRoute.Sitemap = cards.map((c) => ({
+    url: `${base}/cards/${c.slug}`,
+    lastModified: c.lastModified,
     changeFrequency: "weekly",
     priority: 0.6,
   }));
