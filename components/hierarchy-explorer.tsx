@@ -332,7 +332,7 @@ export function HierarchyExplorer({
 
       {/* Results */}
       <div className="space-y-10">
-        {groups.map((g) => {
+        {groups.map((g, gi) => {
           const ownedN = g.items.filter(isOwned).length;
           const pct = g.items.length ? Math.round((ownedN / g.items.length) * 100) : 0;
           return (
@@ -349,7 +349,7 @@ export function HierarchyExplorer({
 
             {view === "grid" ? (
               <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                {g.items.map((card) => {
+                {g.items.map((card, i) => {
                   const owned = isOwned(card);
                   return (
                   <div key={card.id} className="cv-auto group relative">
@@ -364,6 +364,7 @@ export function HierarchyExplorer({
                           sets: card.set_name ? { name: card.set_name } : null,
                         }}
                         placeholderArt={placeholderArt}
+                        priority={gi === 0 && i === 0}
                         className={cn(
                           "transition-transform group-hover:-translate-y-1",
                           owned && "border-[var(--gold)]",

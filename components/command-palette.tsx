@@ -35,11 +35,21 @@ export function CommandPalette() {
     };
   }, []);
 
-  // Focus on open; reset query on close.
+  // Focus on open; reset query and hand focus BACK to whatever opened the palette
+  // on close. Without the restore, focus fell to <body> and the next Tab
+  // restarted from the top of the document.
+  const openerRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 10);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!open) { setQ(""); setActive(0); }
+    if (open) {
+      openerRef.current = document.activeElement as HTMLElement | null;
+      setTimeout(() => inputRef.current?.focus(), 10);
+    } else {
+      const opener = openerRef.current;
+      openerRef.current = null;
+      if (opener?.isConnected) opener.focus();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setQ(""); setActive(0);
+    }
   }, [open]);
 
   // Server-side search across both catalogs (debounced) while the palette is open.

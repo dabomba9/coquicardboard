@@ -170,7 +170,7 @@ export function VaultExplorer({ tiles, params, options, facets, total, pages, pa
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-            {tiles.map((c) => {
+            {tiles.map((c, i) => {
               const owned = isOwned(c);
               return (
                 <Link key={c.id} href={`/cards/${c.slug}`} className="group relative">
@@ -184,6 +184,7 @@ export function VaultExplorer({ tiles, params, options, facets, total, pages, pa
                       sets: c.manufacturer ? { name: c.manufacturer } : null,
                     }}
                     placeholderArt={placeholderArt}
+                    priority={i === 0}
                     className="transition-transform group-hover:-translate-y-1"
                   />
                   {owned && (

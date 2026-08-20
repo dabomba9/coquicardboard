@@ -55,6 +55,9 @@ function SlotInner({ l, i }: { l: Legend; i: number }) {
           alt={`${l.name} — ${l.team} #${l.number}`}
           fill
           unoptimized
+          // Above the fold on the homepage — the first sprite is the LCP element,
+          // and lazy-loading it is what Next warns about.
+          priority={i === 0}
           sizes="(max-width: 768px) 45vw, 22vw"
           className="float-idle pixelated origin-bottom scale-[1.08] object-contain object-bottom drop-shadow-[0_12px_14px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover/slot:scale-[1.13]"
           style={{ animationDelay: `${i * 0.6}s` }}

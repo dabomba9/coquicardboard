@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCardBySlug, getMyHoldingsForCard, getCardPrices } from "@/lib/queries";
 import { isRealPriceSource } from "@/lib/prices";
+import { legendArtForCatalog } from "@/lib/legends";
 import { CardThumb } from "@/components/card-thumb";
 import { HoldingsManager } from "@/components/holdings-manager";
 import { Panel } from "@/components/ui/primitives";
@@ -33,11 +34,14 @@ export default async function ManageCardPage({
       <Link href="/collection" className="text-sm text-muted hover:text-foreground">← My Collection</Link>
 
       <div className="mt-4 grid gap-6 sm:grid-cols-[160px_1fr]">
-        <CardThumb card={card} className="w-full" />
+        <CardThumb card={card} placeholderArt={legendArtForCatalog(card.catalog)} className="w-full" />
         <div>
-          <span className={cn("rounded px-2 py-0.5 text-sm ring-1", c.bg, c.text, c.ring)}>
-            Tier {card.tier_id}
-          </span>
+          {/* Vault cards have no tier — this rendered a bare "Tier" chip. */}
+          {card.tier_id != null && (
+            <span className={cn("rounded px-2 py-0.5 text-sm ring-1", c.bg, c.text, c.ring)}>
+              Tier {card.tier_id}
+            </span>
+          )}
           <h1 className="mt-2 text-xl font-semibold tracking-tight">{card.name}</h1>
           <p className="mt-1 text-sm text-muted">
             {card.sets?.name}

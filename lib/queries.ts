@@ -249,24 +249,6 @@ export async function getAllCards(): Promise<CardWithSet[]> {
   return (data as CardWithSet[]) ?? [];
 }
 
-// Map cardId -> best value cents: raw card_prices median, else catalog_value_cents.
-export async function getCatalogValueMap(): Promise<Map<string, number>> {
-  const supabase = await createClient();
-  const map = new Map<string, number>();
-  const { data: cards } = await supabase.from("cards").select("id, catalog_value_cents").eq("catalog", "mj-hierarchy");
-  for (const c of (cards as { id: string; catalog_value_cents: number | null }[]) ?? []) {
-    if (c.catalog_value_cents != null) map.set(c.id, c.catalog_value_cents);
-  }
-  const { data: prices } = await supabase
-    .from("card_prices")
-    .select("card_id, median_cents")
-    .eq("grade_key", "raw")
-    .like("source", "ebay%"); // real marketplace prices only
-  for (const p of (prices as { card_id: string; median_cents: number | null }[]) ?? []) {
-    if (p.median_cents != null) map.set(p.card_id, p.median_cents);
-  }
-  return map;
-}
 
 export type PriceSeries = { grade_key: string; points: { date: string; value: number }[] };
 
@@ -337,6 +319,8 @@ export type VaultRow = {
   year: number | null;
   image_url: string | null;
   attributes: Record<string, unknown>;
+  // Only selected by getOwnedVaultCards, which spans all four vault catalogs.
+  catalog?: string;
 };
 export async function getVaultCards(): Promise<VaultRow[]> {
   const supabase = await createClient();
@@ -357,15 +341,19 @@ export async function getVaultCards(): Promise<VaultRow[]> {
   return out;
 }
 
-// Owned Jordan Vault cards (catalog='mj-vault') among the given card ids — for the
-// Vault section of /collection (they have no tier, so they're not in the tier grid).
-export async function getOwnedVaultCards(cardIds: string[]): Promise<VaultRow[]> {
+// Owned cards from every catalog EXCEPT the MJ hierarchy, which is the only one
+// /collection's tier grid can render (that grid is built from the shared 4-tier
+// table, and other catalogs' tier_id means something different or is null).
+// Without this they were invisible on the page: it used to ask for mj-vault only,
+// so owned Kobe, Mamba, Clemente and Killebrew cards appeared nowhere at all.
+// Returns `catalog` so the caller can group them under the right heading.
+export async function getOwnedNonHierarchyCards(cardIds: string[]): Promise<VaultRow[]> {
   if (cardIds.length === 0) return [];
   const supabase = await createClient();
   const { data } = await supabase
     .from("cards")
-    .select("id, slug, name, card_number, year, image_url, attributes")
-    .eq("catalog", "mj-vault")
+    .select("id, slug, name, card_number, year, image_url, attributes, catalog")
+    .neq("catalog", "mj-hierarchy")
     .in("id", cardIds)
     .order("name");
   return (data as VaultRow[]) ?? [];

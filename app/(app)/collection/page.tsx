@@ -1,8 +1,10 @@
 import Link from "next/link";
 import {
   getTiers, getCardsByTier, getMyHoldings, getCardIndex, getPriceMap, computeTierSummary,
-  getPortfolioSeries, getOwnedVaultCards,
+  getPortfolioSeries, getOwnedNonHierarchyCards, getOwnedCardMeta,
 } from "@/lib/queries";
+import { holdingValue } from "@/lib/analytics";
+import { legendArtForCatalog } from "@/lib/legends";
 import { PortfolioChart } from "@/components/portfolio-chart";
 import { CompletionRing } from "@/components/completion-ring";
 import { CollectionGrid } from "@/components/collection-grid";
@@ -44,12 +46,34 @@ export default async function CollectionPage() {
         return { ...c, copies: copiesByCard.get(c.id) ?? 1, marketValueCents, forTrade };
       })
   );
-  // Owned Jordan Vault cards (no tier → shown in their own section, not the tier grid).
-  const ownedVaultCards = await getOwnedVaultCards([...ownedCardIds]);
+  // Everything the MJ tier grid can't render, grouped by catalog so each gets its
+  // own heading instead of being filed under "Jordan Vault" or dropped entirely.
+  const ownedOtherCards = await getOwnedNonHierarchyCards([...ownedCardIds]);
+  const CATALOG_LABELS: Record<string, string> = {
+    "mj-vault": "Jordan Vault",
+    "kobe-vault": "Kobe Vault",
+    "clemente-vault": "Clemente Vault",
+    "killebrew-vault": "Killebrew Vault",
+    "kobe-hierarchy": "Mamba Origins",
+    "mamba-hierarchy": "Mamba Hierarchy",
+  };
+  const otherGroups = Object.entries(
+    ownedOtherCards.reduce<Record<string, typeof ownedOtherCards>>((acc, c) => {
+      const k = c.catalog ?? "mj-vault";
+      (acc[k] ??= []).push(c);
+      return acc;
+    }, {})
+  );
   const totalCards = tiers.reduce((s, t) => s + t.card_count, 0);
   const hierarchyOwned = ownedFlat.length; // distinct hierarchy cards owned (for the 378 completion ring)
   const totalOwned = ownedCardIds.size;
-  const totalValue = summary.reduce((s, t) => s + (t.est_value_cents ?? 0), 0);
+  // Value EVERY holding, not just the MJ hierarchy. This used to sum the tier
+  // summary (mj-hierarchy only) while costBasis summed all holdings, so a Kobe or
+  // baseball collector saw $0 market value against their real cost and an
+  // "unrealized loss" equal to everything they'd ever paid. Same helper /analytics
+  // uses, so the two pages now agree.
+  const ownedMeta = await getOwnedCardMeta([...ownedCardIds]);
+  const totalValue = holdings.reduce((s, h) => s + holdingValue(h, priceMap, ownedMeta), 0);
   const costBasis = holdings.reduce((s, h) => s + (h.purchase_price_cents ?? 0), 0);
   const withCost = holdings.some((h) => h.purchase_price_cents != null);
   const gain = totalValue - costBasis;
@@ -80,8 +104,8 @@ export default async function CollectionPage() {
               <div>
                 <div className="text-sm font-medium">Hierarchy complete</div>
                 <div className="mt-1 text-sm text-muted">{hierarchyOwned} of {totalCards} cards</div>
-                {ownedVaultCards.length > 0 && (
-                  <div className="mt-1 text-sm text-muted">+ {ownedVaultCards.length} Jordan Vault</div>
+                {ownedOtherCards.length > 0 && (
+                  <div className="mt-1 text-sm text-muted">+ {ownedOtherCards.length} outside the hierarchy</div>
                 )}
               </div>
             </Panel>
@@ -132,15 +156,15 @@ export default async function CollectionPage() {
         <CollectionGrid cards={ownedFlat} tiers={tiers.map((t) => ({ id: t.id, name: t.name }))} />
       )}
 
-      {/* Owned Jordan Vault cards (no tier — their own section) */}
-      {ownedVaultCards.length > 0 && (
-        <section className="mt-10">
+      {/* Everything outside the MJ hierarchy — one section per catalog */}
+      {otherGroups.map(([catalog, cards]) => (
+        <section key={catalog} className="mt-10">
           <h2 className="flex items-baseline justify-between border-b border-border/50 pb-2">
-            <span className="font-sans text-sm uppercase tracking-wide">Jordan Vault</span>
-            <span className="font-data text-base text-muted">{ownedVaultCards.length}</span>
+            <span className="font-sans text-sm uppercase tracking-wide">{CATALOG_LABELS[catalog] ?? "Other"}</span>
+            <span className="font-data text-base text-muted">{cards.length}</span>
           </h2>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-            {ownedVaultCards.map((c) => (
+            {cards.map((c) => (
               <Link key={c.id} href={`/cards/${c.slug}`} className="group">
                 <CardThumb
                   card={{
@@ -151,13 +175,14 @@ export default async function CollectionPage() {
                     image_url: c.image_url,
                     sets: (c.attributes?.manufacturer as string) ? { name: c.attributes.manufacturer as string } : null,
                   }}
+                  placeholderArt={legendArtForCatalog(catalog)}
                   className="transition-transform group-hover:-translate-y-1 border-[var(--gold)]"
                 />
               </Link>
             ))}
           </div>
         </section>
-      )}
+      ))}
       </>
       )}
     </div>

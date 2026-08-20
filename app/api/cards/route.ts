@@ -5,8 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 // search across BOTH catalogs (hierarchy + vault), capped at 30 — so all 12.5k
 // cards are searchable without shipping them to the client. No query → a small
 // default list of hierarchy grails.
+// `%` and `_` are LIKE wildcards, so an unescaped user query like "100%" matched
+// every card. Escape them (and the escape char) so the input is treated literally.
+const escapeLike = (s: string) => s.replace(/[\\%_]/g, (m) => `\\${m}`);
+
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";
+  const like = `%${escapeLike(q)}%`;
   const supabase = await createClient();
 
   const cols = "name, slug, tier_id, catalog, sets(name)";
@@ -18,8 +23,8 @@ export async function GET(request: NextRequest) {
     // Search BOTH catalogs and merge so vault matches always surface (hierarchy
     // rows are physically first, so a single capped scan would hide the vault).
     const [hier, vault] = await Promise.all([
-      supabase.from("cards").select(cols).in("catalog", ["mj-hierarchy", "kobe-hierarchy", "mamba-hierarchy"]).ilike("name", `%${q}%`).order("name").limit(10),
-      supabase.from("cards").select(cols).in("catalog", ["mj-vault", "kobe-vault", "clemente-vault", "killebrew-vault"]).ilike("name", `%${q}%`).order("name").limit(20),
+      supabase.from("cards").select(cols).in("catalog", ["mj-hierarchy", "kobe-hierarchy", "mamba-hierarchy"]).ilike("name", like).order("name").limit(10),
+      supabase.from("cards").select(cols).in("catalog", ["mj-vault", "kobe-vault", "clemente-vault", "killebrew-vault"]).ilike("name", like).order("name").limit(20),
     ]);
     error = hier.error || vault.error;
     data = [...((hier.data as Row[]) ?? []), ...((vault.data as Row[]) ?? [])];

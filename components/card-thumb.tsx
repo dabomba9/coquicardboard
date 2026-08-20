@@ -34,10 +34,14 @@ export function CardThumb({
   card,
   className,
   placeholderArt,
+  priority,
 }: {
   card: ThumbCard;
   className?: string;
   placeholderArt?: string | null;
+  // Set on the first tile of a grid only: Next flags the leading card image as the
+  // LCP element and warns when it loads lazily.
+  priority?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -69,6 +73,7 @@ export function CardThumb({
               loaded ? "opacity-100" : "opacity-0"
             )}
             unoptimized
+            priority={priority}
             onLoad={() => setLoaded(true)}
             onError={() => setFailed(true)}
           />
@@ -90,6 +95,7 @@ export function CardThumb({
                 sizes="(max-width: 768px) 25vw, 12vw"
                 className="pointer-events-none object-contain object-center p-4 opacity-80"
                 aria-hidden="true"
+                priority={priority}
               />
               {/* scrim so the card name stays readable over the art */}
               <span

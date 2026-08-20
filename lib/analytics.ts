@@ -53,7 +53,8 @@ export function valueByGroup(
     const m = meta.get(h.card_id);
     if (!m) continue;
     const label =
-      by === "tier" ? `Tier ${m.tier_id}` :
+      // Vault cards carry no tier, so this rendered a literal "Tier null" bucket.
+      by === "tier" ? (m.tier_id == null ? "Vault" : `Tier ${m.tier_id}`) :
       by === "set" ? (m.set_name ?? "Unassigned") :
       h.condition_type === "graded" && h.grading_company && h.grade != null ? `${h.grading_company} ${h.grade}` : "Raw";
     const e = acc.get(label) ?? { value: 0, cards: new Set() };
