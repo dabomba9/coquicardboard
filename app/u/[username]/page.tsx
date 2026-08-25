@@ -20,11 +20,17 @@ export async function generateMetadata({
   if (!data) return {};
 
   const name = data.profile?.display_name || data.profile?.username || username;
-  const owned = data.tiers.reduce((s, t) => s + t.owned_cards, 0);
+  const hierarchyOwned = data.tiers.reduce((s, t) => s + t.owned_cards, 0);
   const total = data.tiers.reduce((s, t) => s + t.total_cards, 0);
-  const description = owned
-    ? `${name}'s card collection on Coqui Cardboard — ${owned} of ${total} hierarchy cards owned.`
-    : `${name}'s collector profile on Coqui Cardboard.`;
+  // "Is this profile empty?" must count EVERY catalog. The tier rollup is
+  // MJ-hierarchy-scoped (see migration 0007), so keying the thin-page check off it
+  // would noindex a real collector who happens to own only Kobe or baseball cards.
+  const cardCount = data.holdings.length;
+  const description = hierarchyOwned
+    ? `${name}'s card collection on Coqui Cardboard — ${hierarchyOwned} of ${total} MJ Hierarchy cards owned.`
+    : cardCount
+      ? `${name}'s card collection on Coqui Cardboard — ${cardCount} card${cardCount === 1 ? "" : "s"}.`
+      : `${name}'s collector profile on Coqui Cardboard.`;
 
   return {
     title: `${name} — collection`,
@@ -32,7 +38,8 @@ export async function generateMetadata({
     alternates: { canonical: `/u/${username}` },
     // An empty profile is the same thin-content problem the placeholder card pages
     // had; no reason to advertise it. `follow` so crawlers still traverse out.
-    ...(owned === 0 ? { robots: { index: false, follow: true } } : {}),
+    // Keyed on total holdings, not the MJ-scoped rollup — see cardCount above.
+    ...(cardCount === 0 ? { robots: { index: false, follow: true } } : {}),
     openGraph: { title: `${name} · Coqui Cardboard`, description, url: `/u/${username}`, type: "profile" },
   };
 }
@@ -59,7 +66,13 @@ export default async function PublicProfilePage({
       <p className="mt-1 text-sm text-muted">@{profile.username}</p>
       {profile.bio && <p className="mt-3 text-sm">{profile.bio}</p>}
 
-      <div className="mt-4 text-sm text-muted">{totalOwned} of {totalCards} cards owned</div>
+      {/* The tier rollup counts the MJ Hierarchy only (migration 0007), while the
+          list below shows every catalog — so say which number this is. Mirrors
+          "Hierarchy complete" on /collection. */}
+      <div className="mt-4 text-sm text-muted">
+        {totalOwned} of {totalCards} MJ Hierarchy cards owned
+        {holdings.length > totalOwned && <> · {holdings.length} cards in total</>}
+      </div>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {tiers.map((t) => {
