@@ -126,8 +126,10 @@ export default async function CardDetailPage({
   // catalog (same set or same vault), so one lookup covers all three thumbs.
   const legendArt = legendArtForCatalog(card.catalog);
   const q = encodeURIComponent(`${card.name} ${player}`);
-  const ebayUrl = ebaySearchUrl(`${card.name} ${player}`, card.slug);
-  const ebaySold = ebaySoldUrl(`${card.name} ${player}`, card.slug);
+  // customid is per-PLACEMENT, not just per-card: every link used to report the bare
+  // slug, so EPN could not show which surface actually converts.
+  const ebayUrl = ebaySearchUrl(`${card.name} ${player}`, `${card.slug}:find`);
+  const ebaySold = ebaySoldUrl(`${card.name} ${player}`, `${card.slug}:sold`);
   const scpUrl = sportsCardsProUrl(`${card.name} ${player}`);
   const googleUrl = `https://www.google.com/search?tbm=isch&q=${q}`;
 

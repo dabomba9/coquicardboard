@@ -3,6 +3,7 @@ import { getVaultCatalog, getMyHoldings } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { VaultExplorer, type VaultTile } from "@/components/vault-explorer";
 import { legendArtForCatalog } from "@/lib/legends";
+import { playerForCatalog } from "@/lib/image-search";
 import { JsonLd } from "@/components/json-ld";
 import { collectionJsonLd } from "@/lib/structured-data";
 import {
@@ -75,6 +76,7 @@ export default async function VaultPage({
         signedIn={!!user}
         ownedCount={ownedCount}
         placeholderArt={legendArtForCatalog("mj-vault")}
+        player={playerForCatalog("mj-vault")}
       />
     </div>
   );

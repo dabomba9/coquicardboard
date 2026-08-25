@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { CardThumb } from "@/components/card-thumb";
 import { Button } from "@/components/ui/primitives";
 import { removeFromWantList, updateWantItem } from "@/lib/actions/holdings";
+import { ebaySearchUrl, outboundRel } from "@/lib/affiliate";
+import { playerForCatalog } from "@/lib/image-search";
 import { isDeal, wantSort } from "@/lib/want";
 import { cn, formatUsd, TIER_COLORS } from "@/lib/utils";
 import type { CardWithSet } from "@/lib/types";
@@ -157,6 +159,18 @@ export function WantListGrid({ cards, tiers }: { cards: WantCard[]; tiers: TierM
           <span className="text-muted">Now {card.current_cents != null ? formatUsd(card.current_cents) : "—"}</span>
           {deal && <span className="font-medium text-accent">✓ Under target</span>}
         </div>
+        {/* The want list is the highest-intent surface in the app — someone has said
+            they want this card and named a price — and it had no buy link at all.
+            `Controls` renders outside the tile's <Link> in both the grid and list
+            views, so one anchor here covers both without nesting anchors. */}
+        <a
+          href={ebaySearchUrl(`${card.name} ${playerForCatalog(card.catalog)}`, `${card.slug}:want`)}
+          target="_blank"
+          rel={outboundRel}
+          className="block rounded-md border border-border/60 py-1 text-center text-[11px] font-medium text-accent transition-colors hover:border-accent/60 hover:bg-accent/[0.08]"
+        >
+          Find on eBay ↗
+        </a>
       </div>
     );
   }

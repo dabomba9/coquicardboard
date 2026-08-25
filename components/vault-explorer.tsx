@@ -7,6 +7,7 @@ import { Search, Plus, Check } from "lucide-react";
 import { toast } from "sonner";
 import { CardThumb } from "@/components/card-thumb";
 import { quickAddOwned } from "@/lib/actions/holdings";
+import { ebaySearchUrl, outboundRel } from "@/lib/affiliate";
 import { playConfirm } from "@/lib/sfx";
 import { cn } from "@/lib/utils";
 import type { VaultItem, VaultParams, SortKey, Facet } from "@/lib/vault-filter";
@@ -35,9 +36,12 @@ type Props = {
   ownedCount: number;
   // Legend art shown behind the placeholder for cards with no verified image.
   placeholderArt?: string;
+  // Player name for the eBay query. VaultItem carries no catalog, so the page
+  // (which knows it) passes this, same as placeholderArt.
+  player: string;
 };
 
-export function VaultExplorer({ tiles, params, options, facets, total, pages, page, signedIn, ownedCount, placeholderArt }: Props) {
+export function VaultExplorer({ tiles, params, options, facets, total, pages, page, signedIn, ownedCount, placeholderArt, player }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -173,20 +177,26 @@ export function VaultExplorer({ tiles, params, options, facets, total, pages, pa
             {tiles.map((c, i) => {
               const owned = isOwned(c);
               return (
-                <Link key={c.id} href={`/cards/${c.slug}`} className="group relative">
-                  <CardThumb
-                    card={{
-                      name: c.name ?? "",
-                      card_number: c.cardNumber,
-                      year: c.year,
-                      tier_id: 4,
-                      image_url: c.frontImage,
-                      sets: c.manufacturer ? { name: c.manufacturer } : null,
-                    }}
-                    placeholderArt={placeholderArt}
-                    priority={i === 0}
-                    className="transition-transform group-hover:-translate-y-1"
-                  />
+                // The <Link> covers the thumb only; the badges and buttons are its
+                // SIBLINGS. Previously the Link wrapped everything, which nested a
+                // <button> — and would have nested the eBay <a> — inside an anchor.
+                // That's invalid and browsers mangle it.
+                <div key={c.id} className="group relative">
+                  <Link href={`/cards/${c.slug}`} className="block">
+                    <CardThumb
+                      card={{
+                        name: c.name ?? "",
+                        card_number: c.cardNumber,
+                        year: c.year,
+                        tier_id: 4,
+                        image_url: c.frontImage,
+                        sets: c.manufacturer ? { name: c.manufacturer } : null,
+                      }}
+                      placeholderArt={placeholderArt}
+                      priority={i === 0}
+                      className="transition-transform group-hover:-translate-y-1"
+                    />
+                  </Link>
                   {owned && (
                     <span className="pointer-events-none absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--gold)] text-black"><Check size={12} /></span>
                   )}
@@ -203,7 +213,19 @@ export function VaultExplorer({ tiles, params, options, facets, total, pages, pa
                       <Plus size={15} />
                     </button>
                   )}
-                </Link>
+                  {/* Buy link — most useful under the "Needed" filter, where every
+                      tile is a card the collector wants and doesn't own. */}
+                  <a
+                    href={ebaySearchUrl(`${c.name ?? ""} ${player}`, `${c.slug}:vault`)}
+                    target="_blank"
+                    rel={outboundRel}
+                    aria-label={`Find ${c.name ?? "this card"} on eBay`}
+                    title="Find on eBay"
+                    className="absolute bottom-1 left-1 flex h-7 items-center rounded-full border border-border/60 bg-background/85 px-2 text-[10px] font-medium text-muted backdrop-blur transition-opacity hover:text-accent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+                  >
+                    eBay ↗
+                  </a>
+                </div>
               );
             })}
           </div>
