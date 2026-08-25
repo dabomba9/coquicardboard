@@ -89,7 +89,7 @@ Then publish to cloud with the `migrate-images-to-cloud.ts` step above — optio
    | `EBAY_CLIENT_ID` / `EBAY_CLIENT_SECRET` | your eBay prod keys |
    | `CRON_SECRET` | a long random string |
    | `PRICE_REFRESH_BATCH` | `10` (raise on Pro) |
-   | `NEXT_PUBLIC_EBAY_CAMPID` | eBay Partner Network campaign id (affiliate; optional) |
+   | `NEXT_PUBLIC_EBAY_CAMPID` | eBay Partner Network campaign id — links work without it but earn nothing; see §7 |
    | `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | Search Console HTML-tag token (optional) |
    | `NEXT_PUBLIC_GA_ID` | Google Analytics 4 id `G-XXXXXXXXXX` (optional; GA loads only when set) |
 3. Deploy. The nightly price-refresh cron (`vercel.json` → `/api/cron/refresh-prices`, 08:00 UTC) is picked up automatically; Vercel sends `Authorization: Bearer $CRON_SECRET`.
@@ -128,6 +128,45 @@ isn't one and there doesn't need to be.
 in `app/layout.tsx` via `metadata.verification.google`. It's unset and that's fine while the DNS
 record stands. If you ever do set it: **`NEXT_PUBLIC_*` values are inlined at build time, so setting
 it in Vercel does nothing until you redeploy.** That's the trap most likely to cost you an hour.
+
+## 7. Affiliate revenue (eBay Partner Network)
+
+Outbound "find this card" links carry EPN tracking **only when a campaign id is set**. Without one
+they still work — they're plain eBay searches — and earn nothing. Nothing breaks if you never set it;
+it is simply the switch between the site making $0 and making something.
+
+1. **Get the campaign id.** [partnernetwork.ebay.com](https://partnernetwork.ebay.com) → **Campaigns**
+   tab → the **Number** column is the 10-digit campaign id. No campaigns listed? **Campaigns → Create
+   new Campaign** first.
+2. **Set it.** Vercel → Project → **Settings → Environment Variables** → add
+   `NEXT_PUBLIC_EBAY_CAMPID` = that number, scoped to Production.
+3. **Redeploy.** ⚠️ **`NEXT_PUBLIC_*` is inlined at build time, so saving the variable changes
+   nothing until a new build runs.** Deployments → newest → ⋯ → **Redeploy** (untick "use existing
+   build cache"). Skipping this is the single most likely way to conclude, wrongly, that the
+   integration is broken.
+
+`NEXT_PUBLIC_EBAY_MKRID` is optional — `lib/affiliate.ts` defaults it to the US rotation id
+`711-53200-19255-0`. Only set it for a non-US marketplace.
+
+**Confirming it took.** Open any card page, copy the "eBay" link and look for `campid=`. A second
+signal is in the markup: `outboundRel` (`lib/affiliate.ts`) flips from `rel="noreferrer"` to
+`rel="sponsored noopener noreferrer"` the moment a campaign id exists, so `rel` tells you whether the
+*build* picked the value up.
+
+**Where the links are**, so you know the surface being monetised — card pages, the want list, and
+vault tiles. Each reports a distinct `customid` suffix so EPN can tell placements apart rather than
+lumping them under the bare card slug:
+
+| Surface | `customid` |
+|---|---|
+| Card page → "Find this card: eBay" | `<slug>:find` |
+| Card page → "Recent sales: eBay sold" | `<slug>:sold` |
+| Want list → "Find on eBay" | `<slug>:want` |
+| Vault tile → "eBay ↗" | `<slug>:vault` |
+
+> The footer states "As an eBay Partner Network member, we may earn from qualifying purchases" —
+> which is written today while no link is tagged. If your EPN application is still pending, that
+> sentence is inaccurate until approval; soften it or hold off publishing that claim.
 
 ## Notes
 - Market values are **real eBay** prices only (asking until Marketplace Insights/sold is approved); cards without a comp show "No recent sales yet."
