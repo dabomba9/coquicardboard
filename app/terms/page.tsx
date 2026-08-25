@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { affiliateEnabled } from "@/lib/affiliate";
 import Link from "next/link";
 import { LegalDoc } from "@/components/legal-doc";
 
@@ -75,11 +76,22 @@ export default function TermsPage() {
       </p>
 
       <h2>9. Affiliate links</h2>
-      <p>
-        As a member of the eBay Partner Network, Coqui Cardboard may earn a commission from qualifying purchases made
-        through outbound links on the Service, at no extra cost to you. Such links do not influence the catalog or
-        valuations shown.
-      </p>
+      {/* Stated conditionally: claiming an affiliate relationship we don't have is as
+          inaccurate as failing to disclose one we do. `affiliateEnabled` is true only
+          when a campaign id is configured, which is the same flag that tags the links. */}
+      {affiliateEnabled ? (
+        <p>
+          As a member of the eBay Partner Network, Coqui Cardboard may earn a commission from qualifying purchases made
+          through outbound links on the Service, at no extra cost to you. Such links do not influence the catalog or
+          valuations shown.
+        </p>
+      ) : (
+        <p>
+          Outbound links to marketplaces (for example &ldquo;find on eBay&rdquo;) are provided for convenience and are
+          not affiliate links; Coqui Cardboard earns no commission from them. Should that change, this section and the
+          site footer will say so. Such links do not influence the catalog or valuations shown.
+        </p>
+      )}
 
       <h2>10. Third-party services &amp; links</h2>
       <p>

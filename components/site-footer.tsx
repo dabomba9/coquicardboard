@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CoquiGlyph } from "@/components/coqui-glyph";
 import { PrClock } from "@/components/pr-clock";
+import { affiliateEnabled } from "@/lib/affiliate";
 
 // Puerto Rico island silhouette — themed to currentColor so it follows the brand
 // accent in both light and dark (instead of the source's fixed yellow).
@@ -60,8 +61,13 @@ export function SiteFooter() {
         <div className="mt-8 border-t border-border/40 pt-6 text-[11px] leading-relaxed text-muted">
           <p>
             Independent, fan-made tool — not affiliated with the NBA, Michael Jordan, or any card manufacturer. Card
-            values are estimates, not financial advice. As an eBay Partner Network member, we may earn from qualifying
-            purchases. Trademarks &amp; card images belong to their respective owners. Checklist data for the MJ
+            values are estimates, not financial advice.{" "}
+            {/* Only claim the EPN relationship when links actually carry a campaign id. Without
+                one this said "we may earn from qualifying purchases" while nothing was tagged —
+                untrue. Gating it on the same flag that tags the links means the disclosure appears
+                in the very build that starts monetising them, which is when it becomes required. */}
+            {affiliateEnabled && <>As an eBay Partner Network member, we may earn from qualifying purchases.{" "}</>}
+            Trademarks &amp; card images belong to their respective owners. Checklist data for the MJ
             Hierarchy and Mamba Origins is credited to Bryan Denison /{" "}
             {/* underlined: an inline link inside the muted legal paragraph is otherwise invisible */}
             <a href="https://cajuncardboard.com/" target="_blank" rel="noreferrer" className={`${linkCls} underline underline-offset-2`}>Cajun Cardboard</a>.

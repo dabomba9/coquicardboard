@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { affiliateEnabled } from "@/lib/affiliate";
 import Link from "next/link";
 import { LegalDoc } from "@/components/legal-doc";
 
@@ -64,11 +65,20 @@ export default function PrivacyPage() {
       <p>Your use of these providers is also subject to their own privacy policies.</p>
 
       <h2>6. Affiliate links</h2>
-      <p>
-        Some outbound links (for example &ldquo;find on eBay&rdquo;) are affiliate links. As a member of the eBay
-        Partner Network, we may earn a commission from qualifying purchases. We do not receive your purchase details;
-        the marketplace handles the transaction under its own policies.
-      </p>
+      {/* See the note in app/terms/page.tsx — gated on the same flag that tags the links. */}
+      {affiliateEnabled ? (
+        <p>
+          Some outbound links (for example &ldquo;find on eBay&rdquo;) are affiliate links. As a member of the eBay
+          Partner Network, we may earn a commission from qualifying purchases. We do not receive your purchase details;
+          the marketplace handles the transaction under its own policies.
+        </p>
+      ) : (
+        <p>
+          Outbound links to marketplaces (for example &ldquo;find on eBay&rdquo;) are not affiliate links and earn us no
+          commission. We do not receive your purchase details; the marketplace handles the transaction under its own
+          policies.
+        </p>
+      )}
 
       <h2>7. Public profiles</h2>
       <p>
