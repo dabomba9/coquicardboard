@@ -110,6 +110,18 @@ async function main() {
             { card_id: card.id, grade_key: g.key, value_cents: medianCents, recorded_on: today, source: "ebay" }
           );
           grades++; any = true;
+        } else {
+          // Record the miss for THIS grade, so --missing-only converges. Without a
+          // per-grade record the script asked eBay and threw the answer away: the
+          // card stayed "never attempted" and every later run re-bought the same
+          // negative result. `none`/null-median rows never display a value (see
+          // lib/prices.ts) and the nightly cron still revisits them by as_of.
+          const { error: sErr } = await db.from("card_prices").insert(
+            { card_id: card.id, grade_key: g.key, median_cents: null, last_sale_cents: null,
+              currency: "USD", sample_size: 0, source: "none", as_of: new Date().toISOString() }
+          );
+          if (sErr) console.log(`  ! ${card.name} [${g.key} sentinel]: ${sErr.message}`);
+          else known.add(`${card.id}|${g.key}`);
         }
       } catch (e) {
         console.log(`  ! ${card.name} [${g.key}]: ${(e as Error).message}`);
