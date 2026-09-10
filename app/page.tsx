@@ -46,9 +46,9 @@ export default async function Home() {
   const vaultGrid = withImg.slice(5, 10);
 
   const stats = [
-    { n: "12,000+", l: "Vault cards" },
-    { n: String(mjTotal), l: "MJ Hierarchy" },
-    { n: String(tiers.length || 4), l: "Rarity tiers" },
+    { n: "24,000+", l: "Cards catalogued" },
+    { n: "4", l: "Legends" },
+    { n: "7", l: "Catalogs" },
     { n: "eBay", l: "Real values" },
   ];
 
