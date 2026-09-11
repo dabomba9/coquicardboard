@@ -27,7 +27,7 @@ export function SiteFooter() {
               <CoquiGlyph size={22} className="text-accent" aria-label="" />
               <span><span className="text-accent">Coqui</span> Cardboard</span>
             </Link>
-            <p className="mt-2 text-sm text-muted">Collecting tools &amp; guides for the Michael Jordan card universe.</p>
+            <p className="mt-2 text-sm text-muted">Collecting tools &amp; guides for four legends: Jordan, Bryant, Clemente and Killebrew.</p>
             <div className="mt-4 flex items-center gap-3 text-xs text-muted">
               <PuertoRicoMap className="text-accent" />
               <span>Made in Puerto Rico 🇵🇷 · <PrClock /></span>

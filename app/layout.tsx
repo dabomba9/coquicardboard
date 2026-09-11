@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     template: "%s · Coqui Cardboard",
   },
   description:
-    "Coqui Cardboard: tools and guides for sports-card collectors. Track the Michael Jordan card hierarchy — grade your copies, follow market value, build a want list, and share your collection.",
+    "Coqui Cardboard: tools and guides for sports-card collectors. Track complete vaults for Michael Jordan, Kobe Bryant, Roberto Clemente and Harmon Killebrew — grade your copies, follow market value, build a want list, and share your collection.",
   // Google Search Console (HTML-tag method). Set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
   // to the token from the property; omitted when unset.
   verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION },

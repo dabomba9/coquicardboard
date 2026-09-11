@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 // and being force-dynamic it would happily self-index every ?utm_source= / ?fbclid=
 // variant as a separate URL.
 export const metadata: Metadata = {
-  title: "Coqui Cardboard — Michael Jordan & Kobe Bryant card catalogs",
+  title: "Coqui Cardboard — Jordan, Bryant, Clemente & Killebrew card catalogs",
   description:
     "Browse curated card hierarchies and complete player vaults for Michael Jordan, Kobe Bryant, Roberto Clemente and Harmon Killebrew — track what you own, follow market value, and build a want list.",
   alternates: { canonical: "/" },
