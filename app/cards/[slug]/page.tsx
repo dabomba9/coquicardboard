@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCardBySlugCached, getCardPricesCached, getMyWantCardIds, getPriceHistoryCached, getCardOwnerCount, getRelatedCardsCached, getRelatedVaultCardsCached, getMyHoldingsForCard } from "@/lib/queries";
+import { getCardBySlugCached, getCardPricesCached, getPriceCheckCached, getMyWantCardIds, getPriceHistoryCached, getCardOwnerCount, getRelatedCardsCached, getRelatedVaultCardsCached, getMyHoldingsForCard } from "@/lib/queries";
 import { priceStats } from "@/lib/card-stats";
 import { ebaySearchUrl, ebaySoldUrl, sportsCardsProUrl, outboundRel } from "@/lib/affiliate";
 import { isRealPriceSource } from "@/lib/prices";
@@ -69,7 +69,7 @@ export default async function CardDetailPage({
   const attr = (k: string) => (typeof attrs[k] === "string" ? (attrs[k] as string) : null);
   const manufacturer = attr("manufacturer");
 
-  const [allPrices, history, wantIds, ownerCount, related, myHoldings] = await Promise.all([
+  const [allPrices, history, wantIds, ownerCount, related, myHoldings, lastChecked] = await Promise.all([
     getCardPricesCached(card.id),
     getPriceHistoryCached(card.id),
     user ? getMyWantCardIds() : Promise.resolve(new Set<string>()),
@@ -78,6 +78,7 @@ export default async function CardDetailPage({
       ? (manufacturer ? getRelatedVaultCardsCached(manufacturer, card.year, card.id, card.catalog) : Promise.resolve([]))
       : (card.set_id ? getRelatedCardsCached(card.set_id, card.id) : Promise.resolve([])),
     user ? getMyHoldingsForCard(card.id) : Promise.resolve([]),
+    getPriceCheckCached(card.id),
   ]);
   // Only show REAL marketplace prices (eBay). Drops sentinel 'none' rows and any
   // fabricated/estimated rows, so values are always trustworthy.
@@ -319,7 +320,11 @@ export default async function CardDetailPage({
             {history.length > 0 && <div className="mt-4"><PriceChart series={history} /></div>}
           </>
         ) : (
-          <p className="mt-3 text-sm text-muted">No recent sales yet — value will appear here as sales come in.</p>
+          <p className="mt-3 text-sm text-muted">
+            {lastChecked
+              ? "No eBay listings match this card right now — it rarely comes up for sale. We'll keep checking."
+              : "No recent sales yet — value will appear here as sales come in."}
+          </p>
         )}
       </Panel>
 

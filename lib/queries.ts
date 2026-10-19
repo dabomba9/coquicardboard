@@ -222,6 +222,25 @@ export const getCardPricesCached = unstable_cache(
   { revalidate: 3600, tags: ["prices"] }
 );
 
+// When eBay was last checked for this card and had nothing that matched — the
+// pricing scripts record that as a source='none' row. Lets an unpriced card page
+// say "checked, nothing listed" instead of implying no one has looked. Null if
+// never checked.
+export const getPriceCheckCached = unstable_cache(
+  async (cardId: string): Promise<string | null> => {
+    const { data } = await createAdminClient()
+      .from("card_prices")
+      .select("as_of")
+      .eq("card_id", cardId)
+      .eq("source", "none")
+      .order("as_of", { ascending: false })
+      .limit(1);
+    return ((data as { as_of: string }[] | null) ?? [])[0]?.as_of ?? null;
+  },
+  ["card-price-check"],
+  { revalidate: 3600, tags: ["prices"] }
+);
+
 export const getPriceHistoryCached = unstable_cache(
   async (cardId: string): Promise<PriceSeries[]> => {
     const { data } = await createAdminClient()
