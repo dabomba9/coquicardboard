@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCardBySlugCached, getCardPricesCached, getPriceCheckCached, getMyWantCardIds, getPriceHistoryCached, getCardOwnerCount, getRelatedCardsCached, getRelatedVaultCardsCached, getMyHoldingsForCard } from "@/lib/queries";
+import { getCardBySlugCached, getCardPricesCached, getPriceCheckCached, getMyWantCardIds, getPriceHistoryCached, getCardOwnerCount, getRelatedCardsCached, getRelatedVaultCards, getMyHoldingsForCard } from "@/lib/queries";
 import { priceStats } from "@/lib/card-stats";
 import { ebaySearchUrl, ebaySoldUrl, sportsCardsProUrl, outboundRel } from "@/lib/affiliate";
 import { isRealPriceSource } from "@/lib/prices";
+import { aboutCard, formatCardNumber, printRunFromName } from "@/lib/card-about";
+import { catalogLabel } from "@/lib/catalogs";
 import { legendArtForCatalog } from "@/lib/legends";
 import { JsonLd } from "@/components/json-ld";
 import { productJsonLd, breadcrumbJsonLd } from "@/lib/structured-data";
@@ -69,20 +71,21 @@ export default async function CardDetailPage({
   const attr = (k: string) => (typeof attrs[k] === "string" ? (attrs[k] as string) : null);
   const manufacturer = attr("manufacturer");
 
-  const [allPrices, history, wantIds, ownerCount, related, myHoldings, lastChecked] = await Promise.all([
+  const [allPrices, history, wantIds, ownerCount, relatedInfo, myHoldings, lastChecked] = await Promise.all([
     getCardPricesCached(card.id),
     getPriceHistoryCached(card.id),
     user ? getMyWantCardIds() : Promise.resolve(new Set<string>()),
     getCardOwnerCount(card.id),
     isVault
-      ? (manufacturer ? getRelatedVaultCardsCached(manufacturer, card.year, card.id, card.catalog) : Promise.resolve([]))
-      : (card.set_id ? getRelatedCardsCached(card.set_id, card.id) : Promise.resolve([])),
+      ? getRelatedVaultCards({ id: card.id, name: card.name, year: card.year, catalog: card.catalog, manufacturer })
+      : (card.set_id ? getRelatedCardsCached(card.set_id, card.id) : Promise.resolve([])).then((related) => ({ related, setName: card.sets?.name ?? null, setCount: 0 })),
     user ? getMyHoldingsForCard(card.id) : Promise.resolve([]),
     getPriceCheckCached(card.id),
   ]);
   // Only show REAL marketplace prices (eBay). Drops sentinel 'none' rows and any
   // fabricated/estimated rows, so values are always trustworthy.
   const prices = allPrices.filter((p) => p.median_cents != null && isRealPriceSource(p.source));
+  const { related, setName, setCount } = relatedInfo;
 
   const backImage = attr("backImage");
   const psaPopReport = attr("psaPopReport");
@@ -91,7 +94,7 @@ export default async function CardDetailPage({
   const facts: [string, string | null][] = [
     ["Set", card.sets?.name ?? null],
     ["Year", card.year ? String(card.year) : null],
-    ["Card #", card.card_number ? `#${card.card_number}` : null],
+    ["Card #", formatCardNumber(card.card_number)],
     ["Type", cardType],
     ["Manufacturer", card.sets?.manufacturer ?? attr("manufacturer")],
     ["Print run", card.print_run ? `/${card.print_run}` : card.serial_numbered ? "Serial #'d" : null],
@@ -122,6 +125,8 @@ export default async function CardDetailPage({
     return "estimated";
   };
 
+  const imageCredit = /^(jordan-vault|tcdb|kobe-vault)/.test(card.image_source ?? "") ? "TCDB" : null;
+  const rawPrice = prices.find((p) => p.grade_key === "raw") ?? null;
   const player = isKobeVault || isMamba || isKobe ? "Kobe Bryant" : isClementeVault ? "Roberto Clemente" : isKillebrewVault ? "Harmon Killebrew" : "Michael Jordan";
   // Stand-in art for cards with no verified image. Related cards share this card's
   // catalog (same set or same vault), so one lookup covers all three thumbs.
@@ -142,8 +147,26 @@ export default async function CardDetailPage({
     ? (MAMBA_TIERS.find((t) => t.id === card.tier_id)?.name ?? "")
     : card.tier_id ? (["Legendary", "Epic", "Rare", "Common"][card.tier_id - 1] ?? "Common") : "";
 
+  // A paragraph of this card's own facts — see lib/card-about.ts.
+  const about = aboutCard({
+    name: card.name,
+    year: card.year,
+    cardNumber: card.card_number,
+    setName,
+    manufacturer: card.sets?.manufacturer ?? manufacturer,
+    cardType,
+    printRun: card.print_run ?? printRunFromName(card.name),
+    player,
+    catalogLabel: isVault || isKobe || isMamba ? catalogLabel(card.catalog) : "MJ Hierarchy",
+    setCount,
+    tierName: isVault || isKobe ? null : tierName || null,
+    hasBack: !!backImage,
+    price: rawPrice?.median_cents != null ? { cents: rawPrice.median_cents, sample: rawPrice.sample_size ?? null, asOf: rawPrice.as_of ?? null } : null,
+    lastCheckedNoListings: prices.length ? null : lastChecked,
+  });
+
   // schema.org structured data (Product + breadcrumbs) for search rich results.
-  const ldBits = [card.year ? String(card.year) : null, card.sets?.name ?? manufacturer, card.card_number ? `#${card.card_number}` : null].filter(Boolean);
+  const ldBits = [card.year ? String(card.year) : null, card.sets?.name ?? manufacturer, formatCardNumber(card.card_number)].filter(Boolean);
   const ldDescription = `${card.name}${ldBits.length ? ` — ${ldBits.join(" · ")}` : ""}. ${player} trading card — track market value, grade your copies, and build your collection on Coqui Cardboard.`;
   // `prices` is already real-marketplace-only, so these feed an honest AggregateOffer.
   const pricesUsd = prices.map((p) => (p.median_cents ?? 0) / 100);
@@ -171,9 +194,9 @@ export default async function CardDetailPage({
               <p className="mt-1 text-[10px] uppercase tracking-wide text-muted">Back</p>
             </div>
           )}
-          {card.image_source && (
-            <p className="text-[10px] text-muted">Image: {card.image_source}</p>
-          )}
+          {/* Credit the scan's source; internal pipeline labels ("jordan-vault",
+              "ebay (cached)") aren't meant for readers. */}
+          {imageCredit && <p className="text-[10px] text-muted">Image: {imageCredit}</p>}
         </div>
 
         {/* Identity + actions */}
@@ -235,6 +258,13 @@ export default async function CardDetailPage({
               </div>
             ))}
           </dl>
+
+          {about.length > 0 && (
+            <section className="mt-6">
+              <h2 className="text-[10px] uppercase tracking-wide text-muted">About this card</h2>
+              <p className="mt-1.5 text-sm leading-relaxed">{about.join(" ")}</p>
+            </section>
+          )}
 
           <p className="mt-5 text-xs text-muted">
             Recent sales:{" "}
@@ -330,7 +360,7 @@ export default async function CardDetailPage({
 
       {related.length > 0 && (
         <section className="mt-8">
-          <h2 className="text-xs font-semibold uppercase tracking-wide">More from {isVault ? (manufacturer ?? "the Vault") : (card.sets?.name ?? "this set")}</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide">More from {isVault ? (setCount > 1 && setName ? setName : (manufacturer ?? "the Vault")) : (card.sets?.name ?? "this set")}</h2>
           <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-6">
             {related.map((r) => (
               <Link key={r.id} href={`/cards/${r.slug}`} className="group">

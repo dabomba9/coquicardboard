@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { vaultSetName } from "@/lib/card-about";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
@@ -278,30 +279,61 @@ export const getRelatedCardsCached = unstable_cache(
   { revalidate: 3600, tags: ["catalog"] }
 );
 
-// Related Jordan Vault cards: same manufacturer (vault cards have no set_id), with
-// the closest years surfaced first so a card's "siblings" feel coherent.
-export function getRelatedVaultCardsCached(
-  manufacturer: string, year: number | null, excludeId: string, catalog = "mj-vault", limit = 12
-): Promise<CardWithSet[]> {
-  return unstable_cache(
-    async (): Promise<CardWithSet[]> => {
-      const { data } = await createAdminClient()
-        .from("cards")
-        .select("*, sets(*)")
-        .eq("catalog", catalog)
-        .eq("attributes->>manufacturer", manufacturer)
-        .neq("id", excludeId)
-        .order("rarity_rank")
-        .limit(60);
-      const rows = (data as CardWithSet[]) ?? [];
-      if (year != null) {
-        rows.sort((a, b) => Math.abs((a.year ?? 9999) - year) - Math.abs((b.year ?? 9999) - year));
-      }
-      return rows.slice(0, limit);
-    },
-    ["related-vault-cards", catalog],
-    { revalidate: 3600, tags: ["catalog"] }
-  )();
+// Every card in one vault set (same catalog, same name prefix), cached per set.
+// The arguments are part of the cache key — the old related-cards cache keyed on
+// catalog alone, so every Jordan Vault page showed the same twelve "related" cards.
+const getVaultSetCards = unstable_cache(
+  async (catalog: string, setName: string): Promise<CardWithSet[]> => {
+    const pattern = setName.replace(/[\\%_]/g, (ch) => `\\${ch}`) + " #%";
+    const { data } = await createAdminClient()
+      .from("cards")
+      .select("*, sets(*)")
+      .eq("catalog", catalog)
+      .ilike("name", pattern)
+      .order("rarity_rank")
+      .limit(300);
+    return (data as CardWithSet[]) ?? [];
+  },
+  ["vault-set-cards"],
+  { revalidate: 3600, tags: ["catalog"] }
+);
+
+// Same manufacturer, nearest years first — the fallback when a set has too few
+// other cards to fill the strip. Keyed by its arguments (see above).
+const getVaultManufacturerCards = unstable_cache(
+  async (catalog: string, manufacturer: string): Promise<CardWithSet[]> => {
+    const { data } = await createAdminClient()
+      .from("cards")
+      .select("*, sets(*)")
+      .eq("catalog", catalog)
+      .eq("attributes->>manufacturer", manufacturer)
+      .order("rarity_rank")
+      .limit(400);
+    return (data as CardWithSet[]) ?? [];
+  },
+  ["vault-manufacturer-cards"],
+  { revalidate: 3600, tags: ["catalog"] }
+);
+
+/**
+ * Related cards for a vault card page: others from the same set first, then the
+ * same manufacturer's nearest years. Also returns how many cards the vault holds
+ * in this card's set (for the "About this card" text).
+ */
+export async function getRelatedVaultCards(
+  card: { id: string; name: string; year: number | null; catalog: string; manufacturer: string | null },
+  limit = 12
+): Promise<{ related: CardWithSet[]; setName: string | null; setCount: number }> {
+  const setName = vaultSetName(card.name);
+  const setCards = setName ? await getVaultSetCards(card.catalog, setName) : [];
+  const related = setCards.filter((c) => c.id !== card.id).slice(0, limit);
+  if (related.length < limit && card.manufacturer) {
+    const seen = new Set([card.id, ...related.map((c) => c.id)]);
+    const more = (await getVaultManufacturerCards(card.catalog, card.manufacturer)).filter((c) => !seen.has(c.id));
+    if (card.year != null) more.sort((a, b) => Math.abs((a.year ?? 9999) - card.year!) - Math.abs((b.year ?? 9999) - card.year!));
+    related.push(...more.slice(0, limit - related.length));
+  }
+  return { related, setName, setCount: setCards.length };
 }
 
 // ---- Catalog (public, read-only) ----
