@@ -10,6 +10,12 @@ const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 // and the underlying reads are cached.
 export const dynamic = "force-dynamic";
 
+// The date the card-page TEMPLATE last changed meaningfully (2026-10-19: "About this
+// card" text, per-set related cards). A card's lastmod is the later of this and its
+// own updated_at, so a site-wide content change is announced to crawlers truthfully.
+// Bump it when the card page changes again; don't bump it otherwise.
+const CARD_PAGE_REVISED = "2026-10-19";
+
 // Static pages + guides + every card WORTH indexing — one with an image or a real
 // eBay price. The other ~19k render a name over a placeholder; submitting them
 // spends crawl budget on near-duplicates and drags on the pages that can rank.
@@ -46,10 +52,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // lastModified comes from cards.updated_at (trigger-maintained), so unchanged
-  // cards stop inviting a recrawl every week.
+  // cards stop inviting a recrawl every week — floored at CARD_PAGE_REVISED.
   const cardPages: MetadataRoute.Sitemap = cards.map((c) => ({
     url: `${base}/cards/${c.slug}`,
-    lastModified: c.lastModified,
+    lastModified: c.lastModified > CARD_PAGE_REVISED ? c.lastModified : CARD_PAGE_REVISED,
     changeFrequency: "weekly",
     priority: 0.6,
   }));
