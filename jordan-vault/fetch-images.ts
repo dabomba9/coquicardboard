@@ -317,7 +317,13 @@ async function runCDP(jobs: Job[]) {
     }
     if (done % 25 === 0) await writeFile(NO_SCAN_FILE, JSON.stringify([...noScan]));
     if (streak >= 25) {
-      if (await fetchPatiently(lastGood ?? KNOWN_GOOD)) streak = 0;
+      // Is the session alive? Ask a known image directly, cache-busted. (Going
+      // through fetchPatiently, a challenge on the probe itself was counted as a
+      // per-address miss, so a healthy session read as dead and the run quit.)
+      const probe = await fetchViaPage(`${lastGood ?? KNOWN_GOOD}?nc=${Date.now()}`);
+      if (probe instanceof Buffer) streak = 0;
+      else if (probe === "challenge" && (await waitForClearance())) streak = 0;
+      else if (probe === "throttled") { await backoff(); streak = 0; }
       else if (!stop) { blocked = true; break; }
     }
     if (++done % 25 === 0 || done === jobs.length) console.log(`  ${progress()}`);
