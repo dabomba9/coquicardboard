@@ -119,3 +119,23 @@ describe("trimOutliers", () => {
     expect(trimOutliers([100, 200]).length).toBe(2); // <3 untouched
   });
 });
+
+describe("TCDB checklist names (vintage vaults)", () => {
+  it("drops the VAR tag and its descriptor so real listings match", () => {
+    const name = "1956 Topps #33 Roberto Clemente VAR VAR: Gray Back";
+    const groups = requiredTokenGroups(name);
+    expect(groups.flat()).not.toContain("var");
+    expect(groups.flat()).not.toContain("gray");
+    expect(matchesCard("1956 TOPPS GRAY BACK #33 ROBERTO CLEMENTE PSA 4", extractYear(name), groups)).toBe(true);
+  });
+  it("drops a bare trailing VAR / CPC / UER tag", () => {
+    const flat = requiredTokenGroups("1971 Milk Duds - Boxes #NNO Harmon Killebrew VAR CPC UER").flat();
+    expect(flat).not.toContain("var");
+    expect(flat).not.toContain("cpc");
+    expect(flat).not.toContain("uer");
+  });
+  it("accepts Roberto for a card printed as Bob Clemente", () => {
+    const name = "1963 Topps #540 Bob Clemente";
+    expect(matchesCard("1963 Topps #540 Roberto Clemente Pirates SGC 3", extractYear(name), requiredTokenGroups(name))).toBe(true);
+  });
+});

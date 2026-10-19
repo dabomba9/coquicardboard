@@ -120,7 +120,9 @@ async function main() {
             { card_id: card.id, grade_key: g.key, median_cents: null, last_sale_cents: null,
               currency: "USD", sample_size: 0, source: "none", as_of: new Date().toISOString() }
           );
-          if (sErr) console.log(`  ! ${card.name} [${g.key} sentinel]: ${sErr.message}`);
+          // 23505 = a row for this grade already exists (an earlier sentinel, or a real
+          // price we must not overwrite with a miss) — expected on a full re-run.
+          if (sErr && sErr.code !== "23505") console.log(`  ! ${card.name} [${g.key} sentinel]: ${sErr.message}`);
           else known.add(`${card.id}|${g.key}`);
         }
       } catch (e) {

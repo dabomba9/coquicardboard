@@ -5,6 +5,8 @@ const STOPWORDS = new Set([
   "the", "and", "of", "a", "michael", "jordan", "mj", "card", "qty", "ser", "h", "r",
   "row", "legacy", "collection", "edition", "nba", "basketball", "chicago", "bulls",
   "kobe", "bryant", "lakers", "los", "angeles",
+  // TCDB checklist tags (variant, combo card, error). Sellers never write them.
+  "var", "cpc", "uer",
 ]);
 
 // Abbreviation → acceptable title substrings (any present = group satisfied).
@@ -13,6 +15,7 @@ const SYNONYMS: Record<string, string[]> = {
   rc: ["rc", "rookie"],
   refractor: ["refractor", "refractors"],
   auto: ["auto", "autograph", "signature"],
+  bob: ["bob", "roberto"], // early Topps printed "Bob Clemente"; listings say Roberto
 };
 
 export function extractYear(name: string): string | null {
@@ -24,6 +27,7 @@ export function extractYear(name: string): string | null {
 export function requiredTokenGroups(name: string): string[][] {
   const cleaned = name
     .toLowerCase()
+    .replace(/\bvar:.*$/, " ")                    // TCDB variant descriptor ("VAR: Gray Back") — sellers phrase it freely
     .replace(/\b(19|20)\d{2}(\/\d{2})?\b/g, " ") // years
     .replace(/#[a-z0-9-]+/g, " ")                // card numbers
     .replace(/\/\d+/g, " ")                       // serial /N
