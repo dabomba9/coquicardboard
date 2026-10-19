@@ -179,9 +179,10 @@ async function runCDP(jobs: Job[]) {
   if (!ctx) { console.log("No browser context on the attached Chrome."); await browser.close(); return; }
   const page = await ctx.newPage();
 
-  // null = no image at this address; "throttled" = TCDB said slow down (429/503),
-  // which must never be mistaken for "this card has no scan".
-  type Fetched = Buffer | "throttled" | null;
+  // null = no image at this address; "throttled" = TCDB said slow down (429/503);
+  // "challenge" = Cloudflare wants the human check again (403 / cf-mitigated). Neither
+  // of the last two may ever be mistaken for "this card has no scan".
+  type Fetched = Buffer | "throttled" | "challenge" | null;
   let retryAfterSec = 0;
   const fetchViaPage = async (u: string): Promise<Fetched> => {
     try {
@@ -189,6 +190,7 @@ async function runCDP(jobs: Job[]) {
       // image navigation weren't reliably available yet.
       const res = await page.goto(u, { waitUntil: "domcontentloaded", timeout: 30_000 });
       if (!res) return null;
+      if (res.status() === 403 || res.headers()["cf-mitigated"] === "challenge") return "challenge";
       if (res.status() === 429 || res.status() === 503) {
         retryAfterSec = Number(res.headers()["retry-after"]) || 0;
         return "throttled";
@@ -216,12 +218,34 @@ async function runCDP(jobs: Job[]) {
     console.log(`  ⏸ TCDB rate limit — waiting ${Math.round(ms / 1000)}s (pause #${pauses})`);
     await nap(ms);
   };
-  // Fetch one address, waiting out throttling and retrying the SAME address.
+  // Cloudflare re-challenged the session: show the check in the Chrome window and
+  // wait (up to 30 min) for the human to pass it, probing a TCDB image every 15s.
+  let challenges = 0;
+  const waitForHuman = async (): Promise<boolean> => {
+    challenges++;
+    console.log("  ⚠ Cloudflare check needed — click 'Verify you are human' in the Chrome window at tcdb.com. Waiting (up to 30 min)…");
+    const tab = ctx.pages().find((p) => p !== page) ?? page;
+    await tab.goto("https://www.tcdb.com/", { waitUntil: "domcontentloaded", timeout: 45_000 }).catch(() => {});
+    await tab.bringToFront().catch(() => {});
+    for (let t = 0; t < 120 && !stop; t++) {
+      await nap(15_000);
+      const r = await fetchViaPage(KNOWN_GOOD);
+      if (r instanceof Buffer) { console.log("  ✓ check passed — resuming"); return true; }
+      if (t > 0 && t % 8 === 0) console.log(`  …still waiting for the Cloudflare check (${Math.round((t * 15) / 60)} min)`);
+    }
+    return false;
+  };
+  // Fetch one address, waiting out throttling / re-checks and retrying the SAME address.
   const fetchPatiently = async (u: string): Promise<Buffer | null> => {
     for (;;) {
       if (stop) return null;
       const r = await fetchViaPage(u);
       if (r === "throttled") { await backoff(); continue; }
+      if (r === "challenge") {
+        if (await waitForHuman()) continue;
+        console.log("  ✗ no Cloudflare clearance after 30 min — stopping (resumable).");
+        stop = true; return null;
+      }
       if (r) level = 0;
       return r;
     }
@@ -241,9 +265,10 @@ async function runCDP(jobs: Job[]) {
   // A long *consecutive* miss streak (every address genuinely missing, not
   // throttled) is either a dead session or a stretch of cards TCDB never scanned.
   let ok = 0, fail = 0, done = 0, streak = 0, blocked = false;
-  // A scan TCDB is known to serve (vault #8615, 2005-06 UD Jordan/LeBron #LJMJ8), for telling a
-  // dead session apart from a run of unscanned cards before any card has succeeded.
-  const KNOWN_GOOD = "https://www.tcdb.com/Images/Large/Basketball/29915/29915-3209536Fr.jpg";
+  // A scan TCDB is known to serve at a plain Cards/ address (vault #656's front), for
+  // telling a dead session apart from a run of unscanned cards. Not a Large/ URL:
+  // that path is throttled hardest and would read as "still blocked".
+  const KNOWN_GOOD = "https://www.tcdb.com/Images/Cards/Basketball/2127/2127-2909433Fr.jpg";
   let lastGood: string | null = null;
   const kinds: Record<string, number> = {};
   const t0 = Date.now();
@@ -260,7 +285,7 @@ async function runCDP(jobs: Job[]) {
     if (got) {
       await writeFile(join(OUT, `${j.id}-${j.side}.jpg`), got.buf);
       kinds[got.kind] = (kinds[got.kind] ?? 0) + 1;
-      lastGood = got.url;
+      if (got.kind !== "external") lastGood = got.url; // the session check must hit TCDB, not eBay
       ok++; streak = 0;
     } else { fail++; streak++; }
     if (streak >= 25) {
@@ -274,7 +299,7 @@ async function runCDP(jobs: Job[]) {
   await page.close().catch(() => {});
   await browser.close(); // disconnects only — leaves the user's Chrome open
   const remaining = repUpgrade ? jobs.length - ok : jobs.filter((j) => !existsSync(join(OUT, `${j.id}-${j.side}.jpg`))).length;
-  console.log(`CDP run done in ${((Date.now() - t0) / 60_000).toFixed(1)} min (${pauses} rate-limit pauses, ${(waitedMs / 60_000).toFixed(0)} min waiting). saved ${ok}, failed ${fail}${repUpgrade ? `; ${remaining} fronts still from a Rep stand-in` : `; ${remaining} still missing (resumable)`}. sources: ${JSON.stringify(kinds)}`);
+  console.log(`CDP run done in ${((Date.now() - t0) / 60_000).toFixed(1)} min (${pauses} rate-limit pauses, ${(waitedMs / 60_000).toFixed(0)} min waiting, ${challenges} Cloudflare checks). saved ${ok}, failed ${fail}${repUpgrade ? `; ${remaining} fronts still from a Rep stand-in` : `; ${remaining} still missing (resumable)`}. sources: ${JSON.stringify(kinds)}`);
 }
 
 async function main() {
