@@ -14,6 +14,7 @@ import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import { searchImageCandidates, activeProvider, playerForCatalog } from "../lib/image-search";
 import { downloadAndStore } from "../lib/image-store";
+import { titleMatchesCard } from "../lib/ebay-match";
 
 config({ path: ".env.local" });
 
@@ -61,7 +62,10 @@ async function main() {
   let ok = 0, miss = 0, fail = 0;
   for (const card of todo) {
     try {
-      const candidates = await searchImageCandidates(card.name, playerForCatalog(card.catalog));
+      // Only candidates whose title is this exact card. Taking the first hit stored
+      // the wrong card for oddball issues (a "Team Issue" search returns Topps base).
+      const candidates = (await searchImageCandidates(card.name, playerForCatalog(card.catalog)))
+        .filter((c) => titleMatchesCard(c.title, card.name));
       if (candidates.length === 0) { miss++; console.log(`  – no match: ${card.name}`); }
       else {
         let stored: string | null = null;

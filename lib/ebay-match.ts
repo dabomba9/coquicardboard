@@ -53,6 +53,13 @@ export function matchesCard(title: string, year: string | null, groups: string[]
   return groups.every((g) => g.some((syn) => t.includes(syn)));
 }
 
+// Does a listing/search-result title describe this exact card? Same rules as the
+// price matcher (year + every distinctive token). Used to vet image candidates:
+// a search for an oddball issue often returns the player's common base card.
+export function titleMatchesCard(title: string, name: string): boolean {
+  return matchesCard(title, extractYear(name), requiredTokenGroups(name));
+}
+
 const GRADED_MARKER = /\b(psa|bgs|sgc|cgc|csg|beckett|gem\s?mt|graded|slab)\b/;
 
 // For raw: exclude graded listings. For graded: require the matching grade token.

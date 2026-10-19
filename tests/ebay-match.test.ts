@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   requiredTokenGroups, matchesCard, gradeMatches, median, priceFromListings, extractYear,
-  isJunkTitle, trimOutliers,
+  isJunkTitle, trimOutliers, titleMatchesCard,
 } from "@/lib/ebay-match";
 
 const NAME = "1997 Metal Universe PMG Green #23 /10";
@@ -137,5 +137,15 @@ describe("TCDB checklist names (vintage vaults)", () => {
   it("accepts Roberto for a card printed as Bob Clemente", () => {
     const name = "1963 Topps #540 Bob Clemente";
     expect(matchesCard("1963 Topps #540 Roberto Clemente Pirates SGC 3", extractYear(name), requiredTokenGroups(name))).toBe(true);
+  });
+});
+
+describe("titleMatchesCard (image candidates)", () => {
+  it("rejects the common base card offered for an oddball issue", () => {
+    expect(titleMatchesCard("1960 Topps Roberto Clemente #326 Called Bob On Card", "1960 Topps Venezuelan Tattoos #NNO Bob Clemente")).toBe(false);
+    expect(titleMatchesCard("1956 Topps Pittsburgh Pirates Team Card #121", "1956 Pittsburgh Pirates Team Issue #NNO Roberto Clemente")).toBe(false);
+  });
+  it("accepts a listing of the actual card", () => {
+    expect(titleMatchesCard("1963 Jell-O #143 Roberto Clemente Pirates", "1963 Jell-O #143 Roberto Clemente")).toBe(true);
   });
 });

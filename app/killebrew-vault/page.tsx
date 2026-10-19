@@ -8,12 +8,13 @@ import { JsonLd } from "@/components/json-ld";
 import { collectionJsonLd } from "@/lib/structured-data";
 import {
   parseVaultParams,
+  vaultCanonical,
   vaultFilterOptions,
   vaultFacets,
   filterSortVault,
 } from "@/lib/vault-filter";
 
-export const metadata: Metadata = {
+const META: Metadata = {
   title: "Killebrew Vault — Harmon Killebrew's playing-era cards",
   description: "Browse Harmon Killebrew's playing-era card catalog (1955–1976) — search, filter, follow market value, and track what you own.",
   alternates: { canonical: "/killebrew-vault" },
@@ -24,6 +25,16 @@ export const metadata: Metadata = {
     type: "website",
   },
 };
+
+
+// Self-canonical for plain pagination, hub canonical for filtered views — see vaultCanonical.
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Metadata> {
+  return { ...META, alternates: { canonical: vaultCanonical("/killebrew-vault", await searchParams) } };
+}
 
 export default async function KillebrewVaultPage({
   searchParams,
@@ -60,7 +71,7 @@ export default async function KillebrewVaultPage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
-      <JsonLd data={collectionJsonLd({ name: "Killebrew Vault", description: metadata.description as string, path: "/killebrew-vault", items: tiles.map((t) => ({ name: t.name ?? "", slug: t.slug })) })} />
+      <JsonLd data={collectionJsonLd({ name: "Killebrew Vault", description: META.description as string, path: "/killebrew-vault", items: tiles.map((t) => ({ name: t.name ?? "", slug: t.slug })) })} />
       <h1 className="font-display text-lg uppercase tracking-tight">Killebrew Vault</h1>
       <p className="mt-1 text-sm text-muted">
         <span className="font-data text-base text-foreground">{catalog.length.toLocaleString()}</span> Harmon Killebrew

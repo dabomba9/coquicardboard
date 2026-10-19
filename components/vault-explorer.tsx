@@ -234,7 +234,7 @@ export function VaultExplorer({ tiles, params, options, facets, total, pages, pa
 
           <div className="mt-8 flex items-center justify-center gap-4">
             {page > 1 ? (
-              <Link href={hrefWith({ page: String(page - 1) })} scroll className="rounded-full border border-border/60 px-4 py-1.5 text-sm text-muted transition-colors hover:border-border hover:text-foreground">‹ Prev</Link>
+              <Link href={hrefWith({ page: page - 1 === 1 ? "" : String(page - 1) })} scroll className="rounded-full border border-border/60 px-4 py-1.5 text-sm text-muted transition-colors hover:border-border hover:text-foreground">‹ Prev</Link>
             ) : (
               <span className="rounded-full border border-border/60 px-4 py-1.5 text-sm text-muted opacity-40">‹ Prev</span>
             )}
@@ -245,6 +245,21 @@ export function VaultExplorer({ tiles, params, options, facets, total, pages, pa
               <span className="rounded-full border border-border/60 px-4 py-1.5 text-sm text-muted opacity-40">Next ›</span>
             )}
           </div>
+          {/* Every page, linked — on the plain catalog view only (the one whose pages
+              are self-canonical; see vaultCanonical). With prev/next alone, a card on
+              page 200 sat 200 clicks from the hub and search engines stopped short of
+              it ("Discovered – currently not indexed"). Now every card is two clicks away. */}
+          {!hasFilters && params.sort === "year" && pages > 1 && (
+            <nav aria-label="All pages" className="mx-auto mt-4 flex max-w-3xl flex-wrap justify-center gap-x-1.5 gap-y-1 font-data text-xs">
+              {Array.from({ length: pages }, (_, i) => i + 1).map((n) =>
+                n === page ? (
+                  <span key={n} aria-current="page" className="px-1 text-foreground">{n}</span>
+                ) : (
+                  <Link key={n} href={hrefWith({ page: n === 1 ? "" : String(n) })} className="px-1 text-muted hover:text-accent">{n}</Link>
+                )
+              )}
+            </nav>
+          )}
         </>
       )}
     </div>

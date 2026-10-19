@@ -149,3 +149,15 @@ export function filterSortVault(
   const start = (page - 1) * PAGE_SIZE;
   return { items: filtered.slice(start, start + PAGE_SIZE).map(toItem), total, pages, page };
 }
+
+/**
+ * Canonical URL for a vault listing. Plain pagination (`?page=N`, nothing else) is a
+ * distinct page of cards and canonicalizes to itself; pointing page N at page 1 told
+ * search engines every deep page was a duplicate and its card links were discounted.
+ * Any search, filter or sort is a view of the same catalog and collapses to the hub.
+ */
+export function vaultCanonical(base: string, sp: Record<string, string | string[] | undefined>): string {
+  const present = Object.keys(sp).filter((k) => sp[k] !== undefined && sp[k] !== "");
+  const { page } = parseVaultParams(sp);
+  return present.every((k) => k === "page") && page > 1 ? `${base}?page=${page}` : base;
+}
