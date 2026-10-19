@@ -25,6 +25,7 @@
  */
 import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
+import { existsSync, readdirSync } from "node:fs";
 import { resolveTarget, reconcileVerdict } from "./safety";
 
 config({ path: ".env.local" });
@@ -77,6 +78,17 @@ type Row = {
 async function main() {
   console.log(`Reconciling ${CATALOG} images against the '${BUCKET}' bucket — target: ${host}${isLocal ? " (local)" : " (REMOTE)"}`);
   const { fronts, backs } = await loadPresentIds();
+  // The bucket is SHARED and keyed only by number: Jordan Vault files use
+  // jordan-vault ids (1-12114), the Kobe/legends vaults use TCDB card ids — and
+  // those ranges overlap (Clemente's 1955 Topps is cid 6605). Trusting any
+  // `{id}-front.jpg` linked 47 Jordan cards to other players' scans. For mj-vault,
+  // only ids with a file in the Jordan download folder (public/vault) count.
+  const JORDAN_DIR = "public/vault";
+  if (CATALOG === "mj-vault" && existsSync(JORDAN_DIR)) {
+    const own = new Set(readdirSync(JORDAN_DIR));
+    for (const id of [...fronts]) if (!own.has(`${id}-front.jpg`)) fronts.delete(id);
+    for (const id of [...backs]) if (!own.has(`${id}-back.jpg`)) backs.delete(id);
+  }
   console.log(`Bucket has ${fronts.size} front + ${backs.size} back images.`);
 
   // Pass 1 — plan only. This script derives image_url purely from the bucket, so
