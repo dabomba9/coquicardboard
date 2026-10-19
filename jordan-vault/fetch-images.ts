@@ -263,6 +263,11 @@ async function runCDP(jobs: Job[]) {
       const r = await fetchViaPage(u);
       if (r === "throttled") { await backoff(); continue; }
       if (r === "challenge") {
+        // Cloudflare challenges individual addresses too — repeated requests for
+        // files that don't exist (the no-scan cards) start drawing 403s while the
+        // session itself is fine. If a fresh TCDB image still loads, this address
+        // is the problem: treat it as "no image here", don't wait.
+        if ((await fetchViaPage(`${KNOWN_GOOD}?nc=${Date.now()}`)) instanceof Buffer) return null;
         if (await waitForClearance()) continue;
         console.log("  ✗ still blocked after 60 min — stopping (resumable).");
         stop = true; return null;
