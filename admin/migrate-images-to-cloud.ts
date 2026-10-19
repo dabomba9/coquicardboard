@@ -7,6 +7,9 @@
  *   CLOUD_SUPABASE_URL=… CLOUD_SERVICE_ROLE_KEY=… npm run tsx admin/migrate-images-to-cloud.ts
  *
  * LOCAL creds come from .env.local (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).
+ *
+ * --only-new: copy only what the cloud lacks (a front not yet in card-images, or
+ * a back the cloud row doesn't have). Without it every run re-uploads every card.
  */
 import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
@@ -24,6 +27,7 @@ if (!LOCAL_URL || !LOCAL_KEY || !CLOUD_URL || !CLOUD_KEY) {
 const local = createClient(LOCAL_URL, LOCAL_KEY, { auth: { persistSession: false } });
 const cloud = createClient(CLOUD_URL, CLOUD_KEY, { auth: { persistSession: false } });
 const BUCKET = "card-images";
+const onlyNew = process.argv.includes("--only-new");
 
 // Supabase caps a single select at 1000 rows — page through with .range() so we
 // get ALL cards (the catalogs are 24k+ rows now, not the original <1000).
@@ -50,11 +54,12 @@ async function main() {
       const base = q.select("slug, image_url, image_source, attributes").not("image_url", "is", null);
       return only.length ? base.in("catalog", only) : base;
     });
-  const cloudCards = await fetchAll<{ id: string; slug: string; attributes: Record<string, unknown> | null }>(
-    cloud, (q) => q.select("id, slug, attributes"));
+  const cloudCards = await fetchAll<{ id: string; slug: string; image_url: string | null; attributes: Record<string, unknown> | null }>(
+    cloud, (q) => q.select("id, slug, image_url, attributes"));
   console.log(`local images: ${localCards.length} · cloud cards: ${cloudCards.length}`);
   const cloudIdBySlug = new Map(cloudCards.map((c) => [c.slug, c.id]));
   const cloudAttrsById = new Map(cloudCards.map((c) => [c.id, c.attributes ?? {}]));
+  const cloudImageById = new Map(cloudCards.map((c) => [c.id, c.image_url]));
 
   // Copy one local image URL into the cloud bucket; returns the cloud public URL.
   async function copy(src: string, path: string): Promise<string | null> {
@@ -68,28 +73,36 @@ async function main() {
     return cloud.storage.from(BUCKET).getPublicUrl(`${path}.${ext}`).data.publicUrl;
   }
 
-  let ok = 0, backs = 0, miss = 0, fail = 0;
+  let ok = 0, backs = 0, miss = 0, fail = 0, skipped = 0;
   for (const c of localCards) {
     const cloudId = cloudIdBySlug.get(c.slug);
     if (!cloudId) { miss++; continue; }
+    const localBack = c.attributes?.backImage;
+    const hasFront = (cloudImageById.get(cloudId) ?? "").includes(`/${BUCKET}/`);
+    const needBack = typeof localBack === "string" && !!localBack && !cloudAttrsById.get(cloudId)?.backImage;
+    if (onlyNew && hasFront && !needBack) { skipped++; continue; }
     try {
-      const publicUrl = await copy(c.image_url, `cards/${cloudId}`);
-      if (!publicUrl) { fail++; continue; }
-      const update: Record<string, unknown> = { image_url: publicUrl, image_source: c.image_source };
+      const update: Record<string, unknown> = {};
+      if (!(onlyNew && hasFront)) {
+        const publicUrl = await copy(c.image_url, `cards/${cloudId}`);
+        if (!publicUrl) { fail++; continue; }
+        update.image_url = publicUrl;
+        update.image_source = c.image_source;
+      }
       // Backs live in attributes.backImage (vault cards). They used to be skipped,
       // so production had none. Merge into the CLOUD row's own attributes — never
       // overwrite them with the local copy.
-      const localBack = c.attributes?.backImage;
-      if (typeof localBack === "string" && localBack) {
+      if (typeof localBack === "string" && localBack && (!onlyNew || needBack)) {
         const backUrl = await copy(localBack, `cards/${cloudId}-back`);
         if (backUrl) { update.attributes = { ...cloudAttrsById.get(cloudId), backImage: backUrl }; backs++; }
       }
+      if (Object.keys(update).length === 0) { fail++; continue; } // only a back was due, and it failed
       const { error } = await cloud.from("cards").update(update).eq("id", cloudId);
       if (error) { fail++; continue; }
       ok++;
       if (ok % 25 === 0) console.log(`  …${ok} copied (${backs} backs)`);
     } catch { fail++; }
   }
-  console.log(`Done. copied=${ok} backs=${backs} no-slug-match=${miss} failed=${fail}`);
+  console.log(`Done. copied=${ok} backs=${backs} no-slug-match=${miss} failed=${fail}${onlyNew ? ` already-on-cloud=${skipped}` : ""}`);
 }
 main().catch((e) => { console.error(e); process.exit(1); });
