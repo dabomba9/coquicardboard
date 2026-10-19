@@ -12,10 +12,74 @@ export type Guide = {
     heading: string;
     catalog: string;
     tier?: number;
+    // Hand-picked cards, shown in this order (for vaults, where a tier filter
+    // doesn't apply). Full DB slugs, e.g. vault cards carry their rc<tcdbId>- prefix.
+    slugs?: string[];
   };
 };
 
 export const GUIDES: Guide[] = [
+  {
+    slug: "roberto-clemente-topps-run",
+    title: "Roberto Clemente on Topps, 1955–1973: every flagship card, and the years he was “Bob”",
+    excerpt:
+      "One Topps card a year for nineteen years — and on thirteen of them, the name on the front isn't the one he used.",
+    date: "2026-10-18",
+    body: [
+      "The Clemente Vault holds 256 cards issued during his playing career, from the 1955 Topps rookie to the 1973 set that came out after his death. The backbone of that list is Topps: a flagship base card every single year, nineteen in a row, from 1955 #164 to 1973 #50. Two years come in variants that collectors treat as separate cards — the 1956 #33 with a gray or a white back, and the 1958 #52 with the team name in white or yellow letters — so the full run is 21 cards.",
+      "Read the fronts in order and the name changes. The 1955 and 1956 cards say Roberto Clemente. From 1957 through 1969, every Topps flagship card calls him Bob. Roberto comes back in 1970, on #350, and stays for the last four cards. He was Roberto Clemente, from Carolina, Puerto Rico, and for thirteen years his own flagship card said otherwise.",
+      "The vault makes it clear whose habit that was. Between 1957 and 1969, Topps cards in the vault say Bob 51 times and Roberto 19. Bazooka, Topps' own gum brand, says Bob on all 18 of its cards, and O-Pee-Chee, which printed Topps designs in Canada, on 7 of 8. The team and regional issues go the other way: every Jay Publishing picture pack, Kahn's Wieners card, Sportservice, KDKA and Dexter Press issue in those years calls him Roberto, and Post cereal does on 10 of its 12. The name on the card mostly depended on who printed it.",
+      "The vault is not only Topps. Pittsburgh team issues, Jay Publishing picture packs, Kahn's Wieners, Post cereal panels, Bazooka boxes, Dexter Press and KDKA cards all show up, and the busiest years are late in his career: 32 cards from 1968, 27 from 1971, 26 from 1972. One set is closest to home. The 1972 Puerto Rican Winter League Stickers include nine Clemente panels, #198 through #206, issued for the league he played in during the winters.",
+      "The 1972 Topps #309 is the last flagship card issued in his lifetime. He reached 3,000 hits on September 30, 1972, and died on December 31 of that year in a plane crash while delivering earthquake relief to Nicaragua. The 1973 Topps #50 that closes the run was printed after.",
+      "A note on what this page doesn't show. The vault tracks every Clemente card from his playing days, but many of the oddball issues — team photo packs, publicity photos, tattoos and stickers — rarely trade, and some have no pictured copy anywhere we can source. Those cards read “No recent sales yet” or show placeholder art. That is a fact about how few of them survive and change hands, not a gap that more searching would close.",
+    ],
+    cardList: {
+      heading: "Every flagship Topps Clemente, 1955–1973",
+      catalog: "clemente-vault",
+      slugs: [
+        "rc6605-1955-topps-164-roberto-clemente-rc",
+        "rc7851097-1956-topps-33-roberto-clemente-var-var-gray-back",
+        "rc6682-1956-topps-33-roberto-clemente-var-var-white-back",
+        "rc7077-1957-topps-76-bob-clemente",
+        "rc27066-1958-topps-52-bob-clemente-var-var-team-name-in-white-letters",
+        "rc27067-1958-topps-52-bob-clemente-var-var-team-name-in-yellow-letters",
+        "rc8442-1959-topps-478-bob-clemente",
+        "rc27926-1960-topps-326-bob-clemente",
+        "rc9499-1961-topps-388-bob-clemente",
+        "rc28260-1962-topps-10-bob-clemente",
+        "rc10857-1963-topps-540-bob-clemente",
+        "rc11334-1964-topps-440-bob-clemente",
+        "rc11643-1965-topps-160-bob-clemente",
+        "rc29210-1966-topps-300-bob-clemente",
+        "rc14008-1967-topps-400-bob-clemente",
+        "rc29704-1968-topps-150-bob-clemente",
+        "rc30253-1969-topps-50-bob-clemente",
+        "rc15182-1970-topps-350-roberto-clemente",
+        "rc16187-1971-topps-630-roberto-clemente",
+        "rc16713-1972-topps-309-roberto-clemente",
+        "rc17252-1973-topps-50-roberto-clemente",
+      ],
+    },
+  },
+  {
+    slug: "black-mamba-tier-kobe-grails",
+    title: "The Black Mamba tier: Kobe Bryant's 16 grails, and why ten come from one season",
+    excerpt:
+      "The top of the Mamba Hierarchy is his rookie year plus a handful of modern autographs — and almost nothing in between.",
+    date: "2026-10-18",
+    body: [
+      "The Mamba Hierarchy ranks 75 Kobe Bryant cards into three tiers: 16 in Black Mamba, 24 in Mamba Mentality and 35 in Foundation. There is no published Kobe hierarchy to follow, so this one is our own curation, weighed on the same things as the Michael Jordan Hierarchy: value, demand, scarcity and how the card looks. The tiers are a judgment call. The patterns inside them are not.",
+      "Ten of the sixteen Black Mamba cards come from a single season, 1996–97, his rookie year. That list reads like a tour of the era's premium products: the Topps Chrome #138 and its Refractor, the Bowman's Best Atomic Refractor, the Finest Bronze Refractor, the Flair Showcase Legacy Collection Row 0, the SkyBox Premium Star Rubies, the Metal Precious Metal Gem, the SP, the SkyBox Z-Force Zebut Z-peat and the E-X2000 Star Date 2000.",
+      "The other six jump forward. Five are autographs from 2003–04 to 2016–17, all serial numbered: the Upper Deck Exquisite Emblems of Endorsement at /15, the Exquisite Logoman dual autograph with Magic Johnson at 1/1, the Panini Immaculate Autographed Patches at /100, the Flawless Patch Autographs at /25 and the National Treasures Signatures at /35. The sixth, the 2012–13 Prizm Downtown Bound, is the only modern card in the tier without a signature.",
+      "What is missing is the middle. No Black Mamba card comes from 1997–98 through 2002–03 — the seasons that include his first three championships. The same weighting holds across the whole hierarchy: 46 of its 75 cards are from 1996. The top of the Kobe market is his first season and the high-end autograph era that came later, not the years he was winning titles.",
+      "That is the opposite of the Jordan picture. The top tier of the MJ Hierarchy is concentrated in 1996–98, near the end of his career, when serial numbering and short-print inserts took over. Kobe's rookie season landed in exactly that same window. His first cards were printed in the middle of the premium-insert era, and the hierarchy reflects it.",
+    ],
+    cardList: {
+      heading: "All 16 Black Mamba cards",
+      catalog: "mamba-hierarchy",
+      tier: 1,
+    },
+  },
   {
     slug: "every-tier-1-jordan-card",
     title: "Every Tier 1 Michael Jordan card, and what Tier 1 actually means",

@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getGuide } from "@/data/guides";
+import { getGuide, type Guide } from "@/data/guides";
 import { getHierarchyCatalog } from "@/lib/queries";
 import { CardThumb } from "@/components/card-thumb";
 import { legendArtForCatalog } from "@/lib/legends";
+import { catalogMeta } from "@/lib/catalogs";
 import { JsonLd } from "@/components/json-ld";
 import { articleJsonLd } from "@/lib/structured-data";
 
@@ -32,16 +33,27 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
+// `slugs` (hand-picked, in the guide's order) wins over `tier`; neither = whole catalog.
+function pickCards<T extends { slug: string; tier_id: number | null }>(
+  cards: T[],
+  list: NonNullable<Guide["cardList"]>
+): T[] {
+  if (list.slugs) {
+    const bySlug = new Map(cards.map((c) => [c.slug, c]));
+    return list.slugs.map((s) => bySlug.get(s)).filter((c): c is T => !!c);
+  }
+  return cards.filter((c) => list.tier == null || c.tier_id === list.tier);
+}
+
 export default async function GuidePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const guide = getGuide(slug);
   if (!guide) notFound();
 
-  const listed = guide.cardList
-    ? (await getHierarchyCatalog(guide.cardList.catalog)).filter(
-        (c) => guide.cardList!.tier == null || c.tier_id === guide.cardList!.tier
-      )
-    : [];
+  const listed = guide.cardList ? pickCards(await getHierarchyCatalog(guide.cardList.catalog), guide.cardList) : [];
+  // The footer points at the catalog the guide is about; guides with no card block
+  // are the original MJ explainers.
+  const explore = catalogMeta(guide.cardList?.catalog) ?? catalogMeta("mj-hierarchy")!;
 
   return (
     <article className="mx-auto max-w-2xl px-4 py-10">
@@ -78,7 +90,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
       )}
 
       <div className="mt-10 border-t border-border pt-6">
-        <Link href="/mj-hierarchy" className="text-sm text-accent hover:underline">Explore the MJ Hierarchy →</Link>
+        <Link href={explore.href} className="text-sm text-accent hover:underline">Explore the {explore.label} →</Link>
       </div>
     </article>
   );
