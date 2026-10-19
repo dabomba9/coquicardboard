@@ -149,3 +149,20 @@ describe("titleMatchesCard (image candidates)", () => {
     expect(titleMatchesCard("1963 Jell-O #143 Roberto Clemente Pirates", "1963 Jell-O #143 Roberto Clemente")).toBe(true);
   });
 });
+
+describe("TCDB serial / memorabilia tags (Kobe Vault)", () => {
+  it("drops SN### and MEM so listings can match", () => {
+    const name = "1996 Collector's Edge Rookie Rage - Key Kraze #3 Kobe Bryant SN3200";
+    const flat = requiredTokenGroups(name).flat();
+    expect(flat).not.toContain("sn3200");
+    expect(matchesCard("1996 Collector's Edge Rookie Rage Key Kraze #3 Kobe Bryant /3200", extractYear(name), requiredTokenGroups(name))).toBe(true);
+    const mem = "2006-07 Bowman Elevation - Executive Level Relics (79) Blue #ELR-KB Kobe Bryant MEM, SN79";
+    const memFlat = requiredTokenGroups(mem).flat();
+    expect(memFlat).not.toContain("mem");
+    expect(memFlat).not.toContain("sn79");
+    expect(memFlat).toContain("relics");
+  });
+  it("does not strip words that merely start with sn", () => {
+    expect(requiredTokenGroups("1997 Fleer Sneaker Sensations #1 Kobe Bryant").flat()).toContain("sneaker");
+  });
+});

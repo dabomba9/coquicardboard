@@ -9,6 +9,7 @@
  *   npm run prices:ebay -- --missing-only      # only grades not already answered
  *   npm run prices:ebay -- --grades raw        # only these grade keys (comma list): 1 call/card
  *   npm run prices:ebay -- --no-image-first    # imageless cards first (a price makes them indexable)
+ *   npm run prices:ebay -- --missing-only --retry-none  # also re-ask "checked, no listings" grades
  *
  * eBay's default Browse quota is 5,000 calls/day and each card costs 3 calls
  * (4 for tier 1-2), so a catalog sweep is ~3.5 calls per card — budget before a
@@ -53,6 +54,9 @@ const gradesArg = process.argv.indexOf("--grades");
 const onlyGrades = gradesArg !== -1 ? new Set(process.argv[gradesArg + 1].split(",").map((g) => g.trim())) : null;
 // Cards with no image first: for those, a price is what makes the page indexable.
 const noImageFirst = process.argv.includes("--no-image-first");
+// With --missing-only: re-ask grades whose only answer is a 'none' sentinel (e.g.
+// after a matcher fix). A real price is never re-asked; a hit replaces the sentinel.
+const retryNone = process.argv.includes("--retry-none");
 
 const db = createClient(url, serviceKey, { auth: { persistSession: false } });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -94,11 +98,14 @@ async function main() {
     const ids = cards.map((c) => c.id);
     for (let i = 0; i < ids.length; i += 200) {
       const { data, error: kErr } = await db
-        .from("card_prices").select("card_id, grade_key").in("card_id", ids.slice(i, i + 200));
+        .from("card_prices").select("card_id, grade_key, source").in("card_id", ids.slice(i, i + 200));
       if (kErr) throw kErr;
-      for (const r of (data as { card_id: string; grade_key: string }[]) ?? []) known.add(`${r.card_id}|${r.grade_key}`);
+      for (const r of (data as { card_id: string; grade_key: string; source: string | null }[]) ?? []) {
+        if (retryNone && r.source === "none") continue;
+        known.add(`${r.card_id}|${r.grade_key}`);
+      }
     }
-    console.log(`  skipping ${known.size} grade(s) already checked`);
+    console.log(`  skipping ${known.size} grade(s) already ${retryNone ? "priced" : "checked"}`);
   }
   // --limit counts cards that still have work. Applied before the --missing-only
   // filter, a daily `--limit 2000` re-selected the same, already-answered cards.

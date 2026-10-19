@@ -5,8 +5,8 @@ const STOPWORDS = new Set([
   "the", "and", "of", "a", "michael", "jordan", "mj", "card", "qty", "ser", "h", "r",
   "row", "legacy", "collection", "edition", "nba", "basketball", "chicago", "bulls",
   "kobe", "bryant", "lakers", "los", "angeles",
-  // TCDB checklist tags (variant, combo card, error). Sellers never write them.
-  "var", "cpc", "uer",
+  // TCDB checklist tags (variant, combo card, error, memorabilia). Sellers never write them.
+  "var", "cpc", "uer", "mem",
 ]);
 
 // Abbreviation → acceptable title substrings (any present = group satisfied).
@@ -28,6 +28,7 @@ export function requiredTokenGroups(name: string): string[][] {
   const cleaned = name
     .toLowerCase()
     .replace(/\bvar:.*$/, " ")                    // TCDB variant descriptor ("VAR: Gray Back") — sellers phrase it freely
+    .replace(/\bsn\d*\b/g, " ")                   // TCDB serial tag ("SN79" = numbered to 79); listings write "/79"
     .replace(/\b(19|20)\d{2}(\/\d{2})?\b/g, " ") // years
     .replace(/#[a-z0-9-]+/g, " ")                // card numbers
     .replace(/\/\d+/g, " ")                       // serial /N
