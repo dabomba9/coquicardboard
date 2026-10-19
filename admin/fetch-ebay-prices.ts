@@ -7,6 +7,8 @@
  *   npm run prices:ebay -- --tier 1            # only tier 1
  *   npm run prices:ebay -- --catalog mj-vault  # one catalog
  *   npm run prices:ebay -- --missing-only      # only grades not already answered
+ *   npm run prices:ebay -- --grades raw        # only these grade keys (comma list): 1 call/card
+ *   npm run prices:ebay -- --no-image-first    # imageless cards first (a price makes them indexable)
  *
  * eBay's default Browse quota is 5,000 calls/day and each card costs 3 calls
  * (4 for tier 1-2), so a catalog sweep is ~3.5 calls per card — budget before a
@@ -45,6 +47,12 @@ const catalog = catalogArg !== -1 ? process.argv[catalogArg + 1] : undefined;
 // which mean "checked, no comps". Makes a long run resumable and stops it burning
 // eBay quota re-asking questions we already have answers to.
 const missingOnly = process.argv.includes("--missing-only");
+// Restrict to these grade keys, e.g. `--grades raw` for the big vaults: one call per
+// card, and tier-less vault cards rarely have enough PSA 9/10 listings to price.
+const gradesArg = process.argv.indexOf("--grades");
+const onlyGrades = gradesArg !== -1 ? new Set(process.argv[gradesArg + 1].split(",").map((g) => g.trim())) : null;
+// Cards with no image first: for those, a price is what makes the page indexable.
+const noImageFirst = process.argv.includes("--no-image-first");
 
 const db = createClient(url, serviceKey, { auth: { persistSession: false } });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -59,22 +67,31 @@ const GRADES = (t: number | null): { key: string; suffix: string }[] => [
   { key: "PSA10", suffix: "PSA 10" },
   { key: "PSA9", suffix: "PSA 9" },
   ...(t != null && t <= 2 ? [{ key: "BGS9.5", suffix: "BGS 9.5" }] : []),
-];
+].filter((g) => !onlyGrades || onlyGrades.has(g.key));
 
 async function main() {
-  let q = db.from("cards").select("id, name, tier_id, catalog").order("tier_id").order("rarity_rank");
-  if (catalog) q = q.eq("catalog", catalog);
-  if (tier) q = q.eq("tier_id", tier);
-  const { data: cards, error } = await q;
-  if (error) throw error;
-  const todo = (limit ? cards!.slice(0, limit) : cards!) ?? [];
-  console.log(`eBay asking-price refresh — target: ${host}${isLocal ? " (local)" : " (REMOTE)"}`);
-  console.log(`  ${todo.length} card(s)${catalog ? ` · catalog: ${catalog}` : ""}${missingOnly ? " · missing grades only" : ""}`);
+  // Page through: one select is capped at 1000 rows, which silently limited a
+  // 12k-card vault to its first thousand.
+  type Row = { id: string; name: string; tier_id: number | null; catalog: string; image_url: string | null; attributes: Record<string, unknown> | null };
+  const cards: Row[] = [];
+  for (let from = 0; ; from += 1000) {
+    let q = db.from("cards").select("id, name, tier_id, catalog, image_url, attributes").order("tier_id").order("rarity_rank").order("id");
+    if (catalog) q = q.eq("catalog", catalog);
+    if (tier) q = q.eq("tier_id", tier);
+    const { data, error } = await q.range(from, from + 999);
+    if (error) throw error;
+    cards.push(...((data as Row[]) ?? []));
+    if (!data || data.length < 1000) break;
+  }
+  // Imageless first; within each group, unlicensed oddballs (posters, promos —
+  // rarely listed) last. Stable sort keeps tier/rarity order otherwise.
+  const oddball = (c: Row) => Number(c.attributes?.manufacturer === "Misc & Unlicensed");
+  if (noImageFirst) cards.sort((a, b) => Number(!!a.image_url) - Number(!!b.image_url) || oddball(a) - oddball(b));
 
   // Grades we already have an answer for (a price OR a 'none' sentinel).
   const known = new Set<string>();
   if (missingOnly) {
-    const ids = todo.map((c) => c.id);
+    const ids = cards.map((c) => c.id);
     for (let i = 0; i < ids.length; i += 200) {
       const { data, error: kErr } = await db
         .from("card_prices").select("card_id, grade_key").in("card_id", ids.slice(i, i + 200));
@@ -83,6 +100,12 @@ async function main() {
     }
     console.log(`  skipping ${known.size} grade(s) already checked`);
   }
+  // --limit counts cards that still have work. Applied before the --missing-only
+  // filter, a daily `--limit 2000` re-selected the same, already-answered cards.
+  const pending = missingOnly ? cards.filter((c) => GRADES(c.tier_id).some((g) => !known.has(`${c.id}|${g.key}`))) : cards;
+  const todo = limit ? pending.slice(0, limit) : pending;
+  console.log(`eBay asking-price refresh — target: ${host}${isLocal ? " (local)" : " (REMOTE)"}`);
+  console.log(`  ${todo.length} card(s)${catalog ? ` · catalog: ${catalog}` : ""}${missingOnly ? ` · missing grades only (${pending.length} pending of ${cards.length})` : ""}${onlyGrades ? ` · grades: ${[...onlyGrades].join(",")}` : ""}${noImageFirst ? " · imageless first" : ""}`);
 
   let priced = 0, grades = 0, skipped = 0, reused = 0;
   for (const card of todo) {
