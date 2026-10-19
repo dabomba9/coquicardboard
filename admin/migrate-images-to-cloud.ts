@@ -44,34 +44,52 @@ async function main() {
   // specific catalogs (avoids re-uploading catalogs already on cloud).
   const only = (process.env.MIGRATE_CATALOGS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   if (only.length) console.log(`MIGRATE_CATALOGS: ${only.join(", ")}`);
-  const localCards = await fetchAll<{ slug: string; image_url: string; image_source: string | null }>(
+  type LocalCard = { slug: string; image_url: string; image_source: string | null; attributes: Record<string, unknown> | null };
+  const localCards = await fetchAll<LocalCard>(
     local, (q) => {
-      const base = q.select("slug, image_url, image_source").not("image_url", "is", null);
+      const base = q.select("slug, image_url, image_source, attributes").not("image_url", "is", null);
       return only.length ? base.in("catalog", only) : base;
     });
-  const cloudCards = await fetchAll<{ id: string; slug: string }>(cloud, (q) => q.select("id, slug"));
+  const cloudCards = await fetchAll<{ id: string; slug: string; attributes: Record<string, unknown> | null }>(
+    cloud, (q) => q.select("id, slug, attributes"));
   console.log(`local images: ${localCards.length} · cloud cards: ${cloudCards.length}`);
   const cloudIdBySlug = new Map(cloudCards.map((c) => [c.slug, c.id]));
+  const cloudAttrsById = new Map(cloudCards.map((c) => [c.id, c.attributes ?? {}]));
 
-  let ok = 0, miss = 0, fail = 0;
-  for (const c of (localCards as { slug: string; image_url: string; image_source: string | null }[]) ?? []) {
+  // Copy one local image URL into the cloud bucket; returns the cloud public URL.
+  async function copy(src: string, path: string): Promise<string | null> {
+    const res = await fetch(src);
+    if (!res.ok) return null;
+    const ct = (res.headers.get("content-type") ?? "image/jpeg").split(";")[0];
+    const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
+    const buf = Buffer.from(await res.arrayBuffer());
+    const up = await cloud.storage.from(BUCKET).upload(`${path}.${ext}`, buf, { contentType: ct, upsert: true });
+    if (up.error) return null;
+    return cloud.storage.from(BUCKET).getPublicUrl(`${path}.${ext}`).data.publicUrl;
+  }
+
+  let ok = 0, backs = 0, miss = 0, fail = 0;
+  for (const c of localCards) {
     const cloudId = cloudIdBySlug.get(c.slug);
     if (!cloudId) { miss++; continue; }
     try {
-      const res = await fetch(c.image_url);
-      if (!res.ok) { fail++; continue; }
-      const ct = (res.headers.get("content-type") ?? "image/jpeg").split(";")[0];
-      const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
-      const buf = Buffer.from(await res.arrayBuffer());
-      const path = `cards/${cloudId}.${ext}`;
-      const up = await cloud.storage.from(BUCKET).upload(path, buf, { contentType: ct, upsert: true });
-      if (up.error) { fail++; continue; }
-      const publicUrl = cloud.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
-      await cloud.from("cards").update({ image_url: publicUrl, image_source: c.image_source }).eq("id", cloudId);
+      const publicUrl = await copy(c.image_url, `cards/${cloudId}`);
+      if (!publicUrl) { fail++; continue; }
+      const update: Record<string, unknown> = { image_url: publicUrl, image_source: c.image_source };
+      // Backs live in attributes.backImage (vault cards). They used to be skipped,
+      // so production had none. Merge into the CLOUD row's own attributes — never
+      // overwrite them with the local copy.
+      const localBack = c.attributes?.backImage;
+      if (typeof localBack === "string" && localBack) {
+        const backUrl = await copy(localBack, `cards/${cloudId}-back`);
+        if (backUrl) { update.attributes = { ...cloudAttrsById.get(cloudId), backImage: backUrl }; backs++; }
+      }
+      const { error } = await cloud.from("cards").update(update).eq("id", cloudId);
+      if (error) { fail++; continue; }
       ok++;
-      if (ok % 25 === 0) console.log(`  …${ok} copied`);
+      if (ok % 25 === 0) console.log(`  …${ok} copied (${backs} backs)`);
     } catch { fail++; }
   }
-  console.log(`Done. copied=${ok} no-slug-match=${miss} failed=${fail}`);
+  console.log(`Done. copied=${ok} backs=${backs} no-slug-match=${miss} failed=${fail}`);
 }
 main().catch((e) => { console.error(e); process.exit(1); });

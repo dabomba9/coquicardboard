@@ -23,6 +23,7 @@ import { chromium, type APIRequestContext } from "playwright";
 import { mkdir, readFile, writeFile, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { candidateUrls, isRepUrl, type CandidateKind } from "./image-urls";
 
 const HERE = new URL(".", import.meta.url).pathname;
 const OUT = join(HERE, "..", "public", "vault");
@@ -43,6 +44,9 @@ const assist = args.includes("--assist");
 // (NOT automation-flagged, so the human can pass Cloudflare) and fetch through that
 // already-cleared real session. The reliable path past tcdb's managed challenge.
 const cdp = args.includes("--cdp");
+// Re-fetch fronts that were saved from a TCDB "Rep" stand-in, keeping a real scan
+// only if one exists now (see image-urls.ts). Implies fronts only.
+const repUpgrade = args.includes("--rep-upgrade");
 
 type Card = { id: number; frontImage: string | null; backImage: string | null };
 type Job = { id: number; side: "front" | "back"; url: string };
@@ -56,10 +60,12 @@ async function buildJobs(): Promise<Job[]> {
     if (c.frontImage) jobs.push({ id: c.id, side: "front", url: c.frontImage });
     if (!frontOnly && c.backImage) jobs.push({ id: c.id, side: "back", url: c.backImage });
   }
-  // Skip ones already downloaded (resumable).
+  // Skip ones already downloaded (resumable). --rep-upgrade inverts this for
+  // Rep-sourced fronts: those are on disk but aren't the actual card.
   const todo: Job[] = [];
   for (const j of jobs) {
-    if (existsSync(join(OUT, `${j.id}-${j.side}.jpg`))) continue;
+    const onDisk = existsSync(join(OUT, `${j.id}-${j.side}.jpg`));
+    if (repUpgrade ? !(j.side === "front" && onDisk && isRepUrl(j.url)) : onDisk) continue;
     todo.push(j);
   }
   return Number.isFinite(limit) ? todo.slice(0, limit) : todo;
@@ -175,7 +181,9 @@ async function runCDP(jobs: Job[]) {
 
   const fetchViaPage = async (u: string): Promise<Buffer | null> => {
     try {
-      const res = await page.goto(u, { waitUntil: "commit", timeout: 30_000 });
+      // domcontentloaded, not commit: with commit the body/headers of a direct
+      // image navigation weren't reliably available yet.
+      const res = await page.goto(u, { waitUntil: "domcontentloaded", timeout: 30_000 });
       if (!res || !res.ok()) return null;
       const buf = Buffer.from(await res.body());
       const ct = (res.headers()["content-type"] ?? "").split(";")[0].trim();
@@ -184,29 +192,58 @@ async function runCDP(jobs: Job[]) {
       return null;
     }
   };
+  // The stored address usually 404s now (TCDB moved its scans), so try the
+  // current locations for the same card id, best first. See image-urls.ts.
+  const fetchBest = async (u: string): Promise<{ buf: Buffer; kind: CandidateKind; url: string } | null> => {
+    for (const c of candidateUrls(u)) {
+      const buf = await fetchViaPage(c.url);
+      if (buf) return { buf, kind: c.kind, url: c.url };
+      await sleep(150);
+    }
+    return null;
+  };
 
-  // Many tcdb image URLs are dead (404), so we DON'T gate on a single probe. Just
-  // run; only a long *consecutive* failure streak means the cleared session died.
+  // A long *consecutive* failure streak (every candidate failing for card after
+  // card) means the cleared session died; isolated misses are just cards TCDB
+  // has no scan for.
   let stop = false;
   process.on("SIGINT", () => { stop = true; process.stdout.write("\n(stopping after current image…)\n"); });
   let ok = 0, fail = 0, done = 0, streak = 0, blocked = false;
+  // A scan TCDB is known to serve (vault #8615, 2005-06 UD Jordan/LeBron #LJMJ8), for telling a
+  // dead session apart from a run of unscanned cards before any card has succeeded.
+  const KNOWN_GOOD = "https://www.tcdb.com/Images/Large/Basketball/29915/29915-3209536Fr.jpg";
+  let lastGood: string | null = null;
+  const kinds: Record<string, number> = {};
+  const t0 = Date.now();
+  const progress = () => {
+    const min = (Date.now() - t0) / 60_000;
+    const rate = done / Math.max(min, 1e-9);
+    const eta = rate > 0 ? (jobs.length - done) / rate : 0;
+    return `${done}/${jobs.length} (ok ${ok}, fail ${fail}) · ${min.toFixed(1)} min · ${rate.toFixed(0)}/min · ETA ${eta.toFixed(0)} min · ${JSON.stringify(kinds)}`;
+  };
   for (const j of jobs) {
     if (stop) break;
-    const buf = await fetchViaPage(j.url);
-    if (buf) { await writeFile(join(OUT, `${j.id}-${j.side}.jpg`), buf); ok++; streak = 0; }
-    else { fail++; streak++; }
-    if (streak >= 25) { blocked = true; break; } // session likely expired / re-challenged
-    if (++done % 25 === 0 || done === jobs.length) process.stdout.write(`\r  ${done}/${jobs.length} (ok ${ok}, fail ${fail})`);
+    const got = await fetchBest(j.url);
+    if (got) {
+      await writeFile(join(OUT, `${j.id}-${j.side}.jpg`), got.buf);
+      kinds[got.kind] = (kinds[got.kind] ?? 0) + 1;
+      lastGood = got.url;
+      ok++; streak = 0;
+    } else { fail++; streak++; }
+    // 25 misses in a row is either a dead session or a stretch of oddball cards TCDB
+    // never scanned (the queue opens with ~40 of those). Ask a known-good image which.
+    if (streak >= 25) {
+      if (await fetchViaPage(lastGood ?? KNOWN_GOOD)) streak = 0;
+      else { blocked = true; break; }
+    }
+    if (++done % 25 === 0 || done === jobs.length) console.log(`  ${progress()}`);
     await sleep(300);
   }
-  process.stdout.write("\n");
-  if (blocked) console.log("⚠ 25 failures in a row — the Cloudflare session likely expired. Re-solve the check at tcdb.com in the Chrome window, then re-run --cdp (resumable).");
+  if (blocked) console.log("⚠ 25 cards in a row with no image at any address — the Cloudflare session likely expired. Re-solve the check at tcdb.com in the Chrome window, then re-run --cdp (resumable).");
   await page.close().catch(() => {});
   await browser.close(); // disconnects only — leaves the user's Chrome open
-  const remaining = jobs.filter((j) => !existsSync(join(OUT, `${j.id}-${j.side}.jpg`))).length;
-  console.log(`CDP run done. saved ${ok}, failed ${fail}. ${remaining} still missing (resumable).`);
-  const sample = jobs.find((j) => existsSync(join(OUT, `${j.id}-${j.side}.jpg`)));
-  if (sample) { const s = await stat(join(OUT, `${sample.id}-${sample.side}.jpg`)); console.log(`  sample ${sample.id}-${sample.side}.jpg = ${s.size} bytes`); }
+  const remaining = repUpgrade ? jobs.length - ok : jobs.filter((j) => !existsSync(join(OUT, `${j.id}-${j.side}.jpg`))).length;
+  console.log(`CDP run done in ${((Date.now() - t0) / 60_000).toFixed(1)} min. saved ${ok}, failed ${fail}${repUpgrade ? `; ${remaining} fronts still from a Rep stand-in` : `; ${remaining} still missing (resumable)`}. sources: ${JSON.stringify(kinds)}`);
 }
 
 async function main() {
