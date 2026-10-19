@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/primitives";
 import { removeFromWantList, updateWantItem } from "@/lib/actions/holdings";
 import { ebaySearchUrl, outboundRel } from "@/lib/affiliate";
 import { playerForCatalog } from "@/lib/image-search";
-import { isDeal, wantSort } from "@/lib/want";
-import { cn, formatUsd, TIER_COLORS } from "@/lib/utils";
+import { groupByCatalog, isDeal, tierThenRank, wantSort } from "@/lib/want";
+import { catalogLabel, catalogOrder } from "@/lib/catalogs";
+import { cn, formatUsd } from "@/lib/utils";
 import type { CardWithSet } from "@/lib/types";
 
 export type WantCard = CardWithSet & {
@@ -19,13 +20,12 @@ export type WantCard = CardWithSet & {
   target_cents: number | null;
   current_cents: number | null;
 };
-type TierMeta = { id: number; name: string };
-type SortKey = "priority" | "deal" | "tier" | "value" | "year" | "name";
+type SortKey = "priority" | "deal" | "catalog" | "value" | "year" | "name";
 
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "priority", label: "Priority" },
   { key: "deal", label: "Best deal" },
-  { key: "tier", label: "Tier" },
+  { key: "catalog", label: "Catalog" },
   { key: "value", label: "Value" },
   { key: "year", label: "Year" },
   { key: "name", label: "Name" },
@@ -33,9 +33,9 @@ const SORTS: { key: SortKey; label: string }[] = [
 
 const PRIORITY_LABEL: Record<number, string> = { 1: "High", 2: "Med", 3: "Low" };
 
-export function WantListGrid({ cards, tiers }: { cards: WantCard[]; tiers: TierMeta[] }) {
+export function WantListGrid({ cards }: { cards: WantCard[] }) {
   const [q, setQ] = useState("");
-  const [tierFilter, setTierFilter] = useState<Set<number>>(new Set());
+  const [catalogFilter, setCatalogFilter] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<SortKey>("priority");
   const [view, setView] = useState<"grid" | "list">("grid");
   // Optimistic edits keyed by card id, so changes show instantly.
@@ -80,37 +80,36 @@ export function WantListGrid({ cards, tiers }: { cards: WantCard[]; tiers: TierM
     const needle = q.trim().toLowerCase();
     const out = cards.filter((c) => {
       if (needle && !`${c.name} ${c.sets?.name ?? ""}`.toLowerCase().includes(needle)) return false;
-      if (tierFilter.size && !tierFilter.has(c.tier_id)) return false;
+      if (catalogFilter.size && !catalogFilter.has(c.catalog)) return false;
       return true;
     });
     const cmp: Record<SortKey, (a: WantCard, b: WantCard) => number> = {
-      priority: (a, b) => prioOf(a) - prioOf(b) || a.tier_id - b.tier_id,
+      priority: (a, b) => prioOf(a) - prioOf(b) || tierThenRank(a, b),
       deal: (a, b) => wantSort({ current_cents: a.current_cents, target_cents: targetOf(a) }, { current_cents: b.current_cents, target_cents: targetOf(b) }),
-      tier: (a, b) => a.tier_id - b.tier_id || a.rarity_rank - b.rarity_rank,
+      catalog: (a, b) => catalogOrder(a.catalog) - catalogOrder(b.catalog) || tierThenRank(a, b),
       value: (a, b) => (b.current_cents ?? 0) - (a.current_cents ?? 0),
       year: (a, b) => (a.year ?? 0) - (b.year ?? 0),
       name: (a, b) => a.name.localeCompare(b.name),
     };
     return out.sort(cmp[sortBy]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cards, q, tierFilter, sortBy, prioEdits, targetEdits]);
+  }, [cards, q, catalogFilter, sortBy, prioEdits, targetEdits]);
 
-  // Group into tier sections only when sorting by tier; otherwise one flat list.
+  // Group into catalog sections only when sorting by catalog; otherwise one flat list.
+  // (Not MJ tiers: vault cards have no tier and Kobe/Mamba tier ids are cosmetic.)
   const groups = useMemo(() => {
-    if (sortBy !== "tier") return [{ label: null as string | null, items: filtered }];
-    const map = new Map<number, { label: string; items: WantCard[] }>();
-    for (const c of filtered) {
-      if (!map.has(c.tier_id)) {
-        const t = tiers.find((x) => x.id === c.tier_id);
-        map.set(c.tier_id, { label: t?.name ?? `Tier ${c.tier_id}`, items: [] });
-      }
-      map.get(c.tier_id)!.items.push(c);
-    }
-    return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([, g]) => g);
-  }, [filtered, sortBy, tiers]);
+    if (sortBy !== "catalog") return [{ label: null as string | null, items: filtered }];
+    return groupByCatalog(filtered, catalogOrder).map((g) => ({ label: catalogLabel(g.catalog) as string | null, items: g.items }));
+  }, [filtered, sortBy]);
 
-  function toggleTier(id: number) {
-    setTierFilter((prev) => {
+  // Only the catalogs actually on this list get a chip.
+  const catalogsPresent = useMemo(
+    () => [...new Set(cards.map((c) => c.catalog))].sort((a, b) => catalogOrder(a) - catalogOrder(b)),
+    [cards]
+  );
+
+  function toggleCatalog(id: string) {
+    setCatalogFilter((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
@@ -118,9 +117,9 @@ export function WantListGrid({ cards, tiers }: { cards: WantCard[]; tiers: TierM
   }
   function resetFilters() {
     setQ("");
-    setTierFilter(new Set());
+    setCatalogFilter(new Set());
   }
-  const hasFilters = q !== "" || tierFilter.size > 0;
+  const hasFilters = q !== "" || catalogFilter.size > 0;
   const dealCount = cards.filter((c) => isDeal(c.current_cents, targetOf(c))).length;
 
   // Per-item priority select + target input + current/target readout. Reused by both views.
@@ -202,21 +201,20 @@ export function WantListGrid({ cards, tiers }: { cards: WantCard[]; tiers: TierM
           </div>
         </div>
 
-        {/* Tier chips + count */}
+        {/* Catalog chips + count (hidden when everything is from one catalog) */}
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          {tiers.map((t) => {
-            const c = TIER_COLORS[t.id] ?? TIER_COLORS[4];
-            const active = tierFilter.has(t.id);
+          {catalogsPresent.length > 1 && catalogsPresent.map((slug) => {
+            const active = catalogFilter.has(slug);
             return (
               <button
-                key={t.id}
-                onClick={() => toggleTier(t.id)}
+                key={slug}
+                onClick={() => toggleCatalog(slug)}
                 className={cn(
                   "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                  active ? cn(c.text, "border-current bg-foreground/5") : "border-border/55 text-muted hover:border-border hover:text-foreground"
+                  active ? "border-current bg-foreground/5 text-accent" : "border-border/55 text-muted hover:border-border hover:text-foreground"
                 )}
               >
-                Tier {t.id}
+                {catalogLabel(slug)}
               </button>
             );
           })}

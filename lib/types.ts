@@ -95,11 +95,15 @@ export type TierSummary = {
 export type PublicCollection = {
   profile: Pick<Profile, "username" | "display_name" | "avatar_url" | "bio">;
   tiers: TierSummary[];
+  /** Per-catalog completion for catalogs the collector holds public cards in (0008).
+   *  Optional: absent until that migration is applied to a given database. */
+  catalogs?: { catalog: string; owned_cards: number; total_cards: number }[];
   holdings: {
     card_id: string;
     card_name: string;
     card_slug: string;
-    tier_id: number;
+    tier_id: number | null; // null for vault cards
+    catalog?: string; // 0008+
     condition_type: ConditionType;
     grading_company: GradingCompany | null;
     grade: number | null;

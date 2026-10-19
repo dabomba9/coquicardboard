@@ -5,6 +5,7 @@ import {
 } from "@/lib/queries";
 import { holdingValue } from "@/lib/analytics";
 import { legendArtForCatalog } from "@/lib/legends";
+import { catalogLabel } from "@/lib/catalogs";
 import { PortfolioChart } from "@/components/portfolio-chart";
 import { CompletionRing } from "@/components/completion-ring";
 import { CollectionGrid } from "@/components/collection-grid";
@@ -49,14 +50,6 @@ export default async function CollectionPage() {
   // Everything the MJ tier grid can't render, grouped by catalog so each gets its
   // own heading instead of being filed under "Jordan Vault" or dropped entirely.
   const ownedOtherCards = await getOwnedNonHierarchyCards([...ownedCardIds]);
-  const CATALOG_LABELS: Record<string, string> = {
-    "mj-vault": "Jordan Vault",
-    "kobe-vault": "Kobe Vault",
-    "clemente-vault": "Clemente Vault",
-    "killebrew-vault": "Killebrew Vault",
-    "kobe-hierarchy": "Mamba Origins",
-    "mamba-hierarchy": "Mamba Hierarchy",
-  };
   const otherGroups = Object.entries(
     ownedOtherCards.reduce<Record<string, typeof ownedOtherCards>>((acc, c) => {
       const k = c.catalog ?? "mj-vault";
@@ -160,7 +153,7 @@ export default async function CollectionPage() {
       {otherGroups.map(([catalog, cards]) => (
         <section key={catalog} className="mt-10">
           <h2 className="flex items-baseline justify-between border-b border-border/50 pb-2">
-            <span className="font-sans text-sm uppercase tracking-wide">{CATALOG_LABELS[catalog] ?? "Other"}</span>
+            <span className="font-sans text-sm uppercase tracking-wide">{catalogLabel(catalog)}</span>
             <span className="font-data text-base text-muted">{cards.length}</span>
           </h2>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
