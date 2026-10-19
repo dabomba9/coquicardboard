@@ -5,8 +5,10 @@
 // TCDB has since moved most scans, so those 404 (an HTML "Page Not Found", not an
 // image) — which is why the backfill stalled for months. The same scan is still
 // served, keyed by the same card id, at:
-//   Images/Large/{sport}/{sid}/{sid}-{cid}Fr.jpg         full size, when present
 //   Images/Thumbs/{sport}/{sid}/{sid}_{cid}Thumb2.jpg    front thumbnail (Thumb4 = back)
+//   Images/Large/{sport}/{sid}/{sid}-{cid}Fr.jpg         full size, when present
+// Order is cheapest-first: the stored address still works for most cards, and TCDB
+// throttles the Large path hardest (HTTP 429), so Large is the last resort.
 // "Rep" files ({sid}-{cid}RepFr.jpg) are TCDB stand-ins, NOT the card itself, so
 // for those we only ever try the real-card addresses.
 
@@ -29,8 +31,8 @@ export function candidateUrls(url: string): Candidate[] {
   const suffix = side.toLowerCase() === "fr" ? "Fr" : "Bk";
   const thumb = suffix === "Fr" ? "Thumb2" : "Thumb4";
   return [
-    { url: `${base}/Large/${sport}/${sid}/${sid}-${cid}${suffix}.jpg`, kind: "large" },
     ...(rep ? [] : [{ url, kind: "original" as const }]),
     { url: `${base}/Thumbs/${sport}/${sid}/${sid}_${cid}${thumb}.jpg`, kind: "thumb" },
+    { url: `${base}/Large/${sport}/${sid}/${sid}-${cid}${suffix}.jpg`, kind: "large" },
   ];
 }

@@ -179,12 +179,21 @@ async function runCDP(jobs: Job[]) {
   if (!ctx) { console.log("No browser context on the attached Chrome."); await browser.close(); return; }
   const page = await ctx.newPage();
 
-  const fetchViaPage = async (u: string): Promise<Buffer | null> => {
+  // null = no image at this address; "throttled" = TCDB said slow down (429/503),
+  // which must never be mistaken for "this card has no scan".
+  type Fetched = Buffer | "throttled" | null;
+  let retryAfterSec = 0;
+  const fetchViaPage = async (u: string): Promise<Fetched> => {
     try {
       // domcontentloaded, not commit: with commit the body/headers of a direct
       // image navigation weren't reliably available yet.
       const res = await page.goto(u, { waitUntil: "domcontentloaded", timeout: 30_000 });
-      if (!res || !res.ok()) return null;
+      if (!res) return null;
+      if (res.status() === 429 || res.status() === 503) {
+        retryAfterSec = Number(res.headers()["retry-after"]) || 0;
+        return "throttled";
+      }
+      if (!res.ok()) return null;
       const buf = Buffer.from(await res.body());
       const ct = (res.headers()["content-type"] ?? "").split(";")[0].trim();
       return looksLikeImage(ct, buf) ? buf : null;
@@ -192,22 +201,45 @@ async function runCDP(jobs: Job[]) {
       return null;
     }
   };
-  // The stored address usually 404s now (TCDB moved its scans), so try the
-  // current locations for the same card id, best first. See image-urls.ts.
+
+  let stop = false;
+  process.on("SIGINT", () => { stop = true; process.stdout.write("\n(stopping after current image…)\n"); });
+  // Interruptible sleep, so Ctrl-C doesn't wait out a 15-minute backoff.
+  const nap = async (ms: number) => { for (let t = 0; t < ms && !stop; t += 1000) await sleep(Math.min(1000, ms - t)); };
+
+  // Exponential backoff on throttling: 60s, 2m, 4m… capped at 15m, or TCDB's own
+  // Retry-After when it sends one. Resets after any successful image.
+  let level = 0, pauses = 0, waitedMs = 0;
+  const backoff = async () => {
+    const ms = Math.min(retryAfterSec > 0 ? retryAfterSec * 1000 : 60_000 * 2 ** level, 15 * 60_000);
+    level++; pauses++; waitedMs += ms;
+    console.log(`  ⏸ TCDB rate limit — waiting ${Math.round(ms / 1000)}s (pause #${pauses})`);
+    await nap(ms);
+  };
+  // Fetch one address, waiting out throttling and retrying the SAME address.
+  const fetchPatiently = async (u: string): Promise<Buffer | null> => {
+    for (;;) {
+      if (stop) return null;
+      const r = await fetchViaPage(u);
+      if (r === "throttled") { await backoff(); continue; }
+      if (r) level = 0;
+      return r;
+    }
+  };
+  // The stored address still works for most cards; the rest have moved. Try the
+  // same card id's addresses cheapest-first (see image-urls.ts).
   const fetchBest = async (u: string): Promise<{ buf: Buffer; kind: CandidateKind; url: string } | null> => {
     for (const c of candidateUrls(u)) {
-      const buf = await fetchViaPage(c.url);
+      const buf = await fetchPatiently(c.url);
       if (buf) return { buf, kind: c.kind, url: c.url };
-      await sleep(150);
+      if (stop) return null;
+      await sleep(500);
     }
     return null;
   };
 
-  // A long *consecutive* failure streak (every candidate failing for card after
-  // card) means the cleared session died; isolated misses are just cards TCDB
-  // has no scan for.
-  let stop = false;
-  process.on("SIGINT", () => { stop = true; process.stdout.write("\n(stopping after current image…)\n"); });
+  // A long *consecutive* miss streak (every address genuinely missing, not
+  // throttled) is either a dead session or a stretch of cards TCDB never scanned.
   let ok = 0, fail = 0, done = 0, streak = 0, blocked = false;
   // A scan TCDB is known to serve (vault #8615, 2005-06 UD Jordan/LeBron #LJMJ8), for telling a
   // dead session apart from a run of unscanned cards before any card has succeeded.
@@ -219,31 +251,30 @@ async function runCDP(jobs: Job[]) {
     const min = (Date.now() - t0) / 60_000;
     const rate = done / Math.max(min, 1e-9);
     const eta = rate > 0 ? (jobs.length - done) / rate : 0;
-    return `${done}/${jobs.length} (ok ${ok}, fail ${fail}) · ${min.toFixed(1)} min · ${rate.toFixed(0)}/min · ETA ${eta.toFixed(0)} min · ${JSON.stringify(kinds)}`;
+    return `${done}/${jobs.length} (ok ${ok}, fail ${fail}) · ${min.toFixed(1)} min · ${rate.toFixed(0)}/min · ETA ${eta.toFixed(0)} min · paused ${pauses}x/${(waitedMs / 60_000).toFixed(0)} min · ${JSON.stringify(kinds)}`;
   };
   for (const j of jobs) {
     if (stop) break;
     const got = await fetchBest(j.url);
+    if (stop && !got) break; // interrupted mid-card: don't count it as a miss
     if (got) {
       await writeFile(join(OUT, `${j.id}-${j.side}.jpg`), got.buf);
       kinds[got.kind] = (kinds[got.kind] ?? 0) + 1;
       lastGood = got.url;
       ok++; streak = 0;
     } else { fail++; streak++; }
-    // 25 misses in a row is either a dead session or a stretch of oddball cards TCDB
-    // never scanned (the queue opens with ~40 of those). Ask a known-good image which.
     if (streak >= 25) {
-      if (await fetchViaPage(lastGood ?? KNOWN_GOOD)) streak = 0;
-      else { blocked = true; break; }
+      if (await fetchPatiently(lastGood ?? KNOWN_GOOD)) streak = 0;
+      else if (!stop) { blocked = true; break; }
     }
     if (++done % 25 === 0 || done === jobs.length) console.log(`  ${progress()}`);
-    await sleep(300);
+    await sleep(1000);
   }
   if (blocked) console.log("⚠ 25 cards in a row with no image at any address — the Cloudflare session likely expired. Re-solve the check at tcdb.com in the Chrome window, then re-run --cdp (resumable).");
   await page.close().catch(() => {});
   await browser.close(); // disconnects only — leaves the user's Chrome open
   const remaining = repUpgrade ? jobs.length - ok : jobs.filter((j) => !existsSync(join(OUT, `${j.id}-${j.side}.jpg`))).length;
-  console.log(`CDP run done in ${((Date.now() - t0) / 60_000).toFixed(1)} min. saved ${ok}, failed ${fail}${repUpgrade ? `; ${remaining} fronts still from a Rep stand-in` : `; ${remaining} still missing (resumable)`}. sources: ${JSON.stringify(kinds)}`);
+  console.log(`CDP run done in ${((Date.now() - t0) / 60_000).toFixed(1)} min (${pauses} rate-limit pauses, ${(waitedMs / 60_000).toFixed(0)} min waiting). saved ${ok}, failed ${fail}${repUpgrade ? `; ${remaining} fronts still from a Rep stand-in` : `; ${remaining} still missing (resumable)`}. sources: ${JSON.stringify(kinds)}`);
 }
 
 async function main() {
