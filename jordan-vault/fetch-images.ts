@@ -47,6 +47,11 @@ const cdp = args.includes("--cdp");
 // Re-fetch fronts that were saved from a TCDB "Rep" stand-in, keeping a real scan
 // only if one exists now (see image-urls.ts). Implies fronts only.
 const repUpgrade = args.includes("--rep-upgrade");
+// Cards confirmed to have no scan at any address are remembered here and skipped
+// next run (restarts were spending ~10 min re-asking the same ~180 oddballs).
+// --retry-missing ignores the list.
+const NO_SCAN_FILE = join(HERE, ".cache", "no-scan.json");
+const retryMissing = args.includes("--retry-missing");
 
 type Card = { id: number; frontImage: string | null; backImage: string | null };
 type Job = { id: number; side: "front" | "back"; url: string };
@@ -62,8 +67,11 @@ async function buildJobs(): Promise<Job[]> {
   }
   // Skip ones already downloaded (resumable). --rep-upgrade inverts this for
   // Rep-sourced fronts: those are on disk but aren't the actual card.
+  const noScan: Set<string> = retryMissing || !existsSync(NO_SCAN_FILE)
+    ? new Set() : new Set(JSON.parse(await readFile(NO_SCAN_FILE, "utf8")) as string[]);
   const todo: Job[] = [];
   for (const j of jobs) {
+    if (!repUpgrade && noScan.has(`${j.id}-${j.side}`)) continue;
     const onDisk = existsSync(join(OUT, `${j.id}-${j.side}.jpg`));
     if (repUpgrade ? !(j.side === "front" && onDisk && isRepUrl(j.url)) : onDisk) continue;
     todo.push(j);
@@ -218,21 +226,34 @@ async function runCDP(jobs: Job[]) {
     console.log(`  ⏸ TCDB rate limit — waiting ${Math.round(ms / 1000)}s (pause #${pauses})`);
     await nap(ms);
   };
-  // Cloudflare re-challenged the session: show the check in the Chrome window and
-  // wait (up to 30 min) for the human to pass it, probing a TCDB image every 15s.
-  let challenges = 0;
-  const waitForHuman = async (): Promise<boolean> => {
+  // A scan TCDB is known to serve at a plain Cards/ address (vault #656's front), for
+  // telling a dead session apart from a run of unscanned cards. Not a Large/ URL:
+  // that path is throttled hardest and would read as "still blocked".
+  const KNOWN_GOOD = "https://www.tcdb.com/Images/Cards/Basketball/2127/2127-2909433Fr.jpg";
+  // Cloudflare re-challenged the session. Observed pattern: after a burst of ~60-120
+  // images TCDB challenges every request, then clears on its own after a cool-down.
+  // So: show the check in the Chrome window (the human may click it to clear sooner)
+  // and probe once a minute for up to an hour. The probe is cache-busted — a cached
+  // copy of the test image "passed" while the session was blocked.
+  let challenges = 0, challengeMs = 0;
+  const waitForClearance = async (): Promise<boolean> => {
     challenges++;
-    console.log("  ⚠ Cloudflare check needed — click 'Verify you are human' in the Chrome window at tcdb.com. Waiting (up to 30 min)…");
+    const t = Date.now();
+    console.log("  ⚠ TCDB/Cloudflare is challenging requests — waiting for it to clear (or click 'Verify you are human' in the Chrome window)…");
     const tab = ctx.pages().find((p) => p !== page) ?? page;
     await tab.goto("https://www.tcdb.com/", { waitUntil: "domcontentloaded", timeout: 45_000 }).catch(() => {});
     await tab.bringToFront().catch(() => {});
-    for (let t = 0; t < 120 && !stop; t++) {
-      await nap(15_000);
-      const r = await fetchViaPage(KNOWN_GOOD);
-      if (r instanceof Buffer) { console.log("  ✓ check passed — resuming"); return true; }
-      if (t > 0 && t % 8 === 0) console.log(`  …still waiting for the Cloudflare check (${Math.round((t * 15) / 60)} min)`);
+    for (let i = 1; i <= 60 && !stop; i++) {
+      await nap(60_000);
+      const r = await fetchViaPage(`${KNOWN_GOOD}?nc=${Date.now()}`);
+      if (r instanceof Buffer) {
+        challengeMs += Date.now() - t;
+        console.log(`  ✓ cleared after ${i} min — resuming`);
+        return true;
+      }
+      if (i % 10 === 0) console.log(`  …still blocked (${i} min)`);
     }
+    challengeMs += Date.now() - t;
     return false;
   };
   // Fetch one address, waiting out throttling / re-checks and retrying the SAME address.
@@ -242,8 +263,8 @@ async function runCDP(jobs: Job[]) {
       const r = await fetchViaPage(u);
       if (r === "throttled") { await backoff(); continue; }
       if (r === "challenge") {
-        if (await waitForHuman()) continue;
-        console.log("  ✗ no Cloudflare clearance after 30 min — stopping (resumable).");
+        if (await waitForClearance()) continue;
+        console.log("  ✗ still blocked after 60 min — stopping (resumable).");
         stop = true; return null;
       }
       if (r) level = 0;
@@ -265,18 +286,16 @@ async function runCDP(jobs: Job[]) {
   // A long *consecutive* miss streak (every address genuinely missing, not
   // throttled) is either a dead session or a stretch of cards TCDB never scanned.
   let ok = 0, fail = 0, done = 0, streak = 0, blocked = false;
-  // A scan TCDB is known to serve at a plain Cards/ address (vault #656's front), for
-  // telling a dead session apart from a run of unscanned cards. Not a Large/ URL:
-  // that path is throttled hardest and would read as "still blocked".
-  const KNOWN_GOOD = "https://www.tcdb.com/Images/Cards/Basketball/2127/2127-2909433Fr.jpg";
   let lastGood: string | null = null;
+  const noScan: Set<string> = existsSync(NO_SCAN_FILE) && !retryMissing
+    ? new Set(JSON.parse(await readFile(NO_SCAN_FILE, "utf8")) as string[]) : new Set();
   const kinds: Record<string, number> = {};
   const t0 = Date.now();
   const progress = () => {
     const min = (Date.now() - t0) / 60_000;
     const rate = done / Math.max(min, 1e-9);
     const eta = rate > 0 ? (jobs.length - done) / rate : 0;
-    return `${done}/${jobs.length} (ok ${ok}, fail ${fail}) · ${min.toFixed(1)} min · ${rate.toFixed(0)}/min · ETA ${eta.toFixed(0)} min · paused ${pauses}x/${(waitedMs / 60_000).toFixed(0)} min · ${JSON.stringify(kinds)}`;
+    return `${done}/${jobs.length} (ok ${ok}, fail ${fail}) · ${min.toFixed(1)} min · ${rate.toFixed(0)}/min · ETA ${eta.toFixed(0)} min · paused ${pauses}x/${(waitedMs / 60_000).toFixed(0)} min · challenged ${challenges}x/${(challengeMs / 60_000).toFixed(0)} min · ${JSON.stringify(kinds)}`;
   };
   for (const j of jobs) {
     if (stop) break;
@@ -287,19 +306,26 @@ async function runCDP(jobs: Job[]) {
       kinds[got.kind] = (kinds[got.kind] ?? 0) + 1;
       if (got.kind !== "external") lastGood = got.url; // the session check must hit TCDB, not eBay
       ok++; streak = 0;
-    } else { fail++; streak++; }
+    } else {
+      fail++; streak++;
+      if (!stop) noScan.add(`${j.id}-${j.side}`);
+    }
+    if (done % 25 === 0) await writeFile(NO_SCAN_FILE, JSON.stringify([...noScan]));
     if (streak >= 25) {
       if (await fetchPatiently(lastGood ?? KNOWN_GOOD)) streak = 0;
       else if (!stop) { blocked = true; break; }
     }
     if (++done % 25 === 0 || done === jobs.length) console.log(`  ${progress()}`);
-    await sleep(1000);
+    // ~15 cards/min: TCDB challenges after short bursts, so a steady trickle beats
+    // fast-then-blocked (see waitForClearance).
+    await sleep(3000);
   }
+  await writeFile(NO_SCAN_FILE, JSON.stringify([...noScan]));
   if (blocked) console.log("⚠ 25 cards in a row with no image at any address — the Cloudflare session likely expired. Re-solve the check at tcdb.com in the Chrome window, then re-run --cdp (resumable).");
   await page.close().catch(() => {});
   await browser.close(); // disconnects only — leaves the user's Chrome open
   const remaining = repUpgrade ? jobs.length - ok : jobs.filter((j) => !existsSync(join(OUT, `${j.id}-${j.side}.jpg`))).length;
-  console.log(`CDP run done in ${((Date.now() - t0) / 60_000).toFixed(1)} min (${pauses} rate-limit pauses, ${(waitedMs / 60_000).toFixed(0)} min waiting, ${challenges} Cloudflare checks). saved ${ok}, failed ${fail}${repUpgrade ? `; ${remaining} fronts still from a Rep stand-in` : `; ${remaining} still missing (resumable)`}. sources: ${JSON.stringify(kinds)}`);
+  console.log(`CDP run done in ${((Date.now() - t0) / 60_000).toFixed(1)} min (${pauses} rate-limit pauses, ${(waitedMs / 60_000).toFixed(0)} min waiting, ${challenges} Cloudflare challenges / ${(challengeMs / 60_000).toFixed(0)} min blocked). saved ${ok}, failed ${fail}${repUpgrade ? `; ${remaining} fronts still from a Rep stand-in` : `; ${remaining} still missing (resumable)`}. sources: ${JSON.stringify(kinds)}`);
 }
 
 async function main() {
