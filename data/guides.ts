@@ -20,6 +20,47 @@ export type Guide = {
 
 export const GUIDES: Guide[] = [
   {
+    slug: "harmon-killebrew-topps-run",
+    title: "Harmon Killebrew on Topps, 1955–1975: the flagship run and eight home-run leader cards",
+    excerpt:
+      "A Topps card almost every year for two decades, a gap in 1957 that tells you where he was, and the leader cards that track his power.",
+    date: "2026-10-19",
+    body: [
+      "The Killebrew Vault holds 252 cards issued from 1955 to 1976. Topps accounts for 114 of them, with O-Pee-Chee, Post, Bazooka and Jay Publishing picture packs filling in most of the rest. The flagship run is the spine: a Topps base card in every year from the 1955 #124 rookie to the 1975 #640 — with one exception.",
+      "That exception is 1957. There is no 1957 Topps Killebrew. His only 1957 card in the vault is a Chattanooga Lookouts team issue, because that is where he spent much of that season, in the minors. He is back in the Topps set in 1958 on #288 and never leaves it again. Counting both 1956 variants of #164, gray back and white back, the full flagship run is 21 cards across 20 years. One of them carries a note collectors care about: the 1963 #500 is marked as a short print.",
+      "The more telling cards are the ones he shares. Killebrew led the American League in home runs six times, and Topps' American League Home Run Leaders cards in the vault include him for eight different seasons: 1961, 1962, 1963, 1964, 1966, 1967, 1969 and 1970. The 1969 season also produced the 1975 Topps #207, which pairs him with Willie McCovey as the two leagues' MVPs. Read in order, those leader cards are a box score of his peak, printed a year at a time.",
+      "The vault also shows the franchise moving under him. The early picture packs are Washington Senators issues, from Jay Publishing in 1959 and 1960. From 1961 the team was the Minnesota Twins, and the card count climbs with it: 26 cards from 1962, 28 from 1968 and 26 from 1971, the three busiest years in the vault.",
+      "A note on what this page doesn't show. Many of the oddball issues here — team picture packs, matchbooks, stamps and premiums — rarely trade, so they read “No recent sales yet” or show placeholder art. That reflects how seldom they change hands, not a gap that more searching would close.",
+    ],
+    cardList: {
+      heading: "Every flagship Topps Killebrew, 1955–1975",
+      catalog: "killebrew-vault",
+      slugs: [
+        "hk6565-1955-topps-124-harmon-killebrew-rc",
+        "hk7981787-1956-topps-164-harmon-killebrew-var-var-white-back",
+        "hk6823-1956-topps-164-harmon-killebrew-var-gray-back",
+        "hk27321-1958-topps-288-harmon-killebrew",
+        "hk8479-1959-topps-515-harmon-killebrew",
+        "hk27810-1960-topps-210-harmon-killebrew",
+        "hk9186-1961-topps-80-harmon-killebrew",
+        "hk28321-1962-topps-70-harmon-killebrew",
+        "hk10816-1963-topps-500-harmon-killebrew-sp",
+        "hk11071-1964-topps-177-harmon-killebrew",
+        "hk11883-1965-topps-400-harmon-killebrew",
+        "hk29027-1966-topps-120-harmon-killebrew",
+        "hk14073-1967-topps-460-harmon-killebrew",
+        "hk29775-1968-topps-220-harmon-killebrew",
+        "hk30583-1969-topps-375-harmon-killebrew",
+        "hk14980-1970-topps-150-harmon-killebrew",
+        "hk16106-1971-topps-550-harmon-killebrew",
+        "hk16454-1972-topps-51-harmon-killebrew",
+        "hk17376-1973-topps-170-harmon-killebrew",
+        "hk31314-1974-topps-400-harmon-killebrew",
+        "hk19138-1975-topps-640-harmon-killebrew",
+      ],
+    },
+  },
+  {
     slug: "roberto-clemente-topps-run",
     title: "Roberto Clemente on Topps, 1955–1973: every flagship card, and the years he was “Bob”",
     excerpt:
