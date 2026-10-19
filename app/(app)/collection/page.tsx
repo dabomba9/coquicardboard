@@ -50,6 +50,8 @@ export default async function CollectionPage() {
   // Everything the MJ tier grid can't render, grouped by catalog so each gets its
   // own heading instead of being filed under "Jordan Vault" or dropped entirely.
   const ownedOtherCards = await getOwnedNonHierarchyCards([...ownedCardIds]);
+  // Same "T" marker the MJ grid and the catalog explorers show.
+  const tradeIds = new Set(holdings.filter((h) => h.for_trade).map((h) => h.card_id));
   const otherGroups = Object.entries(
     ownedOtherCards.reduce<Record<string, typeof ownedOtherCards>>((acc, c) => {
       const k = c.catalog ?? "mj-vault";
@@ -158,7 +160,7 @@ export default async function CollectionPage() {
           </h2>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
             {cards.map((c) => (
-              <Link key={c.id} href={`/cards/${c.slug}`} className="group">
+              <Link key={c.id} href={`/cards/${c.slug}`} className="group relative">
                 <CardThumb
                   card={{
                     name: c.name ?? "",
@@ -171,6 +173,9 @@ export default async function CollectionPage() {
                   placeholderArt={legendArtForCatalog(catalog)}
                   className="transition-transform group-hover:-translate-y-1 border-[var(--gold)]"
                 />
+                {tradeIds.has(c.id) && (
+                  <span className="pointer-events-none absolute left-1 top-1 rounded-full bg-accent px-1.5 text-[9px] font-semibold text-black">T</span>
+                )}
               </Link>
             ))}
           </div>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getHierarchyCatalog, getMyHoldings, getCatalogValueMapCached } from "@/lib/queries";
+import { getHierarchyCatalog, getMyHoldings, getMyWantCardIds, getCatalogValueMapCached } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { HierarchyExplorer, type ExplorerCard } from "@/components/hierarchy-explorer";
 import { legendArtForCatalog } from "@/lib/legends";
@@ -25,9 +25,10 @@ export default async function KobeHierarchyPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [cards, holdings, valueEntries] = await Promise.all([
+  const [cards, holdings, wantIds, valueEntries] = await Promise.all([
     getHierarchyCatalog("kobe-hierarchy"),
     user ? getMyHoldings() : Promise.resolve([]),
+    user ? getMyWantCardIds() : Promise.resolve(new Set<string>()),
     getCatalogValueMapCached("kobe-hierarchy"),
   ]);
   const valueMap = new Map(valueEntries);
@@ -54,6 +55,7 @@ export default async function KobeHierarchyPage() {
     value_cents: valueMap.get(c.id) ?? 0,
     owned: ownedIds.has(c.id),
     for_trade: tradeIds.has(c.id),
+    wanted: wantIds.has(c.id),
   }));
 
   return (

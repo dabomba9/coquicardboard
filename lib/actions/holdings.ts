@@ -124,7 +124,6 @@ export async function addToWantList(cardId: string) {
   if (!user) return;
   await supabase.from("want_list").upsert({ user_id: user.id, card_id: cardId }, { onConflict: "user_id,card_id" });
   revalidatePath("/want-list");
-  revalidatePath("/hierarchy");
 }
 
 export async function removeFromWantList(cardId: string) {

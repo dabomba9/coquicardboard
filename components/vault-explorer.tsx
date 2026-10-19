@@ -6,13 +6,14 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Search, Plus, Check } from "lucide-react";
 import { toast } from "sonner";
 import { CardThumb } from "@/components/card-thumb";
+import { WantHeart } from "@/components/want-heart";
 import { quickAddOwned } from "@/lib/actions/holdings";
 import { ebaySearchUrl, outboundRel } from "@/lib/affiliate";
 import { playConfirm } from "@/lib/sfx";
 import { cn } from "@/lib/utils";
 import type { VaultItem, VaultParams, SortKey, Facet } from "@/lib/vault-filter";
 
-export type VaultTile = VaultItem & { owned: boolean; forTrade: boolean };
+export type VaultTile = VaultItem & { owned: boolean; forTrade: boolean; wanted: boolean };
 
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "year", label: "Year ↑" },
@@ -213,6 +214,7 @@ export function VaultExplorer({ tiles, params, options, facets, total, pages, pa
                       <Plus size={15} />
                     </button>
                   )}
+                  {!owned && <WantHeart cardId={c.id} wanted={c.wanted} signedIn={signedIn} className="absolute bottom-1 right-9" />}
                   {/* Buy link — most useful under the "Needed" filter, where every
                       tile is a card the collector wants and doesn't own. */}
                   <a

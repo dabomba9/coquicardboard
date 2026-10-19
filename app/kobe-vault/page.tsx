@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getVaultCatalog, getMyHoldings } from "@/lib/queries";
+import { getVaultCatalog, getMyHoldings, getMyWantCardIds } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { VaultExplorer, type VaultTile } from "@/components/vault-explorer";
 import { legendArtForCatalog } from "@/lib/legends";
@@ -35,9 +35,10 @@ export default async function KobeVaultPage({
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const [catalog, holdings] = await Promise.all([
+  const [catalog, holdings, wantIds] = await Promise.all([
     getVaultCatalog("kobe-vault"),
     user ? getMyHoldings() : Promise.resolve([]),
+    user ? getMyWantCardIds() : Promise.resolve(new Set<string>()),
   ]);
 
   const ownedIds = new Set(holdings.map((h) => h.card_id));
@@ -51,6 +52,7 @@ export default async function KobeVaultPage({
     ...it,
     owned: ownedIds.has(it.id),
     forTrade: tradeIds.has(it.id),
+    wanted: wantIds.has(it.id),
   }));
 
   const withImage = catalog.reduce((n, c) => n + (c.image_url ? 1 : 0), 0);

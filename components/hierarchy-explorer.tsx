@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import { CardThumb } from "@/components/card-thumb";
+import { WantHeart } from "@/components/want-heart";
 import { Coqui } from "@/components/mascot/coqui";
 import { quickAddOwned } from "@/lib/actions/holdings";
 import { playConfirm, playFanfare } from "@/lib/sfx";
@@ -30,6 +31,7 @@ export type ExplorerCard = {
   value_cents: number;
   owned: boolean;
   for_trade: boolean;
+  wanted: boolean;
 };
 
 type Attr = "serial" | "rookie" | "insert" | "parallel";
@@ -389,6 +391,7 @@ export function HierarchyExplorer({
                         +
                       </button>
                     )}
+                    {!owned && <WantHeart cardId={card.id} wanted={card.wanted} signedIn={signedIn} className="absolute bottom-1 right-9" />}
                   </div>
                   );
                 })}
