@@ -48,10 +48,12 @@ async function main() {
   // specific catalogs (avoids re-uploading catalogs already on cloud).
   const only = (process.env.MIGRATE_CATALOGS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   if (only.length) console.log(`MIGRATE_CATALOGS: ${only.join(", ")}`);
-  type LocalCard = { slug: string; image_url: string; image_source: string | null; attributes: Record<string, unknown> | null };
+  type LocalCard = { slug: string; image_url: string | null; image_source: string | null; attributes: Record<string, unknown> | null };
   const localCards = await fetchAll<LocalCard>(
     local, (q) => {
-      const base = q.select("slug, image_url, image_source, attributes").not("image_url", "is", null);
+      // Cards with a front OR a back: some cards only have a back scan, and
+      // filtering on image_url alone left those backs off production.
+      const base = q.select("slug, image_url, image_source, attributes").or("image_url.not.is.null,attributes->>backImage.not.is.null");
       return only.length ? base.in("catalog", only) : base;
     });
   const cloudCards = await fetchAll<{ id: string; slug: string; image_url: string | null; attributes: Record<string, unknown> | null }>(
@@ -78,12 +80,12 @@ async function main() {
     const cloudId = cloudIdBySlug.get(c.slug);
     if (!cloudId) { miss++; continue; }
     const localBack = c.attributes?.backImage;
-    const hasFront = (cloudImageById.get(cloudId) ?? "").includes(`/${BUCKET}/`);
+    const hasFront = !c.image_url || (cloudImageById.get(cloudId) ?? "").includes(`/${BUCKET}/`); // no local front = nothing to send
     const needBack = typeof localBack === "string" && !!localBack && !cloudAttrsById.get(cloudId)?.backImage;
     if (onlyNew && hasFront && !needBack) { skipped++; continue; }
     try {
       const update: Record<string, unknown> = {};
-      if (!(onlyNew && hasFront)) {
+      if (c.image_url && !(onlyNew && hasFront)) {
         const publicUrl = await copy(c.image_url, `cards/${cloudId}`);
         if (!publicUrl) { fail++; continue; }
         update.image_url = publicUrl;
