@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
-import { getIndexableCardSlugs, type IndexableCard } from "@/lib/queries";
+import { getIndexableCardSlugs, getVaultSets, type IndexableCard } from "@/lib/queries";
+import { CATALOGS } from "@/lib/catalogs";
+import { isSetPageWorthy } from "@/lib/vault-sets";
 import { GUIDES } from "@/data/guides";
 
 const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -60,5 +62,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticPages, ...guidePages, ...cardPages];
+  // Vault set checklists that earn a page (3+ cards, at least one pictured).
+  // Pricing isn't counted here — it would mean a price lookup per set; a set
+  // with prices but no images still renders, it just isn't advertised.
+  let setPages: MetadataRoute.Sitemap = [];
+  try {
+    for (const c of CATALOGS.filter((x) => x.kind === "vault")) {
+      for (const s of await getVaultSets(c.slug)) {
+        if (isSetPageWorthy(s)) setPages.push({ url: `${base}/sets/${c.slug}/${s.slug}`, lastModified: CARD_PAGE_REVISED, changeFrequency: "weekly", priority: 0.55 });
+      }
+    }
+  } catch {
+    setPages = [];
+  }
+
+  return [...staticPages, ...guidePages, ...setPages, ...cardPages];
 }

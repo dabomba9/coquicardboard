@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { vaultSetName } from "@/lib/card-about";
+import { groupVaultSets, type VaultSet } from "@/lib/vault-sets";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
@@ -646,4 +647,29 @@ export async function getPublicCollection(username: string): Promise<PublicColle
   const supabase = await createClient();
   const { data } = await supabase.rpc("get_public_collection", { p_username: username });
   return (data as PublicCollection) ?? null;
+}
+
+// ---- Vault set (checklist) pages ----
+
+/** A vault catalog's cards grouped into sets (see lib/vault-sets.ts). Rides on the
+ *  in-memory getVaultCatalog cache; grouping ~12k rows is cheap. */
+export async function getVaultSets(catalog: string): Promise<VaultSet<VaultRow>[]> {
+  return groupVaultSets(await getVaultCatalog(catalog));
+}
+
+/** Real (eBay) raw medians for a set of cards, keyed by card id. */
+export async function getRawPrices(cardIds: string[]): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const db = createAdminClient();
+  for (let i = 0; i < cardIds.length; i += 200) {
+    const { data } = await db
+      .from("card_prices")
+      .select("card_id, median_cents")
+      .in("card_id", cardIds.slice(i, i + 200))
+      .eq("grade_key", "raw")
+      .like("source", "ebay%")
+      .not("median_cents", "is", null);
+    for (const r of (data as { card_id: string; median_cents: number }[]) ?? []) out.set(r.card_id, r.median_cents);
+  }
+  return out;
 }

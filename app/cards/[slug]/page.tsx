@@ -7,6 +7,7 @@ import { ebaySearchUrl, ebaySoldUrl, sportsCardsProUrl, outboundRel } from "@/li
 import { isRealPriceSource } from "@/lib/prices";
 import { aboutCard, formatCardNumber, printRunFromName } from "@/lib/card-about";
 import { catalogLabel } from "@/lib/catalogs";
+import { setSlug } from "@/lib/vault-sets";
 import { legendArtForCatalog } from "@/lib/legends";
 import { JsonLd } from "@/components/json-ld";
 import { productJsonLd, breadcrumbJsonLd } from "@/lib/structured-data";
@@ -360,7 +361,10 @@ export default async function CardDetailPage({
 
       {related.length > 0 && (
         <section className="mt-8">
-          <h2 className="text-xs font-semibold uppercase tracking-wide">More from {isVault ? (setCount > 1 && setName ? setName : (manufacturer ?? "the Vault")) : (card.sets?.name ?? "this set")}</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide">More from{" "}
+            {isVault && setName && setCount >= 3 ? (
+              <Link href={`/sets/${card.catalog}/${setSlug(setName)}`} className="hover:underline">{setName}</Link>
+            ) : isVault ? (setCount > 1 && setName ? setName : (manufacturer ?? "the Vault")) : (card.sets?.name ?? "this set")}</h2>
           <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-6">
             {related.map((r) => (
               <Link key={r.id} href={`/cards/${r.slug}`} className="group">
