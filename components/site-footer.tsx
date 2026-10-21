@@ -45,6 +45,7 @@ export function SiteFooter() {
                 <li><Link href="/kobe-vault" className={linkCls}>Kobe Vault</Link></li>
                 <li><Link href="/clemente-vault" className={linkCls}>Clemente Vault</Link></li>
                 <li><Link href="/killebrew-vault" className={linkCls}>Killebrew Vault</Link></li>
+                <li><Link href="/sets" className={linkCls}>Set checklists</Link></li>
               </ul>
             </div>
             <div>

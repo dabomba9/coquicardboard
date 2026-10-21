@@ -1,7 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Layers, Library, Award, TrendingUp, Heart, Share2, ArrowRight } from "lucide-react";
-import { getTiers, getAllCards } from "@/lib/queries";
+import { getTiers, getAllCards, getRecentlyPictured, getSiteCounts } from "@/lib/queries";
+import { legendArtForCatalog } from "@/lib/legends";
+import { catalogLabel } from "@/lib/catalogs";
 import { CardThumb } from "@/components/card-thumb";
 import { Panel, Button } from "@/components/ui/primitives";
 import { LegendsHero } from "@/components/legends-hero";
@@ -35,22 +37,33 @@ const FEATURES = [
 export default async function Home() {
   let tiers: Tier[] = [];
   let cards: CardWithSet[] = [];
+  let recent: CardWithSet[] = [];
+  let counts: { cards: number; pictured: number; priced: number } | null = null;
   try {
-    [tiers, cards] = await Promise.all([getTiers(), getAllCards()]);
+    [tiers, cards, recent, counts] = await Promise.all([getTiers(), getAllCards(), getRecentlyPictured(12), getSiteCounts()]);
   } catch {
     /* DB not connected — home still renders */
   }
+  const fmt = (n: number) => n.toLocaleString("en-US");
   const mjTotal = tiers.reduce((s, t) => s + t.card_count, 0) || 378;
   const withImg = cards.filter((c) => c.image_url);
   const hierGrid = withImg.filter((c) => c.tier_id === 1).slice(0, 5);
   const vaultGrid = withImg.slice(5, 10);
 
-  const stats = [
-    { n: "24,000+", l: "Cards catalogued" },
-    { n: "4", l: "Legends" },
-    { n: "7", l: "Catalogs" },
-    { n: "eBay", l: "Real values" },
-  ];
+  // Live counts (cached an hour); the old band said "24,000+" forever.
+  const stats = counts
+    ? [
+        { n: fmt(counts.cards), l: "Cards catalogued" },
+        { n: fmt(counts.pictured), l: "Cards pictured" },
+        { n: fmt(counts.priced), l: "With eBay prices" },
+        { n: "4", l: "Legends" },
+      ]
+    : [
+        { n: "24,000+", l: "Cards catalogued" },
+        { n: "4", l: "Legends" },
+        { n: "7", l: "Catalogs" },
+        { n: "eBay", l: "Real values" },
+      ];
 
   return (
     <div className="-mt-[5.5rem]">
@@ -71,6 +84,28 @@ export default async function Home() {
           </div>
         </section>
       </Reveal>
+
+      {/* Recently added — the newest pictured vault cards, so returning visitors
+          (and crawlers) see the catalogs growing. */}
+      {recent.length > 0 && (
+        <Reveal>
+          <section className="mx-auto max-w-6xl px-4 py-6">
+            <div className="flex items-baseline justify-between gap-4">
+              <h2 className="font-display text-lg uppercase tracking-tight">Recently added</h2>
+              <Link href="/sets" className="text-sm text-accent hover:underline">Browse set checklists →</Link>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+              {recent.map((c) => (
+                <Link key={c.id} href={`/cards/${c.slug}`} className="group">
+                  <CardThumb card={c} placeholderArt={legendArtForCatalog(c.catalog)} className="transition-transform group-hover:-translate-y-1" />
+                  <div className="mt-1 line-clamp-2 text-[11px] leading-tight text-muted group-hover:text-foreground">{c.name}</div>
+                  <div className="text-[10px] uppercase tracking-wide text-muted">{catalogLabel(c.catalog)}</div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        </Reveal>
+      )}
 
       {/* Two catalogs */}
       <Reveal>

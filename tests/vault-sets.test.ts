@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupVaultSets, setSlug, isSetPageWorthy, type SetCard } from "@/lib/vault-sets";
+import { groupVaultSets, setSlug, isSetPageWorthy, setsByDecade, type SetCard } from "@/lib/vault-sets";
 
 const card = (id: string, name: string, num: string, year = 1998, img = true): SetCard =>
   ({ id, slug: id, name, card_number: num, year, image_url: img ? `https://x/${id}.jpg` : null });
@@ -35,5 +35,15 @@ describe("groupVaultSets", () => {
     expect(isSetPageWorthy(sets[0])).toBe(false); // 1 card
     expect(isSetPageWorthy({ cards: sets[1].cards, imaged: 0 })).toBe(false);
     expect(isSetPageWorthy({ cards: sets[1].cards, imaged: 0 }, 2)).toBe(true);
+  });
+});
+
+describe("setsByDecade", () => {
+  it("groups by decade, oldest first, undated last", () => {
+    const g = setsByDecade([
+      { name: "B", yearFrom: 1998 }, { name: "A", yearFrom: 1991 }, { name: "X", yearFrom: null }, { name: "C", yearFrom: 1963 },
+    ]);
+    expect(g.map((d) => d.decade)).toEqual(["1960s", "1990s", "Undated"]);
+    expect(g[1].sets.map((s) => s.name)).toEqual(["A", "B"]);
   });
 });

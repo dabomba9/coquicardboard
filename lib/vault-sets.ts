@@ -65,3 +65,16 @@ export function groupVaultSets<C extends SetCard>(cards: C[]): VaultSet<C>[] {
 export function isSetPageWorthy(s: Pick<VaultSet, "cards" | "imaged">, pricedCount = 0): boolean {
   return s.cards.length >= 3 && (s.imaged > 0 || pricedCount > 0);
 }
+
+/** Sets grouped by the decade they were issued in ("1990s"), oldest first; undated last. */
+export function setsByDecade<S extends Pick<VaultSet, "yearFrom" | "name">>(sets: S[]): { decade: string; sets: S[] }[] {
+  const by = new Map<string, S[]>();
+  for (const s of sets) {
+    const key = s.yearFrom == null ? "Undated" : `${Math.floor(s.yearFrom / 10) * 10}s`;
+    const list = by.get(key);
+    if (list) list.push(s); else by.set(key, [s]);
+  }
+  return [...by.entries()]
+    .sort(([a], [b]) => (a === "Undated" ? 1 : b === "Undated" ? -1 : a.localeCompare(b)))
+    .map(([decade, list]) => ({ decade, sets: list.sort((x, y) => (x.yearFrom ?? 0) - (y.yearFrom ?? 0) || x.name.localeCompare(y.name)) }));
+}

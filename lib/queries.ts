@@ -673,3 +673,43 @@ export async function getRawPrices(cardIds: string[]): Promise<Map<string, numbe
   }
   return out;
 }
+
+// ---- Home page ----
+
+const VAULT_SLUGS = ["mj-vault", "kobe-vault", "clemente-vault", "killebrew-vault"];
+
+/** The vault cards most recently given an image (newest updated first). */
+export const getRecentlyPictured = unstable_cache(
+  async (limit = 12): Promise<CardWithSet[]> => {
+    const { data } = await createAdminClient()
+      .from("cards")
+      .select("*, sets(*)")
+      .in("catalog", VAULT_SLUGS)
+      .not("image_url", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(limit);
+    return (data as CardWithSet[]) ?? [];
+  },
+  ["recently-pictured"],
+  { revalidate: 3600, tags: ["catalog"] }
+);
+
+/** Live site-wide counts for the home stats band. */
+export const getSiteCounts = unstable_cache(
+  async (): Promise<{ cards: number; pictured: number; priced: number }> => {
+    const db = createAdminClient();
+    const [all, pic] = await Promise.all([
+      db.from("cards").select("id", { count: "exact", head: true }),
+      db.from("cards").select("id", { count: "exact", head: true }).not("image_url", "is", null),
+    ]);
+    const priced = new Set<string>();
+    for (let from = 0; ; from += 1000) {
+      const { data } = await db.from("card_prices").select("card_id").like("source", "ebay%").not("median_cents", "is", null).range(from, from + 999);
+      for (const r of (data as { card_id: string }[]) ?? []) priced.add(r.card_id);
+      if (!data || data.length < 1000) break;
+    }
+    return { cards: all.count ?? 0, pictured: pic.count ?? 0, priced: priced.size };
+  },
+  ["site-counts"],
+  { revalidate: 3600, tags: ["catalog", "prices"] }
+);
