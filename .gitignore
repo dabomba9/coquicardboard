@@ -43,6 +43,7 @@ next-env.d.ts
 # jordan-vault / kobe-vault scrapers: raw response cache (data outputs ARE committed)
 jordan-vault/.cache/
 kobe-vault/.cache/
+legends-vault/.cache/
 
 # Jordan Vault card images: local staging cache only — served from Supabase
 # Storage (vault-images bucket), not committed. Sync with jordan-vault/upload-images.ts

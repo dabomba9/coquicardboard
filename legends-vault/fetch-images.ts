@@ -10,11 +10,17 @@
  *
  *   npx tsx legends-vault/fetch-images.ts --player clemente --limit 20  # test first
  *   npx tsx legends-vault/fetch-images.ts --player clemente             # full (resumable)
+ *
+ *   # Legend-only folder, fronts AND backs (Thumb4), never the shared bucket:
+ *   npx tsx legends-vault/fetch-images.ts --player clemente --to-dir legends-vault/.cache/images/clemente
+ *   Legend TCDB card ids overlap Jordan Vault ids in the shared `vault-images` bucket
+ *   (both stored as {id}-front.jpg), so writing there clobbers or is clobbered.
+ *   Publish the folder with legends-vault/publish-images.ts.
  */
 import { config } from "dotenv";
 import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getPlayer } from "./config";
 
@@ -28,6 +34,8 @@ const BUCKET = "vault-images";
 const limitArg = argv.indexOf("--limit");
 const limit = limitArg !== -1 ? parseInt(argv[limitArg + 1], 10) : Infinity;
 const force = argv.includes("--force");
+const toDirArg = argv.indexOf("--to-dir");
+const toDir = toDirArg !== -1 ? argv[toDirArg + 1] : null;
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -56,8 +64,53 @@ async function presentFronts(): Promise<Set<number>> {
   return present;
 }
 
+// --to-dir: save fronts (Thumb2) and backs (Thumb4) to a local legend-only folder.
+// A 403 / Cloudflare challenge means "wait for the human", not "no image": it
+// pauses (probing a fresh image once a minute, up to an hour) and retries.
+async function runToDir(dir: string, all: { cid: number; url: string }[]) {
+  mkdirSync(dir, { recursive: true });
+  let browser;
+  try { browser = await chromium.connectOverCDP(CDP_URL); }
+  catch { console.log(`Couldn't attach to Chrome at ${CDP_URL}.`); return; }
+  const ctx = browser.contexts()[0];
+  if (!ctx) { console.log("No browser context on the attached Chrome."); await browser.close(); return; }
+  const page = await ctx.newPage();
+  const fetchOne = async (u: string): Promise<Buffer | "challenge" | null> => {
+    try {
+      const res = await page.goto(u, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      if (!res) return null;
+      if (res.status() === 403 || res.headers()["cf-mitigated"] === "challenge") return "challenge";
+      if (!res.ok()) return null;
+      const buf = Buffer.from(await res.body());
+      return looksLikeImage((res.headers()["content-type"] ?? "").split(";")[0], buf) ? buf : null;
+    } catch { return null; }
+  };
+  const jobs = all.flatMap(({ cid, url }) => [
+    { file: join(dir, `${cid}-front.jpg`), url },
+    { file: join(dir, `${cid}-back.jpg`), url: url.replace(/Thumb2\.jpg$/, "Thumb4.jpg") },
+  ]).filter((j) => force || !existsSync(j.file));
+  console.log(`${player.name}: ${jobs.length} images to fetch → ${dir}`);
+  let ok = 0, none = 0;
+  for (let i = 0; i < jobs.length; i++) {
+    let r = await fetchOne(jobs[i].url);
+    for (let waited = 0; r === "challenge" && waited < 60; waited++) {
+      if (waited === 0) console.log("  ⚠ TCDB is challenging — click 'Verify you are human' (or log in) in the Chrome window…");
+      await sleep(60_000);
+      if ((await fetchOne(`${all[0].url}?nc=${Date.now()}`)) instanceof Buffer) { r = await fetchOne(jobs[i].url); }
+    }
+    if (r === "challenge") { console.log("  ✗ still blocked after 60 min — stopping (resumable)."); break; }
+    if (r) { writeFileSync(jobs[i].file, r); ok++; } else none++;
+    if ((i + 1) % 25 === 0 || i + 1 === jobs.length) console.log(`  ${i + 1}/${jobs.length} (saved ${ok}, none ${none})`);
+    await sleep(800);
+  }
+  await page.close().catch(() => {});
+  await browser.close();
+  console.log(`Done. saved ${ok}, no image ${none}.`);
+}
+
 async function main() {
   const all: { cid: number; url: string }[] = JSON.parse(readFileSync(join(HERE, "data", player.key, "image-urls.json"), "utf8"));
+  if (toDir) { await runToDir(toDir, all); return; }
   let browser;
   try { browser = await chromium.connectOverCDP(CDP_URL); }
   catch {
