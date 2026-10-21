@@ -10,6 +10,7 @@
  *   npm run prices:ebay -- --grades raw        # only these grade keys (comma list): 1 call/card
  *   npm run prices:ebay -- --no-image-first    # imageless cards first (a price makes them indexable)
  *   npm run prices:ebay -- --missing-only --retry-none  # also re-ask "checked, no listings" grades
+ *   npm run prices:ebay -- --recheck-priced    # re-verify existing prices; a miss clears the price
  *
  * eBay's default Browse quota is 5,000 calls/day and each card costs 3 calls
  * (4 for tier 1-2), so a catalog sweep is ~3.5 calls per card — budget before a
@@ -57,6 +58,10 @@ const noImageFirst = process.argv.includes("--no-image-first");
 // With --missing-only: re-ask grades whose only answer is a 'none' sentinel (e.g.
 // after a matcher fix). A real price is never re-asked; a hit replaces the sentinel.
 const retryNone = process.argv.includes("--retry-none");
+// Re-check only cards that currently show a real price, after a matcher change.
+// A miss REPLACES that price with a 'none' marker — the old price came from a
+// looser match and is no longer supported. (Normally a miss never overwrites.)
+const recheckPriced = process.argv.includes("--recheck-priced");
 
 const db = createClient(url, serviceKey, { auth: { persistSession: false } });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -109,10 +114,21 @@ async function main() {
   }
   // --limit counts cards that still have work. Applied before the --missing-only
   // filter, a daily `--limit 2000` re-selected the same, already-answered cards.
-  const pending = missingOnly ? cards.filter((c) => GRADES(c.tier_id).some((g) => !known.has(`${c.id}|${g.key}`))) : cards;
+  let pending = missingOnly ? cards.filter((c) => GRADES(c.tier_id).some((g) => !known.has(`${c.id}|${g.key}`))) : cards;
+  if (recheckPriced) {
+    const priced = new Set<string>();
+    const ids = pending.map((c) => c.id);
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data, error: pErr } = await db.from("card_prices").select("card_id")
+        .in("card_id", ids.slice(i, i + 200)).like("source", "ebay%").not("median_cents", "is", null);
+      if (pErr) throw pErr;
+      for (const r of (data as { card_id: string }[]) ?? []) priced.add(r.card_id);
+    }
+    pending = pending.filter((c) => priced.has(c.id));
+  }
   const todo = limit ? pending.slice(0, limit) : pending;
   console.log(`eBay asking-price refresh — target: ${host}${isLocal ? " (local)" : " (REMOTE)"}`);
-  console.log(`  ${todo.length} card(s)${catalog ? ` · catalog: ${catalog}` : ""}${missingOnly ? ` · missing grades only (${pending.length} pending of ${cards.length})` : ""}${onlyGrades ? ` · grades: ${[...onlyGrades].join(",")}` : ""}${noImageFirst ? " · imageless first" : ""}`);
+  console.log(`  ${todo.length} card(s)${catalog ? ` · catalog: ${catalog}` : ""}${missingOnly ? ` · missing grades only (${pending.length} pending of ${cards.length})` : ""}${onlyGrades ? ` · grades: ${[...onlyGrades].join(",")}` : ""}${noImageFirst ? " · imageless first" : ""}${recheckPriced ? " · re-checking existing prices" : ""}`);
 
   let priced = 0, grades = 0, skipped = 0, reused = 0;
   for (const card of todo) {
@@ -146,10 +162,11 @@ async function main() {
           // card stayed "never attempted" and every later run re-bought the same
           // negative result. `none`/null-median rows never display a value (see
           // lib/prices.ts) and the nightly cron still revisits them by as_of.
-          const { error: sErr } = await db.from("card_prices").insert(
-            { card_id: card.id, grade_key: g.key, median_cents: null, last_sale_cents: null,
-              currency: "USD", sample_size: 0, source: "none", as_of: new Date().toISOString() }
-          );
+          const sentinel = { card_id: card.id, grade_key: g.key, median_cents: null, last_sale_cents: null,
+            currency: "USD", sample_size: 0, source: "none", as_of: new Date().toISOString() };
+          const { error: sErr } = recheckPriced
+            ? await db.from("card_prices").upsert(sentinel, { onConflict: "card_id,grade_key" })
+            : await db.from("card_prices").insert(sentinel);
           // 23505 = a row for this grade already exists (an earlier sentinel, or a real
           // price we must not overwrite with a miss) — expected on a full re-run.
           if (sErr && sErr.code !== "23505") console.log(`  ! ${card.name} [${g.key} sentinel]: ${sErr.message}`);
