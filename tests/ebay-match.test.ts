@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   requiredTokenGroups, matchesCard, gradeMatches, median, priceFromListings, extractYear,
-  isJunkTitle, trimOutliers, titleMatchesCard,
+  isJunkTitle, trimOutliers, titleMatchesCard, cardNumberPattern, numberConsistent,
 } from "@/lib/ebay-match";
 
 const NAME = "1997 Metal Universe PMG Green #23 /10";
@@ -164,5 +164,26 @@ describe("TCDB serial / memorabilia tags (Kobe Vault)", () => {
   });
   it("does not strip words that merely start with sn", () => {
     expect(requiredTokenGroups("1997 Fleer Sneaker Sensations #1 Kobe Bryant").flat()).toContain("sneaker");
+  });
+});
+
+describe("card number must be in the listing", () => {
+  const legacy = "2008-09 Upper Deck Michael Jordan Legacy Collection #1032 Michael Jordan - Game 1032";
+  it("builds a tolerant pattern, and none for unnumbered cards", () => {
+    expect(cardNumberPattern("1996-97 Topps - ProFiles #PF-3 Michael Jordan")!.test("1996 Topps Pro Files PF3 Michael Jordan")).toBe(true);
+    expect(cardNumberPattern("1996-97 Topps - ProFiles #PF-3 Michael Jordan")!.test("1996 Topps Pro Files #PF-3 Jordan")).toBe(true);
+    expect(cardNumberPattern("1991-92 Hoops #30 Michael Jordan")!.test("1991 Hoops #303 Jordan")).toBe(false);
+    const p = cardNumberPattern("1991-92 Hoops #30 Michael Jordan");
+    expect(numberConsistent("1991 Hoops #303 Jordan", p)).toBe(false);   // names another card
+    expect(numberConsistent("1991 Hoops #30 Jordan", p)).toBe(true);
+    expect(numberConsistent("1991 Hoops Michael Jordan Bulls", p)).toBe(true); // no number → can't contradict
+    expect(cardNumberPattern("1956 Pittsburgh Pirates Team Issue #NNO Roberto Clemente")).toBeNull();
+  });
+  it("won't price a card off other cards in its set", () => {
+    const others = [1, 2, 3, 4, 5].map((i) => ({ title: `2008-09 Upper Deck Michael Jordan Legacy Collection #${100 + i} Michael Jordan`, cents: 999 }));
+    expect(priceFromListings(others, "2008-09 Upper Deck Michael Jordan Legacy Collection #1032 Michael Jordan", "raw", 3)).toBeNull();
+    const own = [1, 2, 3].map(() => ({ title: "2008-09 Upper Deck Legacy Collection #1032 Michael Jordan", cents: 499 }));
+    expect(priceFromListings([...others, ...own], "2008-09 Upper Deck Michael Jordan Legacy Collection #1032 Michael Jordan", "raw", 3)).toEqual({ medianCents: 499, count: 3 });
+    expect(legacy).toContain("#1032");
   });
 });

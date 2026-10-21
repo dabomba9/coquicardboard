@@ -123,6 +123,28 @@ export function trimOutliers(nums: number[]): number[] {
 
 // From raw listings, keep only confident matches and return a median if we have
 // at least `minSamples`; otherwise null (caller keeps the existing/estimated price).
+// A listing that names a DIFFERENT card number is a different card. Without this,
+// in big single-player sets (Legacy Collection, Living Legend, …) every listing
+// from the set matched every card, and a card was "priced" off its neighbours:
+// Legacy Collection #1032 got the set-wide ~$9.99 from ~37 listings, none of them
+// #1032. Titles with no "#number" at all still count — sellers of rare parallels
+// often omit it, and the name's distinctive words already pin the card down.
+// Tolerant of "#PF-3" / "PF3"; unnumbered (NNO) cards are not checked.
+export function cardNumberPattern(name: string): RegExp | null {
+  const num = /#([a-z0-9][a-z0-9-]*)/i.exec(name)?.[1];
+  if (!num || /^nno$/i.test(num)) return null;
+  const chunks = num.match(/[a-z]+|\d+/gi);
+  if (!chunks) return null;
+  return new RegExp(`(?<![a-z0-9])${chunks.join("[-\\s.]?")}(?![a-z0-9])`, "i");
+}
+
+/** True unless the title names a card number ("#105") and it isn't this card's. */
+export function numberConsistent(title: string, number: RegExp | null): boolean {
+  if (!number) return true;
+  if (number.test(title)) return true;
+  return !/#\s?[a-z]*\d/i.test(title); // no "#number" in the title → can't contradict
+}
+
 export function priceFromListings(
   listings: { title: string; cents: number }[],
   name: string,
@@ -131,8 +153,10 @@ export function priceFromListings(
 ): { medianCents: number; count: number } | null {
   const year = extractYear(name);
   const groups = requiredTokenGroups(name);
+  const number = cardNumberPattern(name);
   const matched = listings
     .filter((l) => l.cents > 0 && !isJunkTitle(l.title) && matchesCard(l.title, year, groups) && gradeMatches(l.title, gradeKey))
+    .filter((l) => numberConsistent(l.title, number))
     .map((l) => l.cents);
   const cleaned = trimOutliers(matched);
   if (cleaned.length < minSamples) return null;
