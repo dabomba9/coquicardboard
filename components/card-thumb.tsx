@@ -35,6 +35,7 @@ export function CardThumb({
   className,
   placeholderArt,
   priority,
+  optimize = false,
 }: {
   card: ThumbCard;
   className?: string;
@@ -42,6 +43,10 @@ export function CardThumb({
   // Set on the first tile of a grid only: Next flags the leading card image as the
   // LCP element and warns when it loads lazily.
   priority?: boolean;
+  // Resize the remote card image through Next's optimizer. Opt-in per page: the
+  // homepage's few dozen thumbs were 350–750KB eBay photos shown ~90px wide, but
+  // the catalogs would push ~25k distinct images through Vercel's monthly quota.
+  optimize?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -72,8 +77,8 @@ export function CardThumb({
               "object-cover transition-[transform,opacity] duration-300 group-hover:scale-[1.05]",
               loaded ? "opacity-100" : "opacity-0"
             )}
-            unoptimized
-            priority={priority}
+            unoptimized={!optimize}
+            preload={priority}
             onLoad={() => setLoaded(true)}
             onError={() => setFailed(true)}
           />
@@ -95,7 +100,7 @@ export function CardThumb({
                 sizes="(max-width: 768px) 25vw, 12vw"
                 className="pointer-events-none object-contain object-center p-4 opacity-80"
                 aria-hidden="true"
-                priority={priority}
+                preload={priority}
               />
               {/* scrim so the card name stays readable over the art */}
               <span

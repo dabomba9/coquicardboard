@@ -97,7 +97,7 @@ export default async function Home() {
             <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
               {recent.map((c) => (
                 <Link key={c.id} href={`/cards/${c.slug}`} className="group">
-                  <CardThumb card={c} placeholderArt={legendArtForCatalog(c.catalog)} className="transition-transform group-hover:-translate-y-1" />
+                  <CardThumb card={c} optimize placeholderArt={legendArtForCatalog(c.catalog)} className="transition-transform group-hover:-translate-y-1" />
                   <div className="mt-1 line-clamp-2 text-[11px] leading-tight text-muted group-hover:text-foreground">{c.name}</div>
                   <div className="text-[10px] uppercase tracking-wide text-muted">{catalogLabel(c.catalog)}</div>
                 </Link>
@@ -128,7 +128,7 @@ export default async function Home() {
                 </p>
                 {hierGrid.length > 0 && (
                   <div className="mt-5 grid grid-cols-5 gap-2">
-                    {hierGrid.map((c) => <CardThumb key={c.id} card={c} />)}
+                    {hierGrid.map((c) => <CardThumb key={c.id} card={c} optimize />)}
                   </div>
                 )}
                 <span className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-accent group-hover:gap-2">Open the hierarchy <ArrowRight size={15} /></span>
@@ -183,7 +183,7 @@ export default async function Home() {
                 </p>
                 {vaultGrid.length > 0 && (
                   <div className="mt-5 grid grid-cols-5 gap-2">
-                    {vaultGrid.map((c) => <CardThumb key={c.id} card={c} />)}
+                    {vaultGrid.map((c) => <CardThumb key={c.id} card={c} optimize />)}
                   </div>
                 )}
                 <span className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-[var(--gold)] group-hover:gap-2">Browse the vault <ArrowRight size={15} /></span>
