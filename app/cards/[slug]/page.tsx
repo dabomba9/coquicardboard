@@ -176,7 +176,7 @@ export default async function CardDetailPage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <JsonLd data={productJsonLd({ name: card.name, slug: card.slug, description: ldDescription, image: card.image_url, brand: manufacturer ?? card.sets?.name ?? null, pricesUsd, offerUrl: ebayUrl })} />
       <JsonLd data={breadcrumbJsonLd({ name: card.name, slug: card.slug, catalog: card.catalog })} />
-      <Link href={isKobeVault ? "/kobe-vault" : isClementeVault ? "/clemente-vault" : isKillebrewVault ? "/killebrew-vault" : isVault ? "/vault" : isMamba ? "/mamba-hierarchy" : isKobe ? "/kobe-hierarchy" : "/mj-hierarchy"} className="text-[11px] uppercase tracking-wide text-muted hover:text-foreground">← {isKobeVault ? "Kobe Vault" : isClementeVault ? "Clemente Vault" : isKillebrewVault ? "Killebrew Vault" : isVault ? "Jordan Vault" : isMamba ? "Mamba Hierarchy" : isKobe ? "Mamba Origins" : "Hierarchy"}</Link>
+      <Link href={isKobeVault ? "/kobe-vault" : isClementeVault ? "/clemente-vault" : isKillebrewVault ? "/killebrew-vault" : isVault ? "/vault" : isMamba ? "/mamba-hierarchy" : isKobe ? "/mamba-origins" : "/mj-hierarchy"} className="text-[11px] uppercase tracking-wide text-muted hover:text-foreground">← {isKobeVault ? "Kobe Vault" : isClementeVault ? "Clemente Vault" : isKillebrewVault ? "Killebrew Vault" : isVault ? "Jordan Vault" : isMamba ? "Mamba Hierarchy" : isKobe ? "Mamba Origins" : "Hierarchy"}</Link>
 
       <div className="mt-4 grid gap-8 sm:grid-cols-[280px_1fr]">
         <div className="space-y-3">

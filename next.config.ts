@@ -12,7 +12,11 @@ const nextConfig: NextConfig = {
     ],
   },
   async redirects() {
-    const redirects: Redirects = [{ source: "/hierarchy", destination: "/mj-hierarchy", permanent: true }];
+    const redirects: Redirects = [
+      { source: "/hierarchy", destination: "/mj-hierarchy", permanent: true },
+      // Mamba Origins moved from its old catalog-key URL; the slug stays "kobe-hierarchy".
+      { source: "/kobe-hierarchy", destination: "/mamba-origins", permanent: true },
+    ];
 
     // www → apex. Both hostnames served 200 with identical content, so search
     // engines crawled the site twice; canonicals pointed at the apex but a

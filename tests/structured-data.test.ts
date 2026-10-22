@@ -48,7 +48,7 @@ describe("breadcrumbJsonLd", () => {
     const d = breadcrumbJsonLd({ name: "Card", slug: "kobe-c", catalog: "kobe-hierarchy" });
     const items = d.itemListElement as { name: string; item: string }[];
     expect(items[1].name).toBe("Mamba Origins");
-    expect(items[1].item).toContain("/kobe-hierarchy");
+    expect(items[1].item).toContain("/mamba-origins");
   });
   it("uses the Mamba Hierarchy path for mamba-hierarchy cards", () => {
     const d = breadcrumbJsonLd({ name: "Card", slug: "mamba-c", catalog: "mamba-hierarchy" });

@@ -36,7 +36,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/mj-hierarchy`, changeFrequency: "weekly", priority: 0.9 },
     { url: `${base}/mamba-hierarchy`, changeFrequency: "weekly", priority: 0.88 },
-    { url: `${base}/kobe-hierarchy`, changeFrequency: "weekly", priority: 0.85 },
+    { url: `${base}/mamba-origins`, changeFrequency: "weekly", priority: 0.85 },
     { url: `${base}/vault`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/kobe-vault`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/clemente-vault`, changeFrequency: "weekly", priority: 0.8 },

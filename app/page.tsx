@@ -153,7 +153,7 @@ export default async function Home() {
             </Link>
 
             {/* Kobe — Mamba Origins */}
-            <Link href="/kobe-hierarchy" className="group">
+            <Link href="/mamba-origins" className="group">
               <Panel className="h-full overflow-hidden p-6 transition-transform group-hover:-translate-y-1">
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/12 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-accent">

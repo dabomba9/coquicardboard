@@ -13,7 +13,7 @@ export type CatalogMeta = {
 export const CATALOGS: CatalogMeta[] = [
   { slug: "mj-hierarchy", label: "MJ Hierarchy", kind: "hierarchy", href: "/mj-hierarchy" },
   { slug: "mamba-hierarchy", label: "Mamba Hierarchy", kind: "hierarchy", href: "/mamba-hierarchy" },
-  { slug: "kobe-hierarchy", label: "Mamba Origins", kind: "hierarchy", href: "/kobe-hierarchy" },
+  { slug: "kobe-hierarchy", label: "Mamba Origins", kind: "hierarchy", href: "/mamba-origins" },
   { slug: "mj-vault", label: "Jordan Vault", kind: "vault", href: "/vault" },
   { slug: "kobe-vault", label: "Kobe Vault", kind: "vault", href: "/kobe-vault" },
   { slug: "clemente-vault", label: "Clemente Vault", kind: "vault", href: "/clemente-vault" },

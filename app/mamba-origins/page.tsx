@@ -11,12 +11,12 @@ export const metadata: Metadata = {
   title: "The Kobe Bryant Mamba Origins Hierarchy",
   description:
     "All 143 Kobe Bryant 1996-97 rookie cards across 25 brands — track what you own, follow live market value, and chase the Mamba's rookie class.",
-  alternates: { canonical: "/kobe-hierarchy" },
+  alternates: { canonical: "/mamba-origins" },
   openGraph: {
     title: "The Kobe Bryant Mamba Origins Hierarchy · Coqui Cardboard",
     description:
       "All 143 Kobe Bryant 1996-97 rookie cards across 25 brands — track what you own and follow live market value.",
-    url: "/kobe-hierarchy",
+    url: "/mamba-origins",
     type: "website",
   },
 };
@@ -60,7 +60,7 @@ export default async function KobeHierarchyPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
-      <JsonLd data={collectionJsonLd({ name: "Mamba Origins", description: metadata.description as string, path: "/kobe-hierarchy", items: explorerCards.map((c) => ({ name: c.name, slug: c.slug })) })} />
+      <JsonLd data={collectionJsonLd({ name: "Mamba Origins", description: metadata.description as string, path: "/mamba-origins", items: explorerCards.map((c) => ({ name: c.name, slug: c.slug })) })} />
       <div className="flex items-center gap-3">
         <Coqui pose="idle" size={44} aria-label="" />
         <div>
